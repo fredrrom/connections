@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "cops"
+version = "0.1.0"
+description = ""
+authors = ["Fredrik Rømming <fr409@cam.ac.uk>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.2.0"
+pytest-cov = "^4.0.0"
+jupyter = "^1.0.0"
+tqdm = "^4.64.1"
+pandas = "^1.5.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

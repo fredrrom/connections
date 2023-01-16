@@ -1,0 +1,29 @@
+-----------------------------------------------------------------
+
+leanCoP CNF translation (v2.2)
+==============================
+
+- Usage: leancop_trans.sh %1 [%2]
+
+- translates file %1 from TPTP syntax into clausal form (CNF):
+  "cnf(NAME,conjecture,MATRIX)." where MATRIX is a set of clauses
+
+- Example: ./leancop_trans.sh set871
+  translates TPTP file set871 into TPTP CNF file set871.cnf
+
+- uses the definitional translation for the conjecture (formula)
+  and the naive translation for the axioms (formulas)
+
+- the only simplifications that are done are (1) MULT (e.g.
+  [a,b,a] -> [a,b]) and (2) TAUT (e.g. [a,b,-a] -> []).
+
+- renames "=" into "equal___"
+
+- if no %2 is given: output file name %2 is set to %1.cnf;
+  if %2 has form ???/F: output file is z/???/F.cnf, NAME is F
+   (for translation of whole TPTP using the run_prover script);
+  otherwise: if %2 has form F.cnf: output file is %2, NAME is F;
+  otherwise: output file is %2, NAME is %2
+
+-----------------------------------------------------------------
+
