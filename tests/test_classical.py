@@ -6,7 +6,7 @@ from cops.utils.primitives import *
 
 class TestClassicalState:
     # ARRANGE
-    env = ConnectionEnv('tests/icnf_problems/SYN081+1.cnf')
+    env = ConnectionEnv('tests/cnf_problems/SYN081+1.cnf')
     state = env.state
 
     def test_initial_states(self):
@@ -33,7 +33,7 @@ class TestClassicalState:
 
 class TestConnectionEnv:
     # ARRANGE
-    env = ConnectionEnv('tests/icnf_problems/SYN081+1.cnf')
+    env = ConnectionEnv('tests/cnf_problems/SYN081+1.cnf')
 
     def test_step(self):
         # ARRANGE
