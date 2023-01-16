@@ -6,7 +6,7 @@ from cops.utils.primitives import *
 
 class TestClassicalState:
     # ARRANGE
-    env = ConnectionEnv('icnf_problems/SYN081+1.cnf')
+    env = ConnectionEnv('tests/icnf_problems/SYN081+1.cnf')
     state = env.state
 
     def test_initial_states(self):

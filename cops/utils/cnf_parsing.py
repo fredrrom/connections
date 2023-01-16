@@ -9,7 +9,7 @@ def file2cnf(path):
 
 
 def parse_fof(fof):
-    clauses_str = re.findall(r"\[.*\]", fof)[0][2:-2].split(r"],[")#re.findall(r"\[.*\]", fof)[0][2:-2].split(r"], [")
+    clauses_str = re.findall(r"\[.*\]", fof)[0][2:-2].split(r"], [")#clauses_str = re.findall(r"\[.*\]", fof)[0][2:-2].split(r"],[")#
     if clauses_str == ['']:
         return Matrix([])
     return Matrix([parse_clause(clause_str) for clause_str in clauses_str])
@@ -27,7 +27,7 @@ def parse_literal(literal_str):
     neg = False
     if literal_str[0] == "-":
         neg = True
-        literal_str = literal_str[1:]#literal_str[2:-1]
+        literal_str = literal_str[2:-1]#literal_str = literal_str[1:]#literal_str[2:-1]
     split = literal_str.split(r"(", 1)
     terms = []
     if len(split) > 1:
@@ -69,7 +69,8 @@ def split_bracket(str):
         start = split_indeces[i]
         end = split_indeces[i + 1]
         if str[start] == ",":
-            strs.append(str[start + 1: end])#strs.append(str[start + 2: end])
+            strs.append(str[start + 2: end])#strs.append(str[start + 1: end])#
         else:
             strs.append(str[start:end])
     return strs
+
