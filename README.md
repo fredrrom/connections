@@ -1,9 +1,12 @@
 # CoPs
 
-![Tests](https://github.com/fredrrom/mlatp/blob/master/.github/workflows/tests.yml/badge.svg)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![tests](https://github.com/fredrrom/CoPs/actions/workflows/python-app.yml/badge.svg)](https://github.com/fredrrom/CoPs/actions/workflows/python-app.yml)
 
 Reinforcement learning environments for the classical and intuitionistic first-order connection calculi. 
+
+## Requirements
+
+ - Python 3.10
 
 ## Installation
 
@@ -13,14 +16,12 @@ To install the environments, use `pip install cops`. The following command will 
 pip install git+https://github.com/fredrrom/cops.git 
 ```
 
-Note that currently only Python 3.10 is supported.
-
 ## Usage
 
-The environments follow the [OpenAI Gym](https://www.gymlibrary.dev/) interface, but cannot be registered as gym environments as their state and action spaces do not inherit from `gym.spaces`. Creating environment instances and interacting with them is very simple- here's leanCoP implemented using the `ConnectionEnv` environment:
+The environments closely follow the [OpenAI Gym](https://www.gymlibrary.dev/) interface. Creating environment instances and interacting with them is very simple. Here is leanCoP implemented using the `ConnectionEnv` environment:
 
 ```python
-from cops.calculi.classical_connection import ConnectionEnv
+from cops.calculi.classical import ConnectionEnv
 
 env = ConnectionEnv("path_to_CNF_file")
 observation, info = env.reset()
@@ -33,9 +34,11 @@ while True:
         break
 ```
 
-Note that leanCoP is equivalent to an agent always choosing action 0 in the `ConnectionEnv` environment. The same is true for ileanCoP and the `IConnectionEnv` environment. 
+Note that leanCoP is equivalent to an agent always choosing the first available action in the `ConnectionEnv` environment's action space. The same is true for ileanCoP and the `IConnectionEnv` environment.
 
-Although the environments cannot be registered as gym eniroments directly, they can be used as backends for your own gym environments (with more well defined, non-dynamically sized, state spaces) as done in the `GraphEnv` environment in `cops.envs.graph_env.py`. An example of training a PPO agent on the `GraphEnv` environment using [RLlib](https://docs.ray.io/en/latest/rllib/index.html) is given in `experiments/graphcop.py`. The notebook also includes an explanation of the `GraphEnv` environment.
+Also note that the environments cannot be registered as gym environments, as their state and action spaces do not inherit from `gym.spaces`. 
+They are, however, designed to be used as backends for your own gym environments. 
+An example of training an [RLlib](https://docs.ray.io/en/latest/rllib/index.html) PPO agent on a gym environment using the `ConnectionEnv` environment as a backend is given in OTHER REPO.
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)

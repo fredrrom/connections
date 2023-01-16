@@ -4,7 +4,7 @@ from cops.utils.icnf_parsing import file2cnf
 class TestICNFParsing:
     # ARRANGE
     m = '[[big_f(_3436), -big_f(f(_3436))], [big_f(_2806), big_f(f(_2806))], [-big_f(f(_2806)), -big_f(_2806)]]'
-    r = file2cnf('icnf_problems/SYN081+1.cnf')
+    r = file2cnf('tests/icnf_problems/SYN081+1.cnf')
 
     def test_file2cnf_print(self):
         # ASSERT

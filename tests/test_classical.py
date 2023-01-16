@@ -33,7 +33,7 @@ class TestClassicalState:
 
 class TestConnectionEnv:
     # ARRANGE
-    env = ConnectionEnv('icnf_problems/SYN081+1.cnf')
+    env = ConnectionEnv('tests/icnf_problems/SYN081+1.cnf')
 
     def test_step(self):
         # ARRANGE
