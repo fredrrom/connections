@@ -10,7 +10,7 @@ Reinforcement learning environments for the classical and intuitionistic first-o
 
 ## Installation
 
-To install the environments, use `pip install cops`. The following command will pull and install the latest commit from this repository, along with its Python dependencies
+The following command will pull and install the latest commit from this repository, along with its Python dependencies
 
 ```
 pip install git+https://github.com/fredrrom/cops.git 
@@ -23,7 +23,7 @@ The environments closely follow the [OpenAI Gym](https://www.gymlibrary.dev/) in
 ```python
 from cops.calculi.classical import ConnectionEnv
 
-env = ConnectionEnv("path_to_CNF_file")
+env = ConnectionEnv("path_to_CNF_formatted_file")
 observation, info = env.reset()
 
 while True:
@@ -39,6 +39,3 @@ Note that leanCoP is equivalent to an agent always choosing the first available 
 Also note that the environments cannot be registered as gym environments, as their state and action spaces do not inherit from `gym.spaces`. 
 They are, however, designed to be used as backends for your own gym environments. 
 An example of training an [RLlib](https://docs.ray.io/en/latest/rllib/index.html) PPO agent on a gym environment using the `ConnectionEnv` environment as a backend is given in OTHER REPO.
-
-## License
-[MIT](https://choosealicense.com/licenses/mit/)
