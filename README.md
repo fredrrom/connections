@@ -1,6 +1,6 @@
 # CoPs
 
-[![tests](https://github.com/fredrrom/CoPs/actions/workflows/python-app.yml/badge.svg)](https://github.com/fredrrom/CoPs/actions/workflows/python-app.yml)
+[![tests](https://github.com/fredrrom/CoPs/actions/workflows/python-app.yml/badge.svg?branch=main)](https://github.com/fredrrom/CoPs/actions/workflows/python-app.yml)
 
 Reinforcement learning environments for the classical and intuitionistic first-order connection calculi. 
 
