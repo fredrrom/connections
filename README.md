@@ -38,4 +38,6 @@ Note that leanCoP is equivalent to an agent always choosing the first available 
 
 Also note that the environments cannot be registered as gym environments, as their state and action spaces do not inherit from `gym.spaces`. 
 They are, however, designed to be used as backends for your own gym environments. 
-An example of training an [RLlib](https://docs.ray.io/en/latest/rllib/index.html) PPO agent on a gym environment using the `ConnectionEnv` environment as a backend is given in OTHER REPO.
+An example of training an [RLlib](https://docs.ray.io/en/latest/rllib/index.html) PPO agent on a gym environment using the `ConnectionEnv` environment as a backend is given in [RNNAutoencoderCoP](https://github.com/fredrrom/RNNAutoencoderCoP).
+
+TPTP formatted files can be translated to the enivronments' accepted format using the prolog code in `comparisons/classical/leancop_trans_v22f`
