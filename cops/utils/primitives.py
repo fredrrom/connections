@@ -3,7 +3,7 @@ from abc import ABC
 
 
 class Expression(ABC):
-    def __init__(self, symbol, args=(), prefix=[]):
+    def __init__(self, symbol, args=[], prefix=None):
         self.symbol = symbol
         self.args = args
         self.prefix = prefix
@@ -23,24 +23,24 @@ class Expression(ABC):
         )
 
     def __hash__(self):
-        return hash(self.symbol) ^ hash(self.args)
+        return hash(self.symbol) ^ hash(tuple(self.args))
 
 
 class Term(Expression):
-    def __init__(self, symbol, args=(), prefix=[], is_pre=False):
-        super(Term, self).__init__(symbol, args, prefix)
-        self.is_pre = is_pre
-
     def copy(self, num):
+        new_prefix = None
+        if self.prefix is not None:
+            new_prefix = self.prefix.copy(num)
         return type(self)(self.symbol,
-                          tuple(arg.copy(num) for arg in self.args),
-                          [pre.copy(num) for pre in self.prefix],
-                          self.is_pre)
+                          [arg.copy(num) for arg in self.args],
+                          new_prefix)
 
 
 class Variable(Term):
     def copy(self, num):
-        return Variable(f"{self.symbol}{num}")
+        copy = super().copy(num)
+        copy.symbol = f"{self.symbol}{num}"
+        return copy
 
 
 class Constant(Term):
@@ -52,7 +52,7 @@ class Function(Term):
 
 
 class Literal(Expression):
-    def __init__(self, symbol, args=(), prefix=[], neg=False, matrix_pos=None):
+    def __init__(self, symbol, args=[], prefix=None, neg=False, matrix_pos=None):
         super().__init__(symbol, args, prefix)
         self.neg = neg
         self.matrix_pos = matrix_pos
@@ -62,10 +62,13 @@ class Literal(Expression):
         return neg_str + super().__str__()
 
     def copy(self, num):
+        new_prefix = None
+        if self.prefix is not None:
+            new_prefix = self.prefix.copy(num)
         return Literal(
             self.symbol,
-            tuple(arg.copy(num) for arg in self.args),
-            [pre.copy(num) for pre in self.prefix],
+            [arg.copy(num) for arg in self.args],
+            new_prefix,
             self.neg,
             self.matrix_pos
         )

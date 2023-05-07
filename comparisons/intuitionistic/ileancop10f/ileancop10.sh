@@ -16,7 +16,7 @@
 # Parameters
 
 # set the ileanCoP prover path
-PROVER_PATH=.
+PROVER_PATH=ileancop10f
 
 # set Prolog system (ECLiPSe 5.x or SWI), path and options
 
@@ -25,12 +25,12 @@ PROVER_PATH=.
 #PROLOG_OPTIONS='-e'
 
 PROLOG=swi
-PROLOG_PATH=/usr/bin/swipl
+PROLOG_PATH=swipl
 PROLOG_OPTIONS='--debug=false -O -q -g'
 #PROLOG_OPTIONS='-nodebug -O -L120M -G120M -T100M -q -g'
 
 # set TPTP library path
-# export TPTP=.
+export TPTP=../../../conjectures/ILTP-v1.1.2-firstorder
 
 #-------------
 # Main Program

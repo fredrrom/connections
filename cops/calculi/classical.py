@@ -50,6 +50,7 @@ class Tableau:
 
 
 class ConnectionState:
+    
     def __init__(self, matrix):
         # Matrix fields
         self.matrix = matrix
@@ -59,7 +60,7 @@ class ConnectionState:
         self.tableau = None
         self.goal = None
         self.max_depth = None
-        self.termination_depth = 1000  # float("inf")
+        self.termination_depth = float("inf")
 
         # Proof fields
         self.info = None
@@ -67,7 +68,6 @@ class ConnectionState:
         self.qed = False
         self.proof_sequence = []
         self.substitutions = [dict()]
-        self.reset()
 
     @property
     def substitution(self):
@@ -241,9 +241,6 @@ class ConnectionAction:
 
 class ConnectionEnv:
     def __init__(self, path):
-        """
-        Define initial states
-        """
         self.matrix = file2cnf(path)
         self.state = ConnectionState(self.matrix)
 
@@ -257,11 +254,6 @@ class ConnectionEnv:
         return actions
 
     def step(self, action):
-        """
-        Low level function assumes action is legal
-
-        return next_state, reward, done
-        """
         if self.state.is_terminal:
             return self.state, int(self.state.qed), self.state.is_terminal, {"status": self.state.info}
         if action is not None:
@@ -272,9 +264,7 @@ class ConnectionEnv:
         return self.state, int(self.state.qed), self.state.is_terminal, {"status": self.state.info}
 
     def reset(self):
-        """
-        Resets the search problem and returns initial state
-        """
         self.matrix.reset()
         self.state = ConnectionState(self.matrix)
+        self.state.reset()
         return self.state

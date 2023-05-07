@@ -26,38 +26,46 @@ def parse_literal(literal_str):
     if literal_str[0] == "-":
         neg = True
         literal_str = literal_str[1:]
-    lit = literal_str.rsplit(r":pre", 1)
+    lit = find_pre(literal_str)
     split = lit[0].split(r"(", 1)
     terms = []
     if len(split) > 1:
         terms_str = split[1][:-1]
         for term_str in split_bracket(terms_str):
             terms.append(parse_term(term_str))
-    return Literal(split[0], tuple(terms), parse_prefix(lit[1]), neg)
+    return Literal(split[0], terms, parse_term(f'string{lit[1]}'), neg)
 
 
-def parse_term(term_str, is_pre=False):
-    term = term_str.rsplit(r":pre", 1)
+def parse_term(term_str):
+    if term_str.isnumeric() or term_str[0] == '\'':
+        return Constant(term_str)
+    term = find_pre(term_str)
     split = term[0].split(r"(", 1)
     term_name = split[0]
     if len(term) > 1 and (term_name == "f_skolem" or term_name[0] == '_'):
-        prefixes = parse_prefix(term[1])
+        prefixes = parse_term(f'string{term[1]}')
     else:
-        prefixes = []
+        prefixes = Function('string')
         split = term_str.split(r"(", 1)
     if term_name[0] == "_":
-        return Variable(term_name, prefix=prefixes, is_pre=is_pre)
-    elif term_name.isnumeric():
-        return Constant(term_name, prefix=prefixes, is_pre=is_pre)
+        return Variable(term_name, prefix=prefixes)
     subterms = []
     if len(split) > 1:
         subterms_str = split[1][:-1]
         for subterm_str in split_bracket(subterms_str):
-            subterms.append(parse_term(subterm_str, is_pre))
-    if term_name == "c_skolem":
-        return Constant(term_name, tuple(subterms), prefix=prefixes, is_pre=is_pre)
-    return Function(term_name, tuple(subterms), prefix=prefixes, is_pre=is_pre)
+            subterms.append(parse_term(subterm_str))
+    return Function(term_name, subterms, prefix=prefixes)
 
+def find_pre(str):
+    num_bracket = 0
+    for i, c in enumerate(str):
+        if c == "(":
+            num_bracket += 1
+        elif c == ")":
+            num_bracket -= 1
+        elif num_bracket == 0 and c == ":":
+            return [str[:i],str[i + 4:]]
+    return [str]
 
 def split_bracket(str):
     strs = []

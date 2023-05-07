@@ -68,6 +68,3 @@ class TestMatrix:
 
         # ASSERT
         assert idx == 0
-
-# todo add test problem directory
-# todo add parsing test

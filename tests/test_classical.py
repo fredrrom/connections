@@ -1,5 +1,3 @@
-import pytest
-
 from cops.calculi.classical import *
 from cops.utils.primitives import *
 

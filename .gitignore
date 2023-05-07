@@ -4,6 +4,10 @@ __pycache__/
 *$py.class
 .DS_Store
 
+**/out/
+**/log/
+**/diff.csv
+
 # C extensions
 *.so
 

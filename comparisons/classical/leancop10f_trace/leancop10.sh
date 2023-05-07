@@ -16,7 +16,7 @@
 # Parameters
 
 # set the leanCoP prover path
-PROVER_PATH=comparisons/classical/leancop10f_trace
+PROVER_PATH=leancop10f_trace
 
 # set Prolog system (ECLiPSe 5.x or SWI), path and options
 
@@ -30,7 +30,7 @@ PROLOG_OPTIONS='--debug=false -O -q -g'
 #PROLOG_OPTIONS='-nodebug -O -L120M -G120M -T100M -q -g'
 
 # set TPTP library path
-export TPTP=/Users/fredrik/Library/CloudStorage/OneDrive-UniversityofCambridge/Cambridge/conjectures/TPTP-v3.3.0
+export TPTP=../../../conjectures/TPTP-v6.4.0
 
 #-------------
 # Main Program

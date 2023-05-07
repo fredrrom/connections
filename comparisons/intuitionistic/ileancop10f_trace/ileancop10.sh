@@ -16,7 +16,7 @@
 # Parameters
 
 # set the ileanCoP prover path
-PROVER_PATH=comparisons/intuitionistic/ileancop10f_swi
+PROVER_PATH=ileancop10f_trace
 # set Prolog system (ECLiPSe 5.x or SWI), path and options
 
 #PROLOG=eclipse
@@ -29,7 +29,7 @@ PROLOG_OPTIONS='--debug=false -O -q -g'
 #PROLOG_OPTIONS='-nodebug -O -L120M -G120M -T100M -q -g'
 
 # set TPTP library path
-# export TPTP=.
+export TPTP=../../../conjectures/ILTP-v1.1.2-firstorder
 
 #-------------
 # Main Program
