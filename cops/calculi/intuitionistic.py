@@ -116,9 +116,13 @@ class IConnectionState(ConnectionState):
                     parent = parent.parent
                 self.backtrack()
                 return
+            """
+            uncomment to do comparisons
+            
             print('prefix_unify_success')
             print(f'successful_connections:{len(self.proof_sequence)}')
             print(f'prefix_unify({[(flatten(subst(s,l)),flatten(subst(s,r))) for l,r in addco_pairs + proof_pairs]})')
+            """
             self.info = 'Theorem'
             self.prefix_unifier = s
             self.is_terminal = True

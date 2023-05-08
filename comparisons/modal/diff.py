@@ -115,8 +115,7 @@ if __name__ == '__main__':
             results.extend(pool.map(run_theorem_prover, problems))
     results = filter(None,results)
     df = pd.DataFrame(results) 
-    #df = df[(df['ipyCoP status'] != df['ileanCoP status']) & (df['Diff inference'].notna())]
     print(df)
     for logic,domain in logics:
-        df2 = df[df[f'Diff inference {logic} {domain}'].notna()].filter(regex=f'{logic} {domain}|Problem')
+        df2 = df[(df['ipyCoP status'] != df['ileanCoP status']) | df[f'Diff inference {logic} {domain}'].notna()].filter(regex=f'{logic} {domain}|Problem')
         df2.to_csv(f'diff_{logic}_{domain}.csv', index=False)
