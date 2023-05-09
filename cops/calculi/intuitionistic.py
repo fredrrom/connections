@@ -103,7 +103,7 @@ class IConnectionState(ConnectionState):
             # Classical proof, check intutitionistic proof
             addco_pairs = self._admissible_pairs()
             proof_pairs = self._proof_pairs()
-            print(f'prefix_unify({[(subst(self.substitutions[-1],l),subst(self.substitutions[-1],r)) for l,r in addco_pairs + proof_pairs]})')
+            #print(f'prefix_unify({[(subst(self.substitutions[-1],l),subst(self.substitutions[-1],r)) for l,r in addco_pairs + proof_pairs]})')
             s = self.pre_unify_list(addco_pairs + proof_pairs, self.substitutions[-1])
             if s is None:
                 # No intuitonistic proof, backtrack from previous goal
