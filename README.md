@@ -1,4 +1,4 @@
-# CoPs
+# Connections
 
 [![tests](https://github.com/fredrrom/CoPs/actions/workflows/python-app.yml/badge.svg?branch=main)](https://github.com/fredrrom/CoPs/actions/workflows/python-app.yml)
 
