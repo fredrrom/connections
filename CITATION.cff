@@ -8,8 +8,8 @@ message: >-
   metadata from this file.
 type: software
 authors:
-  - given-names: 'R{\o}mming'
-    family-names: Fredrik
+  - given-names: Fredrik
+    family-names: 'R{\o}mming'
     orcid: 'https://orcid.org/0000-0001-7545-4662'
 identifiers:
   - type: url
