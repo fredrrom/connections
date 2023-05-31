@@ -39,7 +39,7 @@ Note that the above is equivalent (i.e., has the same proof search trace) to lea
 `MConnectionEnv` currently supports modal logics S4, S5, D, and T each for the constant, cumulative, and varying domains. Logic and domain can be specifified during the creation of the environment as follows:
 
 ```python
-env = ConnectionEnv("problem_path", logic="S5", domain="varying")
+env = MConnectionEnv("problem_path", logic="S5", domain="varying")
 ```
 
 **NB** The environments cannot be registered as gym environments, as their state and action spaces do not inherit from `gym.spaces`. 
