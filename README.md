@@ -36,14 +36,14 @@ while True:
 
 Note that the above is equivalent (i.e., has the same proof search trace) to leanCoP version 1.0f. The same is true for ileanCoP/`IConnectionEnv` and MleanCoP/`MConnectionEnv`. These versions of leanCoP can be found in the `comparisons` directory.
 
-Also note that the environments cannot be registered as gym environments, as their state and action spaces do not inherit from `gym.spaces`. 
-They are, however, designed to be used as backends for your own gym environments.
-
 `MConnectionEnv` currently supports modal logics S4, S5, D, and T each for the constant, cumulative, and varying domains. Logic and domain can be specifified during the creation of the environment as follows:
 
 ```python
 env = ConnectionEnv("problem_path", logic="S5", domain="varying")
 ```
+
+**NB** The environments cannot be registered as gym environments, as their state and action spaces do not inherit from `gym.spaces`. 
+They are, however, designed to be used as backends for your own gym environments.
 
 ## File Formats
 
