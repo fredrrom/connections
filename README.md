@@ -2,7 +2,7 @@
 
 [![tests](https://github.com/fredrrom/CoPs/actions/workflows/python-app.yml/badge.svg?branch=main)](https://github.com/fredrrom/CoPs/actions/workflows/python-app.yml)
 
-Reinforcement learning environments for the classical and intuitionistic first-order connection calculi. 
+Reinforcement learning environments for classical, intuitionistic, and Modal first-order connection calculi. 
 
 ## Requirements
 
@@ -13,17 +13,17 @@ Reinforcement learning environments for the classical and intuitionistic first-o
 The following command will pull and install the latest commit from this repository, along with its Python dependencies
 
 ```
-pip install git+https://github.com/fredrrom/cops.git 
+pip install git+https://github.com/fredrrom/connections.git 
 ```
 
 ## Usage
 
-The environments closely follow the [OpenAI Gym](https://www.gymlibrary.dev/) interface. Creating environment instances and interacting with them is very simple. Here is leanCoP implemented using the `ConnectionEnv` environment:
+The environments closely follow the [OpenAI Gym](https://www.gymlibrary.dev/)/[Gymnasium](https://gymnasium.farama.org/) interface. Creating environment instances and interacting with them is very simple. Here is a simple connection prover implemented using the `ConnectionEnv` environment:
 
 ```python
 from cops.calculi.classical import ConnectionEnv
 
-env = ConnectionEnv("path_to_CNF_formatted_file")
+env = ConnectionEnv("problem_path")
 observation, info = env.reset()
 
 while True:
@@ -34,10 +34,22 @@ while True:
         break
 ```
 
-Note that leanCoP is equivalent to an agent always choosing the first available action in the `ConnectionEnv` environment's action space. The same is true for ileanCoP and the `IConnectionEnv` environment.
+Note that the above is equivalent (i.e., has the same proof search trace) as leanCoP version 1.0f. The same is true for ileanCoP/`IConnectionEnv` and MleanCoP/`MConnectionEnv`. These versions of leanCoP can be found in the `comparisons` directory.
 
 Also note that the environments cannot be registered as gym environments, as their state and action spaces do not inherit from `gym.spaces`. 
-They are, however, designed to be used as backends for your own gym environments. 
-An example of training an [RLlib](https://docs.ray.io/en/latest/rllib/index.html) PPO agent on a gym environment using the `ConnectionEnv` environment as a backend is given in [RNNAutoencoderCoP](https://github.com/fredrrom/RNNAutoencoderCoP).
+They are, however, designed to be used as backends for your own gym environments.
 
-TPTP formatted files can be translated to the enivronments' accepted format using the prolog code in `comparisons/classical/leancop_trans_v22f`
+`MConnectionEnv` currently supports modal logics S4, S5, D, and T each for the constant, cumulative, and varying domains. Logic and domain can be specifified during the creation of the environment as follows:
+
+```python
+env = ConnectionEnv("problem_path",logic="S5",domain="varying")
+```
+
+## File Formats
+
+TPTP formatted files can be translated into the format accepted by Connections environments using the prolog code in:
+- `comparisons/classical/leancop_trans_v22f` for classical logic
+- `comparisons/intuitionistic/leancop_trans_v22f` for intuitionistic logic
+- `comparisons/modal/leancop_mtrans_v3` for modal logics
+
+To guarantee correct translation, please use SWI-Prolog version 8.4.3.
