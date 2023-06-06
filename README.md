@@ -21,7 +21,7 @@ pip install git+https://github.com/fredrrom/connections.git
 The environments closely follow the [OpenAI Gym](https://www.gymlibrary.dev/)/[Gymnasium](https://gymnasium.farama.org/) interface. Creating environment instances and interacting with them is very simple. Here is a simple connection prover implemented using the `ConnectionEnv` environment:
 
 ```python
-from cops.calculi.classical import ConnectionEnv
+from connections.calculi.classical import ConnectionEnv
 
 env = ConnectionEnv("problem_path")
 observation, info = env.reset()
