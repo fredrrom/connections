@@ -3,9 +3,7 @@ from cops.utils.cnf_parsing import file2cnf
 
 class TestCNFParsingSYN:
     # ARRANGE
-    m = '[[q(f_skolem(3), f_skolem(4))], [p(f_skolem(1), f_skolem(2))], [-p(_4075, _4186), p(_4075, _4131), ' \
-        'p(_4131, _4186)], [-q(_4468, _4579), q(_4468, _4524), q(_4524, _4579)], [q(_4861, _4906), -q(_4906, ' \
-        '_4861)], [-p(_5087, _5132), -q(_5087, _5132)]]'
+    m = '[[q(f_skolem(3), f_skolem(4))], [p(f_skolem(1), f_skolem(2))], [-p(_192, _196), p(_192, _194), p(_194, _196)], [-q(_276, _280), q(_276, _278), q(_278, _280)], [q(_360, _362), -q(_362, _360)], [-p(_418, _430), -q(_418, _430)]]'
     r = file2cnf('tests/cnf_problems/SYN726+1.cnf')
 
     def test_file2cnf_print(self):

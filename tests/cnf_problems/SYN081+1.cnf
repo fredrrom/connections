@@ -1,1 +1,1 @@
-cnf('SYN081+1',conjecture,[[big_f(_3588),-big_f(f(_3588))],[big_f(_3425),big_f(f(_3425))],[-big_f(_3425),-big_f(f(_3425))]]).
+cnf('../../../conjectures/TPTP-v6.4.0/Problems/SYN/SYN081+1.p',conjecture,[[big_f(_13444),-(big_f(f(_13444)))],[big_f(_13104),big_f(f(_13104))],[-(big_f(_13104)),-(big_f(f(_13104)))]]).

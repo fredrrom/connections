@@ -10,14 +10,15 @@ fof_path = '../../../conjectures/ILTP-v1.1.2-firstorder/Problems/'
 translator_path = 'leancop_itrans_v13fc/leancop_itrans.sh'
 leancop_path = 'ileancop10f_trace_extended/ileancop10.sh'
 pycop_path = 'ileancop_trace.py'
-fof_filter = lambda filename : '+' in filename and '.p' in filename and filename.count('.') == 1 and 'SET573' in filename
+fof_filter = lambda filename : True#'+' in filename and '.p' in filename and filename.count('.') == 1 \
+    #and filename[:3] in ['KRS','SET','SWV','SYN','SYJ']
 
 def run_theorem_prover(problempath):
     problem = os.path.basename(os.path.normpath(problempath))
     print(problem)
     with subprocess.Popen([translator_path, problempath, problem], preexec_fn=os.setsid) as process:
         try:
-            output, errors = process.communicate(timeout=1)
+            output, errors = process.communicate(timeout=10)
         except subprocess.TimeoutExpired as err:
             os.killpg(os.getpgid(process.pid), signal.SIGTERM)
     if not os.path.exists(problem):
@@ -41,7 +42,7 @@ def run_theorem_prover(problempath):
     with open(f"{out_path}/out/{problem}_ileancop.out", 'w+') as f:
         with subprocess.Popen([leancop_path, problempath], stdout=f, preexec_fn=os.setsid) as process:
             try:
-                output, errors = process.communicate(timeout=1)
+                output, errors = process.communicate(timeout=10)
                 if output is not None: f.write(output)
             except subprocess.TimeoutExpired as err:
                 if err.stdout is not None:
@@ -88,18 +89,18 @@ def run_theorem_prover(problempath):
             if line_py[:2] != line_lean[:2]:
                 info['Diff inference'] = i + 1
                 break
+    os.remove(f'{out_path}/out/{problem}_ipycop.out')
+    os.remove(f'{out_path}/out/{problem}_ileancop.out')
+    os.remove(f'{out_path}/log/{problem}_ipycop.log')
+    os.remove(f'{out_path}/log/{problem}_ileancop.log')
     os.remove(problem)
-    #os.remove(f'{out_path}/out/{problem}_ipycop.out')
-    #os.remove(f'{out_path}/out/{problem}_ileancop.out')
-    #os.remove(f'{out_path}/log/{problem}_ipycop.log')
-    #os.remove(f'{out_path}/log/{problem}_ileancop.log')
     return info
 
 
 if __name__ == '__main__':
     num_processes = multiprocessing.cpu_count()
     results = []
-    for folder in os.listdir(fof_path):
+    for folder in ['bushy']:#os.listdir(fof_path):
         if not os.path.isdir(os.path.join(fof_path,folder)):
             continue
         problems = [os.path.join(fof_path,folder,filename) for filename in os.listdir(fof_path+folder) if fof_filter(filename)]
@@ -107,5 +108,14 @@ if __name__ == '__main__':
             results.extend(pool.map(run_theorem_prover, problems))
     results = filter(None,results)
     df = pd.DataFrame(results) 
-    df = df[(df['ipyCoP status'] != df['ileanCoP status']) | (df['Diff inference'].notna())]
-    df.to_csv("diff.csv", index=False)
+    df.to_csv('results', index=False)
+    df2 = df[(df['ipyCoP status'] != df['ileanCoP status']) | (df['Diff inference'].notna())]
+    df2.to_csv("diff.csv", index=False)
+
+    filtered_df = df[df['ileanCoP status'] == 'Theorem']  # Filter rows with 'status' as 'Theorem'
+
+    # Extract the "problem" column as a Series
+    problem_column = filtered_df['Problem']
+
+    # Save the "problem" column to a text file
+    problem_column.to_csv('problems.txt', index=False, header=None, sep='\t')
