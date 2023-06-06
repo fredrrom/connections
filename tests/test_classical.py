@@ -1,5 +1,5 @@
-from cops.calculi.classical import *
-from cops.utils.primitives import *
+from connections.calculi.classical import *
+from connections.utils.primitives import *
 
 
 class TestClassicalState:

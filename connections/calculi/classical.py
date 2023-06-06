@@ -1,5 +1,5 @@
-from cops.utils.unification import unify, subst
-from cops.utils.cnf_parsing import file2cnf
+from connections.utils.unification import unify, subst
+from connections.utils.cnf_parsing import file2cnf
 
 
 class Tableau:

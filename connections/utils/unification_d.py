@@ -1,6 +1,6 @@
 # The prefix unification for D is a simple pattern matching, i.e. the standard term unification can be used.
-from cops.utils.unification import *
-from cops.utils.unification_intu import flatten_list
+from connections.utils.unification import *
+from connections.utils.unification_intu import flatten_list
 
 # sub returned from unify is the sub to pass on to recursive call
 def pre_unify(l_pre, m_pre, r_pre, s={}, counter=0):

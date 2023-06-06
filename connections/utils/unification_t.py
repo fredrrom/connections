@@ -1,7 +1,7 @@
 # The prefix unification for T is specified by a set of rewriting rules like intuitionistic prefix unification.
 
-from cops.utils.unification import *
-from cops.utils.unification_intu import flatten_list
+from connections.utils.unification import *
+from connections.utils.unification_intu import flatten_list
 
 def pre_unify(l_pre, m_pre, r_pre, s={}, counter=0):
     l = flatten_list([subst(s,pre) for pre in l_pre])

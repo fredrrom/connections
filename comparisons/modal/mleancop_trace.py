@@ -4,7 +4,7 @@ from os.path import dirname, abspath
 
 sys.path.append(dirname(dirname(abspath(__file__))))
 
-from cops.calculi.modal import *
+from connections.calculi.modal import *
 
 import argparse
 
@@ -17,13 +17,13 @@ args = parser.parse_args()
 env = MConnectionEnv(args.file, args.logic, args.domain)
 
 if env.logic == 'D':
-    from cops.calculi.modal_d import *
+    from connections.calculi.modal_d import *
 elif env.logic == 'T':
-    from cops.calculi.modal_t import *
+    from connections.calculi.modal_t import *
 elif env.logic == 'S4':
-    from cops.calculi.modal_s4 import *
+    from connections.calculi.modal_s4 import *
 elif env.logic == 'S5':
-    from cops.calculi.modal_s5 import *
+    from connections.calculi.modal_s5 import *
 
 import traceback
 import sys

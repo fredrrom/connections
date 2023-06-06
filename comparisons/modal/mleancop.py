@@ -4,7 +4,7 @@ from os.path import dirname, abspath
 
 sys.path.append(dirname(dirname(abspath(__file__))))
 
-from cops.calculi.modal import *
+from connections.calculi.modal import *
 
 import argparse
 

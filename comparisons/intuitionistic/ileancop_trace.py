@@ -4,8 +4,8 @@ from os.path import dirname, abspath
 
 sys.path.append(dirname(dirname(abspath(__file__))))
 
-from cops.calculi.intuitionistic import *
-from cops.utils.unification_intu import flatten_list
+from connections.calculi.intuitionistic import *
+from connections.utils.unification_intu import flatten_list
 
 import argparse
 

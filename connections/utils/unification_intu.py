@@ -1,4 +1,4 @@
-from cops.utils.unification import *
+from connections.utils.unification import *
 
 # sub returned from unify is the sub to pass on to recursive call
 def pre_unify(l_pre, m_pre, r_pre, s={}, counter=0):

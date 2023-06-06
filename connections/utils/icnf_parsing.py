@@ -1,6 +1,6 @@
 import re
 
-from cops.utils.primitives import *
+from connections.utils.primitives import *
 
 
 def file2cnf(path):

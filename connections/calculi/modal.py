@@ -1,5 +1,5 @@
-from cops.calculi.classical import ConnectionEnv
-from cops.utils.icnf_parsing import file2cnf
+from connections.calculi.classical import ConnectionEnv
+from connections.utils.icnf_parsing import file2cnf
 
 class MConnectionEnv(ConnectionEnv):
 
@@ -11,16 +11,16 @@ class MConnectionEnv(ConnectionEnv):
 
     def _init_state(self):
         if self.logic == 'D':
-            from cops.calculi.modal_d import DConnectionState
+            from connections.calculi.modal_d import DConnectionState
             self.state = DConnectionState(self.matrix, self.domain)
         elif self.logic == 'T':
-            from cops.calculi.modal_t import TConnectionState
+            from connections.calculi.modal_t import TConnectionState
             self.state = TConnectionState(self.matrix, self.domain)
         elif self.logic == 'S4':
-            from cops.calculi.modal_s4 import S4ConnectionState
+            from connections.calculi.modal_s4 import S4ConnectionState
             self.state = S4ConnectionState(self.matrix, self.domain)
         elif self.logic == 'S5':
-            from cops.calculi.modal_s5 import S5ConnectionState
+            from connections.calculi.modal_s5 import S5ConnectionState
             self.state = S5ConnectionState(self.matrix, self.domain)
 
     def reset(self):

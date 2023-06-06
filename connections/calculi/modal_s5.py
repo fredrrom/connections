@@ -1,5 +1,5 @@
-from cops.calculi.intuitionistic import *
-from cops.utils.primitives import *
+from connections.calculi.intuitionistic import *
+from connections.utils.primitives import *
 
 
 class S5ConnectionState(IConnectionState):

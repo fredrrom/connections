@@ -1,4 +1,4 @@
-from cops.utils.primitives import *
+from connections.utils.primitives import *
 
 
 class TestVariable:

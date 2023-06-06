@@ -1,6 +1,6 @@
 import pytest
 
-from cops.utils.unification_intu import *
+from connections.utils.unification_intu import *
 
 @pytest.fixture
 def prefixes():

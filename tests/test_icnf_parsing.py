@@ -1,4 +1,4 @@
-from cops.utils.icnf_parsing import file2cnf
+from connections.utils.icnf_parsing import file2cnf
 
 class TestICNFParsing:
     # ARRANGE

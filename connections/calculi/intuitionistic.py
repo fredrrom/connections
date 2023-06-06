@@ -1,7 +1,7 @@
-from cops.calculi.classical import *
-from cops.utils.primitives import *
-from cops.utils.icnf_parsing import file2cnf
-from cops.utils.unification_intu import pre_unify, pre_unify_list, flatten
+from connections.calculi.classical import *
+from connections.utils.primitives import *
+from connections.utils.icnf_parsing import file2cnf
+from connections.utils.unification_intu import pre_unify, pre_unify_list, flatten
 
 
 class IConnectionState(ConnectionState):

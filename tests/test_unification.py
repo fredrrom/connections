@@ -1,6 +1,6 @@
 import pytest
 
-from cops.utils.unification import *
+from connections.utils.unification import *
 
 
 @pytest.fixture

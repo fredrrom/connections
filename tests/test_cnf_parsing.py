@@ -1,4 +1,4 @@
-from cops.utils.cnf_parsing import file2cnf
+from connections.utils.cnf_parsing import file2cnf
 
 
 class TestCNFParsingSYN:

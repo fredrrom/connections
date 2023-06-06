@@ -1,21 +1,20 @@
-from cops.calculi.intuitionistic import *
-from cops.utils.primitives import *
-import cops.utils.unification_d as d
+from connections.calculi.intuitionistic import *
+from connections.utils.primitives import *
+import connections.utils.unification_t as t
 
 
-class DConnectionState(IConnectionState):
+class TConnectionState(IConnectionState):
 
     def __init__(self, matrix, domain):
         super().__init__(matrix)
         self.domain = domain
 
     def pre_unify(self,pre_1,pre_2,s):
-        return d.pre_unify(pre_1.args, [], pre_2.args, s=s)
+        return t.pre_unify(pre_1.args, [], pre_2.args, s=s)
     
     def pre_unify_list(self,list,s):
-        return d.pre_unify_list(list,s)
+        return t.pre_unify_list(list,s)
 
-    # Don't append W
     def _pre_eq(self,lit_1,lit_2):
         if lit_2.prefix is None:
             lit_2.prefix = Function('string')
@@ -24,8 +23,6 @@ class DConnectionState(IConnectionState):
         pre_1, pre_2 = lit_1.prefix, lit_2.prefix
         return pre_1, pre_2
 
-
-    # single prefix subsitution for all pairs (var,eigenvar) in classical substitution and (lit,lit) in classical connections
     def _admissible_pairs(self):
         if self.domain in 'constant':
             return []
