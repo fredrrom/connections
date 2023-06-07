@@ -6,13 +6,15 @@ import signal
 import time
 import pandas as pd
 
+SAVE_LOGS = False
+
 out_path = 'output'
 fof_path = '../../../conjectures/QMLTP-v1.1/problems/'
 translator_path = 'leancop_mtrans_v3/leancop_mtrans.sh'
 leancop_path = 'mleancop10f_trace_v/mleancop10_arg.sh'
 pycop_path = 'mleancop_trace.py'
 logics = itertools.product(['S4','S5','D','T'],['constant','cumulative','varying'])
-fof_filter = lambda filename : '+' in filename and '.p' in filename and filename.count('.') == 1 and 'MML' not in filename# and 'GSY357' in filename
+fof_filter = lambda filename : '+' in filename and '.p' in filename and filename.count('.') == 1 and 'MML' not in filename# and 'SYM009' in filename
 
 def run_theorem_prover(problempath):
     problem = os.path.basename(os.path.normpath(problempath))
@@ -61,6 +63,8 @@ def run_theorem_prover(problempath):
 
             with open(f'{out_path}/log/{problem}_{logic}_{domain}_mpycop.log', "w+") as new_py:
                 for line in file_1.readlines():
+                    if line[:2] in ['st','Ba']:
+                        continue
                     new_py.write(line)
 
             skip_count = 0
@@ -82,7 +86,7 @@ def run_theorem_prover(problempath):
             lines_1, lines_2 = file_1.readlines(), file_2.readlines()
             ipy_status, ilean_status = False, False
             if lines_1:
-                ipy_status = 'Theorem' in lines_1[-1]
+                ipy_status = 'Theorem' in lines_1[-1] and not 'Non-Theorem' in lines_1[-1]
                 lines_1 = lines_1[:-1]
             if lines_2:
                 ilean_status = 'Theorem' in lines_2[-1]
@@ -96,11 +100,13 @@ def run_theorem_prover(problempath):
                 if line_py[:2] != line_lean[:2]:
                     info[f'Diff inference {logic} {domain}'] = i + 1
                     break
-    os.remove(problem)
-    os.remove(f'{out_path}/out/{problem}_{logic}_{domain}_mpycop.out')
-    os.remove(f'{out_path}/out/{problem}_{logic}_{domain}_mleancop.out')
-    os.remove(f'{out_path}/log/{problem}_{logic}_{domain}_mpycop.log')
-    os.remove(f'{out_path}/log/{problem}_{logic}_{domain}_mleancop.log')
+        if not SAVE_LOGS:
+            os.remove(f'{out_path}/out/{problem}_{logic}_{domain}_mpycop.out')
+            os.remove(f'{out_path}/out/{problem}_{logic}_{domain}_mleancop.out')
+            os.remove(f'{out_path}/log/{problem}_{logic}_{domain}_mpycop.log')
+            os.remove(f'{out_path}/log/{problem}_{logic}_{domain}_mleancop.log')
+    if not SAVE_LOGS:
+        os.remove(problem)
     return info
 
 
@@ -115,7 +121,13 @@ if __name__ == '__main__':
             results.extend(pool.map(run_theorem_prover, problems))
     results = filter(None,results)
     df = pd.DataFrame(results) 
-    print(df)
+    df.to_csv('results', index=False)
+
     for logic,domain in logics:
-        df2 = df[(df['ipyCoP status'] != df['ileanCoP status']) | df[f'Diff inference {logic} {domain}'].notna()].filter(regex=f'{logic} {domain}|Problem')
+        # Extract diff
+        df2 = df[(df[f'mpyCoP {logic} {domain} status'] != df[f'mleanCoP {logic} {domain} status']) | df[f'Diff inference {logic} {domain}'].notna()].filter(regex=f'{logic} {domain}|Problem').dropna()
         df2.to_csv(f'diff_{logic}_{domain}.csv', index=False)
+
+        filtered_df = df[df[f'mleanCoP {logic} {domain} status'] == 'Theorem']
+        problem_column = filtered_df['Problem']
+        problem_column.to_csv(f'problems_{logic}_{domain}.txt', index=False, header=None, sep='\t')

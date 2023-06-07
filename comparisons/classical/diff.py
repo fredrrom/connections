@@ -5,12 +5,14 @@ import signal
 import time
 import pandas as pd
 
+SAVE_LOGS = False
+
 out_path = 'output'
 fof_path = '../../../conjectures/TPTP-v6.4.0/Problems/'
 translator_path = 'leancop_trans_v22fb/leancop_trans.sh'
 leancop_path = 'leancop10f_trace/leancop10.sh'
 pycop_path = 'leancop_trace.py'
-fof_filter = lambda filename : True#'+' in filename and '.p' in filename and filename.count('.') == 1 #\
+fof_filter = lambda filename : '+' in filename and '.p' in filename and filename.count('.') == 1 and 'CSR103' in filename#\
     #and filename[:3] in ['SET', 'GEO', 'NUM', 'SEU', 'SWV', 'SWW', 'SYN']
 
 def run_theorem_prover(problempath):
@@ -42,7 +44,7 @@ def run_theorem_prover(problempath):
     with open(f"{out_path}/out/{problem}_leancop.out", 'w+') as f:
         with subprocess.Popen([leancop_path, problempath], stdout=f, preexec_fn=os.setsid) as process:
             try:
-                output, errors = process.communicate(timeout=10)
+                output, errors = process.communicate(timeout=1)
                 if output is not None: f.write(output)
             except subprocess.TimeoutExpired as err:
                 if err.stdout is not None:
@@ -54,9 +56,10 @@ def run_theorem_prover(problempath):
 
         with open(f'{out_path}/log/{problem}_pycop.log', "w+") as new_py:
             for line in file_1.readlines():
+                if line[:2] in ['st','Ba']:
+                    continue
                 new_py.write(line)
 
-        skip_count = 0
         with open(f'{out_path}/log/{problem}_leancop.log', "w+") as new_lean:
             trace = file_2.readlines()[1:]
             for i, line in enumerate(trace):
@@ -72,7 +75,7 @@ def run_theorem_prover(problempath):
             lines_1 = lines_1[:-1]
         if lines_2:
             ilean_status = 'Theorem' in lines_2[-1] or 'Unsatisfiable' in lines_2[-1]
-            lines_2 = lines_2[:-2]
+            lines_2 = lines_2[:-3]
         info['pyCoP status'] = 'Theorem' if ipy_status else 'Timeout'
         info['leanCoP status'] = 'Theorem' if ilean_status else 'Timeout'
         info['pyCoP inferences'] = len(lines_1)
@@ -82,19 +85,19 @@ def run_theorem_prover(problempath):
             if line_py[:2] != line_lean[:2]:
                 info['Diff inference'] = i + 1
                 break
-    os.remove(problem)
-    os.remove(f'{out_path}/out/{problem}_leancop.out')
-    os.remove(f'{out_path}/out/{problem}_pycop.out')
-    os.remove(f'{out_path}/log/{problem}_pycop.log')
-    os.remove(f'{out_path}/log/{problem}_leancop.log')
+    if not SAVE_LOGS:
+        os.remove(problem)
+        os.remove(f'{out_path}/out/{problem}_leancop.out')
+        os.remove(f'{out_path}/out/{problem}_pycop.out')
+        os.remove(f'{out_path}/log/{problem}_pycop.log')
+        os.remove(f'{out_path}/log/{problem}_leancop.log')
     return info
 
 
 if __name__ == '__main__':
     num_processes = multiprocessing.cpu_count() - 1
     results = []
-    for folder in ['bushy']:#os.listdir(fof_path):
-        print(os.path.isdir(os.path.join(fof_path,folder)))
+    for folder in os.listdir(fof_path):
         if not os.path.isdir(os.path.join(fof_path,folder)):
             continue
         problems = [os.path.join(fof_path,folder,filename) for filename in os.listdir(fof_path+folder) if fof_filter(filename)]
@@ -104,17 +107,16 @@ if __name__ == '__main__':
     df = pd.DataFrame(results) 
     df.to_csv("results.csv", index=False)
 
-    filtered_df = df[df['leanCoP status'] == 'Theorem']  # Filter rows with 'status' as 'Theorem'
-
-    # Extract the "problem" column as a Series
+    # Extract solved problems
+    filtered_df = df[df['leanCoP status'] == 'Theorem']  
     problem_column = filtered_df['Problem']
-
-    # Save the "problem" column to a text file
     problem_column.to_csv('problems.txt', index=False, header=None, sep='\t')
-    """
+    
+    # Extract diff problems
     df2 = df[(df['pyCoP status'] != df['leanCoP status']) | (df['Diff inference'].notna())]
     df2.to_csv("diff.csv", index=False)
 
+    """
     df.reset_index(inplace=True)  # Reset the index of the DataFrame
     count_pycop_1 = df[df['pyCoP status'] == 'Theorem'][df['pyCoP time'] < 1].groupby(df['Problem'].str[:3]).size()
     count_leancop_1 = df[df['leanCoP status'] == 'Theorem'][df['leanCoP time'] < 1].groupby(df['Problem'].str[:3]).size()

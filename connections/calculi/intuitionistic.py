@@ -89,50 +89,49 @@ class IConnectionState(ConnectionState):
         equations = []
         # Loop over actions to find all literal connections
         for action in self.proof_sequence:
+            if action.type in ['st','bt']:
+                continue
             lit_1 = action.principle_node.literal
-            if action.inference_type == "re":
+            if action.type == "re":
                 lit_2 = action.path_lit
             else:
                 lit_2 = action.clause_copy[action.lit_idx]
             equations.append(self._pre_eq(lit_1, lit_2))
         return equations
 
-    def theorem_or_backtrack(self):
+    def theorem_or_next(self):
         new_goal = self.goal.find_next()
-        if new_goal is None:
-            # Classical proof, check intutitionistic proof
-            addco_pairs = self._admissible_pairs()
-            proof_pairs = self._proof_pairs()
-            #print(f'prefix_unify({[(subst(self.substitutions[-1],l),subst(self.substitutions[-1],r)) for l,r in addco_pairs + proof_pairs]})')
-            s = self.pre_unify_list(addco_pairs + proof_pairs, self.substitutions[-1])
-            if s is None:
-                # No intuitonistic proof, backtrack from previous goal
-                self.proof_sequence.pop()
-                self.substitutions.pop()
-                self.goal.children = []
-                parent = self.goal
-                while parent is not None:
-                    parent.proven = False
-                    parent = parent.parent
-                self.backtrack()
-                return
-            """
-            uncomment to do comparisons
-            
-            print('prefix_unify_success')
-            print(f'successful_connections:{len(self.proof_sequence)}')
-            print(f'prefix_unify({[(flatten(subst(s,l)),flatten(subst(s,r))) for l,r in addco_pairs + proof_pairs]})')
-            """
+        if new_goal is not None:
+            # Not classical proof, keep going new goal
+            self.goal = new_goal
+            self.goal.actions = self._legal_actions()
+            return
+        # Classical proof, check intutitionistic proof
+        addco_pairs = self._admissible_pairs()
+        proof_pairs = self._proof_pairs()
+        print(f'prefix_unify({[(subst(self.substitutions[-1],l),subst(self.substitutions[-1],r)) for l,r in addco_pairs + proof_pairs]})')
+        s = self.pre_unify_list(addco_pairs + proof_pairs, self.substitutions[-1])
+        if s is not None:
+            # Intuitonistic proof, return success
             self.info = 'Theorem'
             self.prefix_unifier = s
             self.is_terminal = True
             self.qed = True
             return
-        # No classical proof, backtrack from current goal
-        self.goal = new_goal
-        self.goal.actions = self._legal_actions()
-        self.backtrack()
-
+        """
+        uncomment to do comparisons
+        print('prefix_unify_success')
+        print(f'successful_connections:{len(self.proof_sequence)}')
+        print(f'prefix_unify({[(flatten(subst(s,l)),flatten(subst(s,r))) for l,r in addco_pairs + proof_pairs]})')
+        """
+        # No intuitionistic proof, keep going from current goal
+        self.proof_sequence.pop()
+        self.substitutions.pop()
+        self.goal.children = []
+        parent = self.goal
+        while parent is not None:
+            parent.proven = False
+            parent = parent.parent
 
 
 class IConnectionEnv(ConnectionEnv):

@@ -8,7 +8,7 @@ class Tableau:
         self.parent = parent
         self.children = []
         self.proven = False
-        self.depth = parent.depth + 1 if parent is not None else 0
+        self.depth = parent.depth + 1 if parent is not None else -1
         self.actions = {}
 
     def __str__(self):
@@ -39,13 +39,11 @@ class Tableau:
         parent = self.parent
         self_idx = parent.children.index(self)
         if self_idx > 1 or (self_idx == 1 and parent.literal is None):
-            self.actions = {}
             prev = parent.children[self_idx - 1]
             while len(prev.children) > 1:
                 prev = prev.children[-1]
         else:
             prev = parent
-        prev.proven = False
         return prev
 
 
@@ -57,10 +55,9 @@ class ConnectionState:
         self.start_idx = 0
 
         # Tableau fields
-        self.tableau = None
-        self.goal = None
+        self.tableau = Tableau()
+        self.goal = self.tableau
         self.max_depth = None
-        self.termination_depth = float("inf")
 
         # Proof fields
         self.info = None
@@ -72,27 +69,30 @@ class ConnectionState:
     @property
     def substitution(self):
         return self.substitutions[-1]
-
-    def _next_start_clause(self):
-        self.start_idx += 1
-        if self.start_idx >= len(self.matrix.positive_clauses):
-            self.max_depth += 1
-            self.start_idx = 0
-        self.reset(idx=self.start_idx, depth=self.max_depth)
-
-    def reset(self, idx=0, depth=2):
-        self.start_idx = idx
+    
+    def reset(self, depth=1):
         self.max_depth = depth
-        if len(self.matrix.positive_clauses) > 0:
-            clause = self.matrix.copy(self.matrix.positive_clauses[self.start_idx])
-            self.tableau = Tableau()
-            self.tableau.children = [Tableau(lit, self.tableau) for lit in clause]
-            self.goal = self.tableau.children[0]
-            self.goal.actions = self._legal_actions()
-        else:
-            self.info = 'Non-Theorem, no positive start clauses'
-            self.is_terminal = True
-            self.qed = True
+        self.tableau = Tableau()
+        self.goal = self.tableau
+        self.goal.actions = self._legal_actions()
+
+    def _starts(self):
+        starts = []
+        for clause in self.matrix.positive_clauses:
+            clause_copy = self.matrix.copy(clause)
+            starts.append(
+                    ConnectionAction(
+                        type="st",
+                        clause_copy=clause_copy,
+                        id="st" + str(len(starts))
+                    )
+                )
+        if not starts:
+            starts.append(ConnectionAction(type="st", id="st0"))
+        return starts
+    
+    def _backtracks(self):
+        return [ConnectionAction(type='bt', id='bt')]
 
     def _extensions(self):
         extensions = []
@@ -106,7 +106,7 @@ class ConnectionState:
             if sigma is not None:
                 extensions.append(
                     ConnectionAction(
-                        inference_type="ex",
+                        type="ex",
                         principle_node=self.goal,
                         sigma=sigma,
                         lit_idx=lit_idx,
@@ -125,7 +125,7 @@ class ConnectionState:
             if sigma is not None:
                 reductions.append(
                     ConnectionAction(
-                        inference_type="re",
+                        type="re",
                         principle_node=self.goal,
                         sigma=sigma,
                         path_lit=lit,
@@ -143,56 +143,69 @@ class ConnectionState:
         return False
 
     def _legal_actions(self):
+        if self.goal.parent == None:
+            return {action.id: action for action in self._starts()}
         current_clause = [node.literal for node in self.goal.parent.children[1:]]
         reg = self._regularizable(current_clause, self.substitutions[-1])
         if (self.goal is None) or reg:
-            return {}
-        if self.goal.depth >= self.max_depth:
-            return {action.id: action for action in self._reductions()}
-        actions = self._reductions() + self._extensions()
+            actions = self._backtracks()
+        elif self.goal.depth >= self.max_depth:
+            actions = self._reductions() + self._backtracks()
+        else:
+            actions = self._reductions() + self._extensions() + self._backtracks()
         return {action.id: action for action in actions}
 
     def backtrack(self):
-        actions = []
-        while not actions:
-            # If no proof has been found before reaching the termination depth, terminate
-            if self.max_depth > self.termination_depth:
-                self.info = f'Depth limit exceeded ({self.termination_depth})'
-                self.is_terminal = True
-                break
-
-            # Find non-attempted actions
-            actions = self.goal.actions
-            # If all actions have been tried, backtrack to previous goal
-            if actions:
-                continue
-
+        actions = {}
+        while not actions or (actions.keys() == ['bt']):
             self.goal = self.goal.find_prev()
+
             if self.proof_sequence:
                 self.proof_sequence.pop()
 
-            # If no new actions available for previous goals try next start clause or increase depth
-            if self.goal and self.goal.literal is None:
-                self._next_start_clause()
-            else:
-                self.substitutions.pop()
-                self.goal.proven = False
-                self.goal.children = []
+            actions = self.goal.actions
+            self.substitutions.pop()
+            self.goal.proven = False
+            self.goal.children = []
+
+            # If no new actions available for previous goals increase depth
+            if self.goal is self.tableau and not self.goal.actions:
+                self.reset(depth=self.max_depth+1)
+                break
 
     def update_goal(self, action):
         del self.goal.actions[action.id]
-        self.proof_sequence.append(action)
+
+        if action.type == 'bt':
+            #self.goal.proven = False
+            #self.goal.children = []
+            self.backtrack()
+            return
+        else:
+            self.substitutions.append(action.sigma)
+            self.proof_sequence.append(action)
+
+        if action.type == 'st':
+            if action.clause_copy is None:
+                self.info = 'Non-Theorem: no positive start clauses'
+                self.is_terminal = True
+                self.qed = True
+                return
+            self.goal.children = [Tableau(lit, self.goal) for lit in action.clause_copy]
 
         # Make literal extended to child and mark as proven for backtracking purposes
-        if action.inference_type == "ex":
+        if action.type == "ex":
             self.goal.children = [Tableau(lit, self.goal) for lit in action.clause_copy]
             self.goal.children[action.lit_idx].proven = True
             self.goal.children.insert(0, self.goal.children.pop(action.lit_idx))
 
-        # Find next goal node, if None, a proof has been found, otherwise backtrack
-        self.theorem_or_backtrack()
+        if action.type == "re":
+            self.goal.proven = True
 
-    def theorem_or_backtrack(self):
+        # Find next goal node, if None, a proof has been found, otherwise backtrack
+        self.theorem_or_next()
+
+    def theorem_or_next(self):
         self.goal = self.goal.find_next()
         if self.goal is None:
             self.info = 'Theorem'
@@ -200,8 +213,6 @@ class ConnectionState:
             self.qed = True
             return
         self.goal.actions = self._legal_actions()
-        self.backtrack()
-
 
 class ConnectionAction:
     """
@@ -211,15 +222,15 @@ class ConnectionAction:
 
     def __init__(
             self,
-            inference_type,
-            principle_node,
-            sigma,
-            id,
+            type,
+            principle_node=None,
+            sigma={},
+            id=None,
             lit_idx=None,
             path_lit=None,
             clause_copy=None,
     ):
-        self.inference_type = inference_type
+        self.type = type
         self.principle_node = principle_node
         self.sigma = sigma
         self.path_lit = path_lit
@@ -228,12 +239,14 @@ class ConnectionAction:
         self.id = id
 
     def __str__(self):
-        if self.inference_type == "ex":
+        if self.type == "ex":
             return f"{self.id}: {str(self.principle_node.literal)} -> {str(self.clause_copy)}"
-        else:
-            return (
-                f"{self.id}: {str(self.principle_node.literal)} <- {str(self.path_lit)}"
-            )
+        if self.type == "re":
+            return f"{self.id}: {str(self.principle_node.literal)} <- {str(self.path_lit)}"
+        if self.type == "st":
+            return f"{self.id}: {str(self.clause_copy)}"
+        if self.type == "bt":
+            return 'Backtrack'
 
     def __repr__(self):
         return str(self)
@@ -246,21 +259,14 @@ class ConnectionEnv:
 
     @property
     def action_space(self):
-        if self.state.goal is None:
-            return [None]
         actions = list(self.state.goal.actions.values())
-        if not actions:
-            return [None]
         return actions
 
     def step(self, action):
         if self.state.is_terminal:
             return self.state, int(self.state.qed), self.state.is_terminal, {"status": self.state.info}
-        if action is not None:
-            self.state.substitutions.append(action.sigma)
+        else:
             self.state.update_goal(action)
-        elif len(self.state.matrix.positive_clauses) > 0:
-            self.state.backtrack()
         return self.state, int(self.state.qed), self.state.is_terminal, {"status": self.state.info}
 
     def reset(self):

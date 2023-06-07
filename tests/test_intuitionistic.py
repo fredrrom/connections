@@ -7,14 +7,18 @@ class TestIntuitionisticState:
     env = IConnectionEnv('tests/icnf_problems/SYN081+1.cnf')
     state = env.reset()
 
-    def test_initial_states(self):
-        assert isinstance(self.state, IConnectionState)
-        assert isinstance(self.state.matrix, Matrix)
+    def test_start_states(self):
+        action = self.env.action_space[0]
+
+        # ACT
+        self.state, reward, done, info = self.env.step(action)
+        print(self.state.goal)
+        print(self.state.goal.children)
         assert isinstance(self.state.goal.literal, Literal)
         assert str([child.literal for child in self.state.tableau.children]) == '[big_f(_28061), big_f(f(_28061))]'
         assert str(self.state.tableau.children[0].literal) == str(self.state.goal.literal)
         assert self.state.tableau.children[0].children == []
-        assert self.state.goal.depth == 1
+        assert self.state.goal.depth == 0
         assert self.state.tableau.literal is None
 
     def test_extensions(self):
@@ -29,7 +33,7 @@ class TestIntuitionisticState:
                                                 ' ex2: big_f(_28061) -> [-big_f(f(_28067)), -big_f(_28067)]]'
 
 
-class TestConnectionEnv:
+class TestIConnectionEnv:
     # ARRANGE
     env = IConnectionEnv('tests/icnf_problems/SYN081+1.cnf')
 
@@ -40,12 +44,23 @@ class TestConnectionEnv:
 
         # ACT
         observation, reward, done, info = self.env.step(action)
+        action = self.env.action_space[0]
+
+        # ACT
+        self.state, reward, done, info = self.env.step(action)
 
         # ASSERT
         assert str(action) == 'ex0: big_f(_28061) -> [big_f(_34362), -big_f(f(_34362))]'
-        assert observation.max_depth == 2
+        assert observation.max_depth == 1
         assert observation.goal.depth == 1
+        print(self.env.state.proof_sequence)
+
+        action = self.env.action_space[0]
+
+        # ACT
+        self.state, reward, done, info = self.env.step(action)
         assert str(self.env.action_space) == '[ex1: big_f(_28061) -> [-big_f(f(_28063)), -big_f(_28063)],' \
-                                             ' ex2: big_f(_28061) -> [-big_f(f(_28064)), -big_f(_28064)]]'
+                                             ' ex2: big_f(_28061) -> [-big_f(f(_28064)), -big_f(_28064)],' \
+                                             ' Backtrack]'
         assert observation.substitution == {}
-        assert observation.proof_sequence == []
+        assert str(observation.proof_sequence) == '[st0: [big_f(_28061), big_f(f(_28061))]]'

@@ -31,18 +31,17 @@ import sys
 try:
     observation = env.reset()
     depth = 2
-    print(f'pathlim___________:{depth}')
     while True:
         if depth != observation.max_depth:
             depth = observation.max_depth
-            print(f'pathlim___________:{depth}')
+            print(f'pathlim___________:{depth+1}')
         action = env.action_space[0]
         if observation is not None:
             if observation.goal is not None:
                 # for action in actions
-                if action is not None:
+                if action is not None and action.type in ['re','ex']:
                     lit_1 = observation.goal.literal
-                    if action.inference_type == 're':
+                    if action.type == 're':
                         lit_2 = action.path_lit
                     else:
                         lit_2 = action.clause_copy[action.lit_idx]
