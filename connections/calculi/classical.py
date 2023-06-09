@@ -67,7 +67,6 @@ class ConnectionState:
         # Proof fields
         self.info = None
         self.is_terminal = False
-        self.qed = False
         self.proof_sequence = []
         self.substitutions = [dict()]
 
@@ -172,8 +171,6 @@ class ConnectionState:
         del self.goal.actions[action.id]
 
         if action.type == 'bt':
-            #self.goal.proven = False
-            #self.goal.children = []
             self.backtrack()
             return
         else:
@@ -184,7 +181,6 @@ class ConnectionState:
             if action.clause_copy is None:
                 self.info = 'Non-Theorem: no positive start clauses'
                 self.is_terminal = True
-                self.qed = True
                 return
             self.goal.children = [Tableau(lit, self.goal) for lit in action.clause_copy]
 
@@ -205,7 +201,6 @@ class ConnectionState:
         if self.goal is None:
             self.info = 'Theorem'
             self.is_terminal = True
-            self.qed = True
             return
         self.goal.actions = self._legal_actions()
 
@@ -259,10 +254,10 @@ class ConnectionEnv:
 
     def step(self, action):
         if self.state.is_terminal:
-            return self.state, int(self.state.qed), self.state.is_terminal, {"status": self.state.info}
+            return self.state, int(self.state.is_terminal), self.state.is_terminal, {"status": self.state.info}
         else:
             self.state.update_goal(action)
-        return self.state, int(self.state.qed), self.state.is_terminal, {"status": self.state.info}
+        return self.state, int(self.state.is_terminal), self.state.is_terminal, {"status": self.state.info}
 
     def reset(self):
         self.matrix.reset()

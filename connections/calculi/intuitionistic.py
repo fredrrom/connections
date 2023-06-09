@@ -116,7 +116,6 @@ class IConnectionState(ConnectionState):
             self.info = 'Theorem'
             self.prefix_unifier = s
             self.is_terminal = True
-            self.qed = True
             return
         """
         uncomment to do comparisons
