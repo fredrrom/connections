@@ -249,6 +249,8 @@ class ConnectionEnv:
 
     @property
     def action_space(self):
+        if self.goal is None:
+            return [None]
         actions = list(self.state.goal.actions.values())
         return actions
 
