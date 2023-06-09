@@ -2,7 +2,7 @@
 
 [![tests](https://github.com/fredrrom/CoPs/actions/workflows/python-app.yml/badge.svg?branch=main)](https://github.com/fredrrom/CoPs/actions/workflows/python-app.yml)
 
-Reinforcement learning environments for classical, intuitionistic, and Modal first-order connection calculi. 
+Reinforcement learning environments for classical, intuitionistic, and modal first-order connection calculi. 
 
 ## Requirements
 
