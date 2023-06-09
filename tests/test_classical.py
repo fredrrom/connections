@@ -5,7 +5,6 @@ from connections.utils.primitives import *
 class TestClassicalState:
     # ARRANGE
     env = ConnectionEnv('tests/cnf_problems/SYN081+1.cnf')
-    env.reset()
     state = env.state
 
     def test_initial_states(self):
@@ -44,7 +43,6 @@ class TestConnectionEnv:
 
     def test_step(self):
         # ARRANGE
-        observation = self.env.reset()
         action = self.env.action_space[0]
 
         # ACT

@@ -50,14 +50,19 @@ class Tableau:
 class ConnectionState:
     
     def __init__(self, matrix):
-        # Matrix fields
         self.matrix = matrix
-        self.start_idx = 0
+        self.reset()
 
+    @property
+    def substitution(self):
+        return self.substitutions[-1]
+    
+    def reset(self, depth=1):
         # Tableau fields
+        self.max_depth = depth
         self.tableau = Tableau()
         self.goal = self.tableau
-        self.max_depth = None
+        self.goal.actions = self._legal_actions()
 
         # Proof fields
         self.info = None
@@ -65,16 +70,6 @@ class ConnectionState:
         self.qed = False
         self.proof_sequence = []
         self.substitutions = [dict()]
-
-    @property
-    def substitution(self):
-        return self.substitutions[-1]
-    
-    def reset(self, depth=1):
-        self.max_depth = depth
-        self.tableau = Tableau()
-        self.goal = self.tableau
-        self.goal.actions = self._legal_actions()
 
     def _starts(self):
         starts = []

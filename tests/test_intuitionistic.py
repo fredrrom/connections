@@ -5,7 +5,8 @@ from connections.utils.primitives import *
 class TestIntuitionisticState:
     # ARRANGE
     env = IConnectionEnv('tests/icnf_problems/SYN081+1.cnf')
-    state = env.reset()
+    state = env.state
+
 
     def test_start_states(self):
         action = self.env.action_space[0]
@@ -39,7 +40,6 @@ class TestIConnectionEnv:
 
     def test_step(self):
         # ARRANGE
-        observation = self.env.reset()
         action = self.env.action_space[0]
 
         # ACT
