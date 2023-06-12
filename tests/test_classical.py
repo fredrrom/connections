@@ -35,6 +35,7 @@ class TestClassicalState:
         assert str(self.state._extensions()) == '[ex0: big_f(_131041) -> [big_f(_134445), -big_f(f(_134445))],' \
                                                 ' ex1: big_f(_131041) -> [-big_f(_131046), -big_f(f(_131046))],' \
                                                 ' ex2: big_f(_131041) -> [-big_f(_131047), -big_f(f(_131047))]]'
+        assert self.state.goal.orig_num_actions == 4
 
 
 class TestConnectionEnv:

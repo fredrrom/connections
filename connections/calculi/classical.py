@@ -9,6 +9,7 @@ class Tableau:
         self.children = []
         self.proven = False
         self.depth = parent.depth + 1 if parent is not None else -1
+        self.orig_num_actions = 0
         self.actions = {}
 
     def __str__(self):
@@ -63,6 +64,7 @@ class ConnectionState:
         self.tableau = Tableau()
         self.goal = self.tableau
         self.goal.actions = self._legal_actions()
+        self.goal.orig_num_actions = len(self.goal.actions)
 
         # Proof fields
         self.info = None
@@ -203,6 +205,7 @@ class ConnectionState:
             self.is_terminal = True
             return
         self.goal.actions = self._legal_actions()
+        self.goal.orig_num_actions = len(self.goal.actions)
 
 class ConnectionAction:
     """

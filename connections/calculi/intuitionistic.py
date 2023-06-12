@@ -105,6 +105,7 @@ class IConnectionState(ConnectionState):
             # Not classical proof, keep going new goal
             self.goal = new_goal
             self.goal.actions = self._legal_actions()
+            self.goal.orig_num_actions = len(self.goal.actions)
             return
         # Classical proof, check intutitionistic proof
         addco_pairs = self._admissible_pairs()
