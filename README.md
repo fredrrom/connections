@@ -6,7 +6,7 @@ Reinforcement learning environments for classical, intuitionistic, and modal fir
 
 ## Requirements
 
- - Python 3.10
+ - Python 3.10 or later
 
 ## Installation
 
