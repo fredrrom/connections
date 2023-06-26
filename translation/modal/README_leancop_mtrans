@@ -1,0 +1,67 @@
+-----------------------------------------------------------------
+
+leanCoP modal CNF translation (v1.3)
+====================================
+
+- Usage: leancop_mtrans.sh %1 [%2]
+
+- translates file %1 from QMLTP syntax into intuitionistic clausal
+  form (CNF) "cnfm(NAME,conjecture,MATRIX)." where
+   a) MATRIX is a set of clauses, a clause is a set of literals,
+      in which
+   b) eigenvariables are skolemized -> f_skolem(i,X1,X2,...),
+   c) prefix constants are skolemized -> c_skolem(i,X1,X2,...),
+      and
+   d) each literal is assigned a prefix -> literal:prefix,
+   e) each (free) term variable is assigned a prefix -> X:prefix
+      (including free variables in Skolem terms),
+   f) each skolem term is assigned a prefix -> f_skolem(..):prefix,
+      and
+   g) a prefix pre(...) contains a list of variables and constants,
+      pre is the empty prefix
+
+- Example: ./leancop_mtrans.sh amp008
+  translates QMLTP file amp008 into modal CNF file amp.cnf
+
+- uses the definitional translation for the conjecture (formula)
+  and the naive translation for the axioms (formulas)
+
+- the only simplifications that are done are (1) MULT (e.g.
+  [a,b,a] -> [a,b]) and (2) TAUT (e.g. [a,b,-a] -> []).
+
+- if no %2 is given: output file name %2 is %1.cnf; NAME is %1;
+  if %2 has form ???/F: output file is z/???/F.cnf, NAME is F
+   (for translation of whole QMLTP using the run_prover script);
+  otherwise: if %2 has form F.cnf: output file is %2, NAME is F;
+  otherwise: output file is %2, NAME is %2
+
+-----------------------------------------------------------------
+
+OLD (from leancop_itrans):
+
+Changes v1.3fb:
+- def_mm_intu_f.pl: correct line 134
+  [((-DfPred2:pre),NNF3)] to [((-DfPred2):pre,NNF3)]
+- add prefix to free variables in skolem terms
+(- leancop_main_itrans.pl: use write options for ignoring operator
+  declarations (see LCL887+1) --- not used!)
+
+Changes v1.3f:
+- use nanocop_tptp2.pl instead of leancop_tptp2.pl
+- use new SWI Prolog options in shell script
+- rename (the changed) def_mm_intu.pl to def_mm_intu_f.pl
+- cleanup in shell script and leancop_main_itrans.pl
+
+Changes (v3):
+- correct union2 (prefixes are now unsigned)
+- correct empty prefix to "pre" for introduced definition literals
+- added "print('CNF Theorem'), nl" (used by run_prover script)
+
+Changes (v2):
+- main predicate in problem files is cnfi(...) instead of cnf(...)
+- bugfix "~" (now only "-" should occur in formulas)
+- prefix [a1,a2,...] is represented as "pre(a1,a2,...)"; the empty
+  prefix [] is represented by "pre"
+
+-----------------------------------------------------------------
+
