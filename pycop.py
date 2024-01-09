@@ -33,13 +33,13 @@ if os.path.exists(problem):
 
 if args.logic == 'classical':
     from connections.calculi.classical import *
-    env = ConnectionEnv(args.file)
+    env = ConnectionEnv(args.file, iterative_deepening=True)
 elif args.logic == 'intuitionistic':
     from connections.calculi.intuitionistic import *
-    env = IConnectionEnv(args.file)
+    env = IConnectionEnv(args.file, iterative_deepening=True)
 else:
     from connections.calculi.modal import *
-    env = MConnectionEnv(args.file, args.logic, args.domains)
+    env = MConnectionEnv(args.file, args.logic, args.domains, iterative_deepening=True)
 
 print(env)
 
