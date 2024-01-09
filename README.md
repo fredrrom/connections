@@ -41,7 +41,7 @@ The environments closely follow the [OpenAI Gym](https://www.gymlibrary.dev/)/[G
 from connections.calculi.classical import ConnectionEnv
 
 env = ConnectionEnv("problem_path")
-observation, info = env.reset()
+observation = env.reset()
 
 while True:
     action = env.action_space[0]
