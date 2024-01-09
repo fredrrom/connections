@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser(description='leanCoP Python version')
 parser.add_argument("file", help="The conjecture you want to prove")
 args = parser.parse_args()
 
-env = ConnectionEnv(args.file)
+env = ConnectionEnv(args.file, iterative_deepening=True)
 import traceback
 import sys
 

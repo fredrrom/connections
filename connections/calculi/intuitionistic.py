@@ -6,8 +6,8 @@ from connections.utils.unification_intu import pre_unify, pre_unify_list, flatte
 
 class IConnectionState(ConnectionState):
 
-    def __init__(self, matrix):
-        super().__init__(matrix)
+    def __init__(self, matrix, iterative_deepening):
+        super().__init__(matrix, iterative_deepening)
         self.prefix_unifier = {}
         self.var_gen_num = 0
 
@@ -135,12 +135,13 @@ class IConnectionState(ConnectionState):
 
 
 class IConnectionEnv(ConnectionEnv):
-    def __init__(self, path):
+    def __init__(self, path, iterative_deepening=False):
         self.matrix = file2cnf(path)
-        self.state = IConnectionState(self.matrix)
+        self.iterative_deepening = iterative_deepening
+        self.state = IConnectionState(self.matrix, iterative_deepening)
 
     def reset(self):
         self.matrix.reset()
-        self.state = IConnectionState(self.matrix)
+        self.state = IConnectionState(self.matrix, self.iterative_deepening)
         self.state.reset()
         return self.state

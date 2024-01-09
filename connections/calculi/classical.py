@@ -50,8 +50,9 @@ class Tableau:
 
 class ConnectionState:
     
-    def __init__(self, matrix):
+    def __init__(self, matrix, iterative_deepening):
         self.matrix = matrix
+        self.iterative_deepening = iterative_deepening
         self.reset()
 
     @property
@@ -145,7 +146,7 @@ class ConnectionState:
         reg = self._regularizable(current_clause, self.substitutions[-1])
         if (self.goal is None) or reg:
             actions = self._backtracks()
-        elif self.goal.depth >= self.max_depth:
+        elif self.iterative_deepening and (self.goal.depth >= self.max_depth):
             actions = self._reductions() + self._backtracks()
         else:
             actions = self._reductions() + self._extensions() + self._backtracks()
@@ -246,9 +247,10 @@ class ConnectionAction:
 
 
 class ConnectionEnv:
-    def __init__(self, path):
+    def __init__(self, path, iterative_deepening=False):
         self.matrix = file2cnf(path)
-        self.state = ConnectionState(self.matrix)
+        self.iterative_deepening = iterative_deepening
+        self.state = ConnectionState(self.matrix, iterative_deepening)
 
     @property
     def action_space(self):
@@ -266,6 +268,6 @@ class ConnectionEnv:
 
     def reset(self):
         self.matrix.reset()
-        self.state = ConnectionState(self.matrix)
+        self.state = ConnectionState(self.matrix, self.iterative_deepening)
         self.state.reset()
         return self.state

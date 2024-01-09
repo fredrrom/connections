@@ -36,9 +36,9 @@ class TestIntuitionisticState:
 
 class TestIConnectionEnv:
     # ARRANGE
-    env = IConnectionEnv('tests/icnf_problems/SYN081+1.cnf')
+    env = IConnectionEnv('tests/icnf_problems/SYN081+1.cnf',iterative_deepening=True)
 
-    def test_step(self):
+    def test_iterative_deepening_steps(self):
         # ARRANGE
         action = self.env.action_space[0]
 

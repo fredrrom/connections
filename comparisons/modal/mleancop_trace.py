@@ -14,7 +14,7 @@ parser.add_argument("logic", help="Which modal logic")
 parser.add_argument("domain", help="Which domain")
 args = parser.parse_args()
 
-env = MConnectionEnv(args.file, args.logic, args.domain)
+env = MConnectionEnv(args.file, args.logic, args.domain, iterative_deepening=True)
 
 if env.logic == 'D':
     from connections.calculi.modal_d import *

@@ -5,8 +5,8 @@ import connections.utils.unification_d as d
 
 class DConnectionState(IConnectionState):
 
-    def __init__(self, matrix, domain):
-        super().__init__(matrix)
+    def __init__(self, matrix, domain, iterative_deepening=False):
+        super().__init__(matrix, iterative_deepening)
         self.domain = domain
 
     def pre_unify(self,pre_1,pre_2,s):

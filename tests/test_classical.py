@@ -40,9 +40,9 @@ class TestClassicalState:
 
 class TestConnectionEnv:
     # ARRANGE
-    env = ConnectionEnv('tests/cnf_problems/SYN081+1.cnf')
+    env = ConnectionEnv('tests/cnf_problems/SYN081+1.cnf', iterative_deepening=True)
 
-    def test_step(self):
+    def test_iterative_deepening_steps(self):
         # ARRANGE
         action = self.env.action_space[0]
 
@@ -63,8 +63,8 @@ class TestConnectionEnv:
 
         # ACT
         self.state, reward, done, info = self.env.step(action)
-        assert str(self.env.action_space) == '[ex1: big_f(_131041) -> [-big_f(_131043), -big_f(f(_131043))],' \
-                                             ' ex2: big_f(_131041) -> [-big_f(_131044), -big_f(f(_131044))],' \
+        assert str(self.env.action_space) == '[ex1: big_f(_131041) -> [-big_f(_131043), -big_f(f(_131043))],'\
+                                             ' ex2: big_f(_131041) -> [-big_f(_131044), -big_f(f(_131044))],'\
                                              ' Backtrack]'
         assert observation.substitution == {}
         assert str(observation.proof_sequence) == '[st0: [big_f(_131041), big_f(f(_131041))]]'

@@ -4,8 +4,8 @@ from connections.utils.primitives import *
 
 class S4ConnectionState(IConnectionState):
 
-    def __init__(self, matrix, domain):
-        super().__init__(matrix)
+    def __init__(self, matrix, domain, iterative_deepening=False):
+        super().__init__(matrix, iterative_deepening)
         self.domain = domain
 
     # No append W otherwise same as intu?

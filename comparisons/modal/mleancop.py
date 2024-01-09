@@ -14,7 +14,7 @@ parser.add_argument("logic", help="Which modal logic")
 parser.add_argument("domain", help="Which domain")
 args = parser.parse_args()
 
-env = MConnectionEnv(args.file, args.logic, args.domains)
+env = MConnectionEnv(args.file, args.logic, args.domains, iterative_deepening=True)
 import traceback
 import sys
 
