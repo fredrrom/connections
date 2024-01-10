@@ -34,7 +34,8 @@ def run_theorem_prover(problempath):
     
 if __name__ == '__main__':
     num_processes = multiprocessing.cpu_count() - 1
-    problems = [os.path.join(args.dir,filename) for filename in os.listdir(args.dir)]
+    fof_filter = lambda filename : '+' in filename and '.p' in filename and filename.count('.') == 1
+    problems = [os.path.join(args.dir,filename) for filename in os.listdir(args.dir) if fof_filter(filename)]
     if not os.path.exists('translated_dir'):
         os.makedirs('translated_dir')
     with multiprocessing.Pool(processes=num_processes) as pool:
