@@ -93,14 +93,14 @@ These connection provers are equivalent to version 1.0f of the leanCoP, ileanCoP
 ```
 @inproceedings{connections_2023,
     author     = {Rømming, Fredrik and Otten, Jens and Holden, Sean B.},
-	title      = {Connections: {Markov} {Decision} {Processes} for 
+    title      = {Connections: {Markov} {Decision} {Processes} for 
                   {Classical}, {Intuitionistic} and {Modal} {Connection}   
                   {Calculi}},
-	booktitle  = {Proceedings of the 1st {International} {Workshop} on    
+    booktitle  = {Proceedings of the 1st {International} {Workshop} on    
                   {Automated} {Reasoning} with {Connection} {Calculi}},
     series     = {{CEUR} {Workshop} {Proceedings}},
     volume     = {3613},
-	year       = {2023},
-	pages      = {107--118},
+    year       = {2023},
+    pages      = {107--118},
 }
 ```
