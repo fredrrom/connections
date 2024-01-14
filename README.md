@@ -5,6 +5,8 @@
 
 Reinforcement learning environments for classical, intuitionistic, and modal first-order connection calculi in Python. 
 
+For further details see the [paper](https://ceur-ws.org/Vol-3613/AReCCa2023_paper8.pdf).
+
 ## Requirements
 
  - Python 3.10 or later
@@ -85,3 +87,20 @@ python pycop.py <file> [logic] [domain]
 where `<file>` is the path to the problem file in TPTP/QMLTP syntax, the optional argument `[logic]` is one of `classical` (default), `intuitionistic`, `D`, `T`, `S4`, or `S5`, and the optional argument `[domain]` is one of `constant` (default), `cumulative`, and `varying`. Note that the value of `[domain]` is inconsequential if `[logic]` is  `classical` or `intuitionistic`. If the formula in `<file>` is valid for the logic `[logic]` (with `[domain]` domains if logic is modal), then the prover reports `Theorem`.
 
 These connection provers are equivalent to version 1.0f of the leanCoP, ileanCoP and MleanCoP provers for classical, intuitionistic and modal logic, respectively, which can be found in the `comparisons` directory.
+
+## BibTeX Citation
+
+```
+@inproceedings{connections_2023,
+    author     = {Rømming, Fredrik and Otten, Jens and Holden, Sean B.},
+	title      = {Connections: {Markov} {Decision} {Processes} for 
+                  {Classical}, {Intuitionistic} and {Modal} {Connection}   
+                  {Calculi}},
+	booktitle  = {Proceedings of the 1st {International} {Workshop} on    
+                  {Automated} {Reasoning} with {Connection} {Calculi}},
+    series     = {{CEUR} {Workshop} {Proceedings}},
+    volume     = {3613},
+	year       = {2023},
+	pages      = {107--118},
+}
+```
