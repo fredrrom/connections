@@ -65,7 +65,7 @@ Consider double-negation elimination, that $p$ is equivalent to $\lnot \lnot p$.
 
 That file contains 5 clauses, which are found by means of Definition 3 in Otten's "Restricting Backtracking in Connection Calculi". 
 
-Running the following code:
+Running the following code (from inside the connections directory):
 ```python
 from connections.calculi.classical import ConnectionEnv
 
