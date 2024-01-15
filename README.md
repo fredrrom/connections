@@ -61,7 +61,7 @@ env = MConnectionEnv("problem_path", logic="S5", domain="varying")
 They are, however, designed to be used as backends for your own gym environments.
 
 ## A Worked Example
-Consider double-negation elimination, that $p$ is equivalent to $\lnot \lnot p$. This is a theorem in classical logic, and is saved in the file tests/cnf_problems/SYN001+1.p
+Consider double-negation elimination, that $p$ is equivalent to $\lnot \lnot p$. This is a theorem in classical logic, and is saved in the file `tests/cnf_problems/SYN001+1.p`
 
 That file contains 5 clauses, which are found by means of Definition 3 in Otten's "Restricting Backtracking in Connection Calculi". 
 
