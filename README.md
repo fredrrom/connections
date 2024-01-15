@@ -60,6 +60,35 @@ env = MConnectionEnv("problem_path", logic="S5", domain="varying")
 **NB** The environments cannot be registered as gym environments, as their state and action spaces do not inherit from `gym.spaces`. 
 They are, however, designed to be used as backends for your own gym environments.
 
+## A Worked Example
+Consider double-negation elimination, that $p$ is equivalent to $\lnot \lnot p$. This is a theorem in classical logic, and is saved in the file tests/cnf_problems/SYN001+1.p
+
+That file contains 5 clauses, which are found by means of Definition 3 in Otten's "Restricting Backtracking in Connection Calculi". 
+
+Running the following code:
+```python
+from connections.calculi.classical import ConnectionEnv
+
+env = ConnectionEnv("tests/cnf_problems/SYN001+1.p")
+observation = env.reset()
+
+while True:
+    action = env.action_space[0]
+    observation, reward, done, info = env.step(action)
+    if done:
+        print(env.state.proof_sequence, "\n")
+        print(info)
+        break
+```
+
+should print 
+```
+[st0: [p_defini(1), p_defini(2)], ex0: p_defini(1) -> [-p_defini(1), p], ex1: p -> [-p_defini(1), -p], re0: -p_defini(1) <- p_defini(1), ex0: p_defini(2) -> [-p_defini(2), p], ex0: p -> [-p_defini(2), -p], re0: -p_defini(2) <- p_defini(2)]
+
+{'status': 'Theorem'}
+```
+The latter line tells us that this is a theorem, i.e. that the formula is valid. The former line gives us the proof sequence reached at the end, from which one can reconstruct a proof tree or tableau. 
+
 ## TPTP/QMLTP Translation
 
 To translate TPTP/QMLTP formatted files into the `connections` format, run the following command
