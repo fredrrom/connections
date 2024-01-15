@@ -87,7 +87,7 @@ should print
 
 {'status': 'Theorem'}
 ```
-The latter line tells us that this is a theorem, i.e. that the formula is valid. The former line gives us the proof sequence reached at the end, from which one can reconstruct a proof tree or tableau. 
+The latter line tells us that this is a theorem, i.e. that the formula is valid. The former line gives us the proof sequence reached at the end, from which one can reconstruct the full proof tree. Alternatively, one can inspect the final tableau by calling `print(env.state.tableau)` after the proof terminates.
 
 ## TPTP/QMLTP Translation
 
