@@ -63,7 +63,7 @@ They are, however, designed to be used as backends for your own gym environments
 ## A Worked Example
 Consider double-negation elimination, that $p$ is equivalent to $\lnot \lnot p$. This is a theorem in classical logic, and is saved in the file `tests/cnf_problems/SYN001+1.p`
 
-That file contains 5 clauses, which are found by means of Definition 3 in Otten's "Restricting Backtracking in Connection Calculi". 
+That file contains 5 clauses, which are found by means of Definition 3 in [Otten's "Restricting Backtracking in Connection Calculi"](http://www.otten1.de/papers/restricting_backtracking_aicom10.pdf). 
 
 Running the following code (from inside the connections directory):
 ```python
