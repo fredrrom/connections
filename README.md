@@ -67,7 +67,7 @@ Consider double-negation elimination, that $p$ is equivalent to $\lnot \lnot p$.
 
 That file contains 5 clauses, which are found by means of Definition 3 in [Otten's "Restricting Backtracking in Connection Calculi"](http://www.otten1.de/papers/restricting_backtracking_aicom10.pdf). 
 
-Running the following code (from inside the connections directory):
+Running the following code (from inside this project's directory):
 ```python
 from connections.calculi.classical import ConnectionEnv
 
@@ -78,7 +78,7 @@ while True:
     action = env.action_space[0]
     observation, reward, done, info = env.step(action)
     if done:
-        print(env.state.proof_sequence, "\n")
+        print(observation.proof_sequence, "\n")
         print(info)
         break
 ```
@@ -89,7 +89,7 @@ should print
 
 {'status': 'Theorem'}
 ```
-The latter line tells us that this is a theorem, i.e. that the formula is valid. The former line gives us the proof sequence reached at the end, from which one can reconstruct the full proof tree. Alternatively, one can inspect the final tableau by calling `print(env.state.tableau)` after the proof terminates.
+The latter line tells us that this is a theorem, i.e. that the formula is valid. The former line gives us the proof sequence reached at the end, from which one can reconstruct the full proof tree. Alternatively, one can inspect the tableau by calling `print(observation.tableau)`.
 
 ## TPTP/QMLTP Translation
 
