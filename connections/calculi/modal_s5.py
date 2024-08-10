@@ -3,10 +3,6 @@ from connections.utils.primitives import *
 
 
 class S5ConnectionState(IConnectionState):
-    
-    def __init__(self, matrix, domain, iterative_deepening=False):
-        super().__init__(matrix, iterative_deepening)
-        self.domain = domain
 
     # always append variable W to prefix of negated literal (polarity 1)
     def _pre_eq(self,lit_1,lit_2):
@@ -21,9 +17,9 @@ class S5ConnectionState(IConnectionState):
 
     # single prefix subsitution for all pairs (var,eigenvar) in classical substitution and (lit,lit) in classical connections
     def _admissible_pairs(self):
-        if self.domain in ['constant','cumulative']:
+        if self.settings.domain in ['constant','cumulative']:
             return []
-        if self.domain == 'varying':
+        if self.settings.domain == 'varying':
             equations = []
             for var, term in self.substitutions[-1].items():
             # loop over eigenvariables (given by "f_skolem" symbol)

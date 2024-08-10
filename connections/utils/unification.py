@@ -1,68 +1,113 @@
-from connections.utils.primitives import *
+from connections.utils.primitives import Variable, Expression
 
+class Substitution:
+    """
+    Union-Find w. backtracking
+    """
+    def __init__(self):
+        self.parent = {}
+        self.rank = {}
+        self.trail = []
 
-def unify(x, y, s={}):
-    if s is None:
-        return None
-    elif x == y:
-        return s
-    elif isinstance(x, Variable):
-        return unify_var(x, y, s)
-    elif isinstance(y, Variable):
-        return unify_var(y, x, s)
-    elif isinstance(x, Expression) and isinstance(y, Expression):
-        return unify(x.args, y.args, unify(x.symbol, y.symbol, s))
-    elif isinstance(x, list) and isinstance(y, list) and len(x) == len(y):
-        if not x:
-            return s
-        return unify(x[1:], y[1:], unify(x[0], y[0], s))
-    else:
-        return None
+    def find(self, item):
+        if item not in self.parent:
+            self.parent[item] = item
+            self.rank[item] = 0
+        if self.parent[item] != item:
+            self.parent[item] = self.find(self.parent[item])
+        return self.parent[item]
 
+    def union(self, item1, item2):
+        root1 = self.find(item1)
+        root2 = self.find(item2)
 
-def unify_var(var, x, s):
-    if var in s:
-        return unify(s[var], x, s)
-    elif x in s:
-        return unify(var, s[x], s)
-    elif occur_check(var, x, s):
-        return None
-    else:
-        new_s = {**s, var: x}
-        cascade_substitution(new_s)
-        return new_s
+        if root1 != root2:
+            # Use rank to determine which tree becomes the parent
+            if self.rank[root1] > self.rank[root2]:
+                self.trail.append((root2, self.parent[root2]))
+                self.parent[root2] = root1
+            elif self.rank[root1] < self.rank[root2]:
+                self.trail.append((root1, self.parent[root1]))
+                self.parent[root1] = root2
+            else:
+                self.trail.append((root2, self.parent[root2]))
+                self.parent[root2] = root1
+                self.trail.append((root1, self.rank[root1]))
+                self.rank[root1] += 1
 
+    def add_substitution(self, var, term):
+        self.union(var, term)
 
-def occur_check(var, x, s):
-    if var == x:
+    def __call__(self, var):
+        root = self.find(var)
+        return root if root != var else None
+
+    def backtrack(self):
+        while self.trail:
+            var, old_state = self.trail.pop()
+            if isinstance(old_state, int):  # rank update
+                self.rank[var] = old_state
+            else:  # parent update
+                self.parent[var] = old_state
+
+    def get_final_substitutions(self):
+        substitutions = {}
+        for var in self.parent:
+            if isinstance(var, Variable):
+                term = self.find(var)
+                if term != var:
+                    substitutions[var] = term
+        return substitutions
+
+def occurs_check(var, term, subst):
+    if var == term:
         return True
-    elif isinstance(x, Variable) and x in s:
-        return occur_check(var, s[x], s)
-    elif isinstance(x, Expression):
-        return any(occur_check(var, arg, s) for arg in x.args)
-    else:
-        return False
+    if isinstance(term, Variable):
+        term_root = subst.find(term)
+        return occurs_check(var, term_root, subst) if term_root != term else False
+    if isinstance(term, Expression):
+        return any(occurs_check(var, arg, subst) for arg in term.args)
+    return False
 
+def unify(term1, term2, subst):
+    term1 = subst.find(term1)
+    term2 = subst.find(term2)
 
-def subst(s, x):
-    if isinstance(x, Constant):
-        return x
-    elif isinstance(x, Variable):
-        return s.get(x, x)
-    elif isinstance(x, Function):
-        return Function(x.symbol, [subst(s, arg) for arg in x.args], prefix=x.prefix)
-    else:
-        return Literal(
-            x.symbol,
-            [subst(s, arg) for arg in x.args],
-            prefix=x.prefix,
-            neg=x.neg,
-            matrix_pos=x.matrix_pos,
-        )
+    if term1 == term2:
+        return True
 
+    if isinstance(term1, Variable):
+        if occurs_check(term1, term2, subst):
+            return False
+        subst.add_substitution(term1, term2)
+        return True
 
-def cascade_substitution(s):
-    for x in s:
-        s[x] = subst(s, s.get(x))
-        if isinstance(s.get(x), Expression) and not isinstance(s.get(x), Variable):
-            s[x] = subst(s, s.get(x))
+    if isinstance(term2, Variable):
+        if occurs_check(term2, term1, subst):
+            return False
+        subst.add_substitution(term2, term1)
+        return True
+
+    if isinstance(term1, Expression) and isinstance(term2, Expression):
+        if term1.functor != term2.functor or len(term1.args) != len(term2.args):
+            return False
+        for arg1, arg2 in zip(term1.args, term2.args):
+            if not unify(arg1, arg2, subst):
+                subst.backtrack()  # Roll back on failure
+                return False
+        return True
+
+    return False
+
+# Example usage with backtracking and rank
+subst = Substitution()
+X = Variable('X')
+Y = Variable('Y')
+term1 = Expression('f', [Expression('a'), X])
+term2 = Expression('f', [Y, Expression('g', [Expression('b')])])
+
+if unify(term1, term2, subst):
+    substitutions = subst.get_final_substitutions()
+    print(substitutions)  # Expected output: {X: g(b), Y: a}
+else:
+    print("Unification failed")

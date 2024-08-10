@@ -1,3 +1,4 @@
+from connections.env import *
 from connections.calculi.classical import *
 from connections.utils.primitives import *
 
@@ -35,12 +36,13 @@ class TestClassicalState:
         assert str(self.state._extensions()) == '[ex0: big_f(_131041) -> [big_f(_134445), -big_f(f(_134445))],' \
                                                 ' ex1: big_f(_131041) -> [-big_f(_131046), -big_f(f(_131046))],' \
                                                 ' ex2: big_f(_131041) -> [-big_f(_131047), -big_f(f(_131047))]]'
-        assert self.state.goal.orig_num_actions == 4
-
+        assert len(self.state.goal.actions) == 4
+        assert self.state.goal.num_attempted == 0
 
 class TestConnectionEnv:
     # ARRANGE
-    env = ConnectionEnv('tests/cnf_problems/SYN081+1.cnf', iterative_deepening=True)
+    settings = Settings(iterative_deepening=True)
+    env = ConnectionEnv('tests/cnf_problems/SYN081+1.cnf', settings=settings)
 
     def test_iterative_deepening_steps(self):
         # ARRANGE
@@ -60,6 +62,8 @@ class TestConnectionEnv:
         print(self.env.state.proof_sequence)
 
         action = self.env.action_space[0]
+        print(action)
+        print(self.env.action_space)
 
         # ACT
         self.state, reward, done, info = self.env.step(action)
@@ -68,3 +72,14 @@ class TestConnectionEnv:
                                              ' Backtrack]'
         assert observation.substitution == {}
         assert str(observation.proof_sequence) == '[st0: [big_f(_131041), big_f(f(_131041))]]'
+
+    
+    def test_time(self):
+        # ARRANGE
+        settings = Settings(iterative_deepening=False)
+        env = ConnectionEnv('tests/cnf_problems/SYN081+1.cnf', settings=settings)
+
+        # ACT
+        for _ in range(1000):
+            action = env.action_space[0]
+            env.step(action)

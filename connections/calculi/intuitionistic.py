@@ -1,13 +1,12 @@
 from connections.calculi.classical import *
 from connections.utils.primitives import *
-from connections.utils.icnf_parsing import file2cnf
 from connections.utils.unification_intu import pre_unify, pre_unify_list, flatten
 
 
 class IConnectionState(ConnectionState):
 
-    def __init__(self, matrix, iterative_deepening):
-        super().__init__(matrix, iterative_deepening)
+    def __init__(self, matrix, settings):
+        super().__init__(matrix, settings)
         self.prefix_unifier = {}
         self.var_gen_num = 0
 
@@ -105,7 +104,6 @@ class IConnectionState(ConnectionState):
             # Not classical proof, keep going new goal
             self.goal = new_goal
             self.goal.actions = self._legal_actions()
-            self.goal.orig_num_actions = len(self.goal.actions)
             return
         # Classical proof, check intutitionistic proof
         addco_pairs = self._admissible_pairs()
@@ -132,16 +130,3 @@ class IConnectionState(ConnectionState):
         while parent is not None:
             parent.proven = False
             parent = parent.parent
-
-
-class IConnectionEnv(ConnectionEnv):
-    def __init__(self, path, iterative_deepening=False):
-        self.matrix = file2cnf(path)
-        self.iterative_deepening = iterative_deepening
-        self.state = IConnectionState(self.matrix, iterative_deepening)
-
-    def reset(self):
-        self.matrix.reset()
-        self.state = IConnectionState(self.matrix, self.iterative_deepening)
-        self.state.reset()
-        return self.state

@@ -4,10 +4,6 @@ from connections.utils.primitives import *
 
 class S4ConnectionState(IConnectionState):
 
-    def __init__(self, matrix, domain, iterative_deepening=False):
-        super().__init__(matrix, iterative_deepening)
-        self.domain = domain
-
     # No append W otherwise same as intu?
     def _pre_eq(self,lit_1,lit_2):
         if lit_2.prefix is None:
@@ -18,11 +14,11 @@ class S4ConnectionState(IConnectionState):
         return pre_1, pre_2
     
     def _admissible_pairs(self):
-        if self.domain in 'constant':
+        if self.settings.domain in 'constant':
             return []
-        if self.domain == 'cumulative':
+        if self.settings.domain == 'cumulative':
             return super()._admissible_pairs()
-        if self.domain == 'varying':
+        if self.settings.domain == 'varying':
             equations = []
             for var, term in self.substitutions[-1].items():
             # loop over eigenvariables (given by "f_skolem" symbol)

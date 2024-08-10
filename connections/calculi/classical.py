@@ -1,5 +1,4 @@
 from connections.utils.unification import unify, subst
-from connections.utils.cnf_parsing import file2cnf
 
 
 class Tableau:
@@ -9,7 +8,7 @@ class Tableau:
         self.children = []
         self.proven = False
         self.depth = parent.depth + 1 if parent is not None else -1
-        self.orig_num_actions = 0
+        self.num_attempted = 0
         self.actions = {}
 
     def __str__(self):
@@ -50,9 +49,9 @@ class Tableau:
 
 class ConnectionState:
     
-    def __init__(self, matrix, iterative_deepening):
+    def __init__(self, matrix, settings):
         self.matrix = matrix
-        self.iterative_deepening = iterative_deepening
+        self.settings = settings
         self.reset()
 
     @property
@@ -65,7 +64,6 @@ class ConnectionState:
         self.tableau = Tableau()
         self.goal = self.tableau
         self.goal.actions = self._legal_actions()
-        self.goal.orig_num_actions = len(self.goal.actions)
 
         # Proof fields
         self.info = None
@@ -75,7 +73,10 @@ class ConnectionState:
 
     def _starts(self):
         starts = []
-        for clause in self.matrix.positive_clauses:
+        start_clause_candidates = self.matrix.positive_clauses
+        if not self.settings.positive_start_clauses:
+            start_clause_candidates = self.matrix.clauses
+        for clause in start_clause_candidates:
             clause_copy = self.matrix.copy(clause)
             starts.append(
                     ConnectionAction(
@@ -146,15 +147,16 @@ class ConnectionState:
         reg = self._regularizable(current_clause, self.substitutions[-1])
         if (self.goal is None) or reg:
             actions = self._backtracks()
-        elif self.iterative_deepening and (self.goal.depth >= self.max_depth):
+        elif self.settings.iterative_deepening and (self.goal.depth >= self.max_depth):
             actions = self._reductions() + self._backtracks()
         else:
             actions = self._reductions() + self._extensions() + self._backtracks()
         return {action.id: action for action in actions}
 
     def backtrack(self):
+        # Backtrack to previous choice point (goal). If no choice points left, reset. 
         actions = {}
-        while not actions or (actions.keys() == ['bt']):
+        while not actions or actions.keys() == ['bt'] or (self.settings.restricted_backtracking and self.goal.num_attempted > self.settings.backtrack_after):
             self.goal = self.goal.find_prev()
 
             if self.proof_sequence:
@@ -172,6 +174,7 @@ class ConnectionState:
 
     def update_goal(self, action):
         del self.goal.actions[action.id]
+        self.goal.num_attempted += 1
 
         if action.type == 'bt':
             self.backtrack()
@@ -206,7 +209,6 @@ class ConnectionState:
             self.is_terminal = True
             return
         self.goal.actions = self._legal_actions()
-        self.goal.orig_num_actions = len(self.goal.actions)
 
 class ConnectionAction:
     """
@@ -244,30 +246,3 @@ class ConnectionAction:
 
     def __repr__(self):
         return str(self)
-
-
-class ConnectionEnv:
-    def __init__(self, path, iterative_deepening=False):
-        self.matrix = file2cnf(path)
-        self.iterative_deepening = iterative_deepening
-        self.state = ConnectionState(self.matrix, iterative_deepening)
-
-    @property
-    def action_space(self):
-        if self.state.goal is None:
-            return [None]
-        actions = list(self.state.goal.actions.values())
-        return actions
-
-    def step(self, action):
-        if self.state.is_terminal:
-            return self.state, int(self.state.is_terminal), self.state.is_terminal, {"status": self.state.info}
-        else:
-            self.state.update_goal(action)
-        return self.state, int(self.state.is_terminal), self.state.is_terminal, {"status": self.state.info}
-
-    def reset(self):
-        self.matrix.reset()
-        self.state = ConnectionState(self.matrix, self.iterative_deepening)
-        self.state.reset()
-        return self.state

@@ -8,12 +8,9 @@ class Expression(ABC):
         self.args = args
         self.prefix = prefix
 
-    def __str__(self):
-        arg_str = "(" + ", ".join(str(x) for x in self.args) + ")" if self.args else ''
-        return str(self.symbol) + arg_str
-
     def __repr__(self):
-        return str(self)
+        arg_str = "(" + ", ".join(str(x) for x in self.args) + ")" if self.args else ''
+        return f'{self.symbol}{arg_str}'
 
     def __eq__(self, other):
         if len(self.args) != len(other.args):
@@ -57,9 +54,9 @@ class Literal(Expression):
         self.neg = neg
         self.matrix_pos = matrix_pos
 
-    def __str__(self):
+    def __repr__(self):
         neg_str = '-' if self.neg else ''
-        return neg_str + super().__str__()
+        return neg_str + super().__repr__()
 
     def copy(self, num):
         new_prefix = None
