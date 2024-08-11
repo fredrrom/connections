@@ -1,4 +1,4 @@
-from connections.utils.unification import unify, subst
+from connections.utils.unification import Substitution
 
 
 class Tableau:
@@ -53,10 +53,6 @@ class ConnectionState:
         self.matrix = matrix
         self.settings = settings
         self.reset()
-
-    @property
-    def substitution(self):
-        return self.substitutions[-1]
     
     def reset(self, depth=1):
         # Tableau fields
@@ -69,7 +65,7 @@ class ConnectionState:
         self.info = None
         self.is_terminal = False
         self.proof_sequence = []
-        self.substitutions = [dict()]
+        self.substitution = Substitution()
 
     def _starts(self):
         starts = []
@@ -96,17 +92,13 @@ class ConnectionState:
         extensions = []
         for clause_idx, lit_idx in self.matrix.complements(self.goal.literal):
             clause_copy = self.matrix.copy(clause_idx)
-            sigma = unify(
-                self.goal.literal,
-                clause_copy[lit_idx],
-                self.substitutions[-1],
-            )
-            if sigma is not None:
+            unifies, updates = self.substitution.can_unify(self.goal.literal,clause_copy[lit_idx])
+            if unifies:
                 extensions.append(
                     ConnectionAction(
                         type="ex",
                         principle_node=self.goal,
-                        sigma=sigma,
+                        sub_updates=updates,
                         lit_idx=lit_idx,
                         clause_copy=clause_copy,
                         id="ex" + str(len(extensions)),
@@ -117,26 +109,27 @@ class ConnectionState:
     def _reductions(self):
         reductions = []
         for lit in self.goal.path():
-            sigma = None
+            unifies = False
             if self.goal.literal.neg != lit.neg and self.goal.literal.symbol == lit.symbol:
-                sigma = unify(self.goal.literal, lit, self.substitutions[-1])
-            if sigma is not None:
+                unifies, updates = self.substitution.can_unify(self.goal.literal, lit)
+            if unifies:
                 reductions.append(
                     ConnectionAction(
                         type="re",
                         principle_node=self.goal,
-                        sigma=sigma,
+                        sub_updates=updates,
                         path_lit=lit,
                         id="re" + str(len(reductions)),
                     )
                 )
         return reductions
 
-    def _regularizable(self, clause, sub):
+    def _regularizable(self, clause):
         for path_lit in self.goal.path():
             for clause_lit in clause:
+                #self.substitution.equal(path_lit, clause_lit)
                 if path_lit.neg == clause_lit.neg and path_lit.symbol == clause_lit.symbol:
-                    if subst(sub, path_lit) == subst(sub, clause_lit):
+                    if self.substitution(path_lit) == self.substitution(clause_lit):
                         return True
         return False
 
@@ -144,7 +137,7 @@ class ConnectionState:
         if self.goal.parent == None:
             return {action.id: action for action in self._starts()}
         current_clause = [node.literal for node in self.goal.parent.children[1:]]
-        reg = self._regularizable(current_clause, self.substitutions[-1])
+        reg = self._regularizable(current_clause)
         if (self.goal is None) or reg:
             actions = self._backtracks()
         elif self.settings.iterative_deepening and (self.goal.depth >= self.max_depth):
@@ -163,7 +156,7 @@ class ConnectionState:
                 self.proof_sequence.pop()
 
             actions = self.goal.actions
-            self.substitutions.pop()
+            self.substitution.backtrack()
             self.goal.proven = False
             self.goal.children = []
 
@@ -180,7 +173,7 @@ class ConnectionState:
             self.backtrack()
             return
         else:
-            self.substitutions.append(action.sigma)
+            self.substitution.update(action.sub_updates)
             self.proof_sequence.append(action)
 
         if action.type == 'st':
@@ -220,7 +213,7 @@ class ConnectionAction:
             self,
             type,
             principle_node=None,
-            sigma={},
+            sub_updates=[],
             id=None,
             lit_idx=None,
             path_lit=None,
@@ -228,7 +221,7 @@ class ConnectionAction:
     ):
         self.type = type
         self.principle_node = principle_node
-        self.sigma = sigma
+        self.sub_updates = sub_updates
         self.path_lit = path_lit
         self.lit_idx = lit_idx
         self.clause_copy = clause_copy

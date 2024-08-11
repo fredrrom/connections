@@ -5,8 +5,7 @@ import signal
 import traceback
 from os.path import dirname, abspath
 
-sys.path.append(dirname(dirname(abspath(__file__))))
-
+from connections.env import *
 import argparse
 
 parser = argparse.ArgumentParser(description='Python equivalent of version 1.0f of leanCoP, ileanCoP, and mleanCoP')
@@ -31,15 +30,7 @@ with subprocess.Popen([translator_path, args.file, problem], preexec_fn=os.setsi
 if os.path.exists(problem):
     os.remove(problem)
 
-if args.logic == 'classical':
-    from connections.calculi.classical import *
-    env = ConnectionEnv(args.file, iterative_deepening=True)
-elif args.logic == 'intuitionistic':
-    from connections.calculi.intuitionistic import *
-    env = IConnectionEnv(args.file, iterative_deepening=True)
-else:
-    from connections.calculi.modal import *
-    env = MConnectionEnv(args.file, args.logic, args.domains, iterative_deepening=True)
+env = ConnectionEnv(problem, Settings(logic=args.logic, domain=args.domain))
 
 print(env)
 

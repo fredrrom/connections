@@ -5,15 +5,15 @@ import signal
 import time
 import pandas as pd
 
-SAVE_LOGS = False
+SAVE_LOGS = True
 
 out_path = 'output'
 fof_path = '../../../conjectures/TPTP-v6.4.0/Problems/'
 translator_path = 'leancop_trans_v22fb/leancop_trans.sh'
 leancop_path = 'leancop10f_trace/leancop10.sh'
 pycop_path = 'leancop_trace.py'
-fof_filter = lambda filename : '+' in filename and '.p' in filename and filename.count('.') == 1 and 'CSR103' in filename#\
-    #and filename[:3] in ['SET', 'GEO', 'NUM', 'SEU', 'SWV', 'SWW', 'SYN']
+fof_filter = lambda filename : '+' in filename and '.p' in filename and filename.count('.') == 1 and 'SET061+1.p' in filename#filename[:3] in ['SET'] #'CSR103' in filename \
+    #and filename[:3] in ['SET']#, 'GEO', 'NUM', 'SEU', 'SWV', 'SWW', 'SYN']
 
 def run_theorem_prover(problempath):
     problem = os.path.basename(os.path.normpath(problempath))

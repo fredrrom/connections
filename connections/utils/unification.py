@@ -1,56 +1,97 @@
-from connections.utils.primitives import Variable, Expression
+from connections.utils.primitives import *
 
 class Substitution:
     """
-    Union-Find w. backtracking
+    Union-Find w. incremental updates and backtracking
     """
     def __init__(self):
         self.parent = {}
-        self.rank = {}
         self.trail = []
 
     def find(self, item):
+        if not isinstance(item, Variable):
+            return item
         if item not in self.parent:
             self.parent[item] = item
-            self.rank[item] = 0
-        if self.parent[item] != item:
-            self.parent[item] = self.find(self.parent[item])
-        return self.parent[item]
+            return item
+        elif self.parent[item] == item:
+            return item
+        else:
+            return self.find(self.parent[item])
 
-    def union(self, item1, item2):
-        root1 = self.find(item1)
-        root2 = self.find(item2)
+    def union(self, s, t):
+        self.trail.append([])
+        equations = [(s, t)]
 
-        if root1 != root2:
-            # Use rank to determine which tree becomes the parent
-            if self.rank[root1] > self.rank[root2]:
-                self.trail.append((root2, self.parent[root2]))
-                self.parent[root2] = root1
-            elif self.rank[root1] < self.rank[root2]:
-                self.trail.append((root1, self.parent[root1]))
-                self.parent[root1] = root2
+        while equations:
+            s, t = equations.pop()
+            s = self.find(s)
+            t = self.find(t)
+
+            if s == t:
+                continue
+            
+            if isinstance(s, Variable):
+                if self.occurs_check(s, t):
+                    return False
+                self.trail[-1].append((s, self.parent[s], t))
+                self.parent[s] = t
+            elif isinstance(t, Variable):
+                if self.occurs_check(t, s):
+                    return False
+                self.trail[-1].append((t, self.parent[t], s))
+                self.parent[t] = s
             else:
-                self.trail.append((root2, self.parent[root2]))
-                self.parent[root2] = root1
-                self.trail.append((root1, self.rank[root1]))
-                self.rank[root1] += 1
-
-    def add_substitution(self, var, term):
-        self.union(var, term)
-
-    def __call__(self, var):
-        root = self.find(var)
-        return root if root != var else None
-
+                if s.symbol != t.symbol or len(s.args) != len(t.args):
+                    return False
+                for arg1, arg2 in zip(s.args, t.args):
+                    equations.append((arg1, arg2))  # Add each pair of arguments to the set
+        return True
+    
+    def occurs_check(self, var, term):
+        if var == term:
+            return True
+        if isinstance(term, Variable):
+            term_root = self.find(term)
+            return var == term_root
+        if isinstance(term, Expression):
+            return any(self.occurs_check(var, arg) for arg in term.args)
+        return False
+    
     def backtrack(self):
-        while self.trail:
-            var, old_state = self.trail.pop()
-            if isinstance(old_state, int):  # rank update
-                self.rank[var] = old_state
-            else:  # parent update
+        updates = self.trail.pop()
+        for action in reversed(updates):
+            var, old_state, _ = action
+            if old_state == var:
+                del self.parent[var]
+            else:
                 self.parent[var] = old_state
+    
+    def update(self, update):
+        self.trail.append([])
+        for action in update:
+            var, _, new_state = action
+            self.parent[var] = new_state
 
-    def get_final_substitutions(self):
+    def can_unify(self, s, t):
+        unify, updates = self.unify(s, t)
+        self.backtrack()
+        return unify, updates
+    
+    def unify(self, s, t):
+        unify = self.union(s, t)
+        updates = self.trail[-1]
+        return unify, updates
+    
+    def __call__(self, term):
+        if isinstance(term, Variable):
+            return self.find(term)
+        substituted_args = [self(arg) for arg in term.args]
+        return type(term)(term.symbol,
+                          substituted_args,
+                          term.prefix)
+    
+    def to_dict(self):
         substitutions = {}
         for var in self.parent:
             if isinstance(var, Variable):
@@ -58,56 +99,85 @@ class Substitution:
                 if term != var:
                     substitutions[var] = term
         return substitutions
+    
+    def __repr__(self):
+        return repr(self.to_dict())
+    
+if __name__ == '__main__':
+    sub = Substitution()
+    s = Function('f', [
+        Function('h', [Variable('x1'), Variable('x2'), Variable('x3')]), 
+        Function('h', [Variable('x6'), Variable('x7'), Variable('x8')]), 
+        Variable('x3'), 
+        Variable('x6')
+    ])
+    t = Function('f', [
+        Function('h', [Function('g', [Variable('x4'), Variable('x5')]), Variable('x1'), Variable('x2')]), 
+        Function('h', [Variable('x7'), Variable('x8'), Variable('x6')]), 
+        Function('g', [Variable('x5'), Constant('a')]), 
+        Variable('x5')
+    ])
+    unify, updates = sub.can_unify(s, t)
+    print(updates)
+    print(sub.parent)
+    sub.update(updates)
+    print(sub.parent)
 
-def occurs_check(var, term, subst):
-    if var == term:
-        return True
-    if isinstance(term, Variable):
-        term_root = subst.find(term)
-        return occurs_check(var, term_root, subst) if term_root != term else False
-    if isinstance(term, Expression):
-        return any(occurs_check(var, arg, subst) for arg in term.args)
-    return False
+#### Robinson
+#### Too many copies during substitution
+# def subst(theta, term):
+#     """Applies a substitution theta to a term (Variable or Expression)."""
+#     if isinstance(term, Variable):
+#         if term in theta:
+#             return subst(theta, theta[term])
+#         else:
+#             return term
+#     substituted_args = [subst(theta, arg) for arg in term.args]
+#     return type(term)(term.symbol,
+#                       substituted_args,
+#                       term.prefix)
 
-def unify(term1, term2, subst):
-    term1 = subst.find(term1)
-    term2 = subst.find(term2)
+# def occurs_in(x, y):
+#     if isinstance(y, Variable):
+#         return x == y
+#     elif isinstance(y, Expression):
+#         return any(occurs_in(x, arg) for arg in y.args)
+#     return False
 
-    if term1 == term2:
-        return True
+# def unify_var(var, x, theta):
+#     if var in theta:
+#         return unify(theta[var], x, theta)
+#     elif isinstance(x, Variable) and x in theta:
+#         return unify(var, theta[x], theta)
+#     elif occurs_in(var, x):
+#         return None  # Occur check fails
+#     else:
+#         theta[var] = x
+#         return apply_substitution(theta)
 
-    if isinstance(term1, Variable):
-        if occurs_check(term1, term2, subst):
-            return False
-        subst.add_substitution(term1, term2)
-        return True
+# def unify(x, y, theta=None):
+#     if theta is None:
+#         theta = {}
 
-    if isinstance(term2, Variable):
-        if occurs_check(term2, term1, subst):
-            return False
-        subst.add_substitution(term2, term1)
-        return True
+#     if x == y:
+#         return theta
+#     elif isinstance(x, Variable):
+#         return unify_var(x, y, theta)
+#     elif isinstance(y, Variable):
+#         return unify_var(y, x, theta)
+#     elif isinstance(x, Expression) and isinstance(y, Expression):
+#         if x.symbol != y.symbol or len(x.args) != len(y.args):
+#             return None
+#         for arg1, arg2 in zip(x.args, y.args):
+#             theta = unify(arg1, arg2, theta)
+#             if theta is None:
+#                 return None
+#         return apply_substitution(theta)
+#     else:
+#         return None
 
-    if isinstance(term1, Expression) and isinstance(term2, Expression):
-        if term1.functor != term2.functor or len(term1.args) != len(term2.args):
-            return False
-        for arg1, arg2 in zip(term1.args, term2.args):
-            if not unify(arg1, arg2, subst):
-                subst.backtrack()  # Roll back on failure
-                return False
-        return True
-
-    return False
-
-# Example usage with backtracking and rank
-subst = Substitution()
-X = Variable('X')
-Y = Variable('Y')
-term1 = Expression('f', [Expression('a'), X])
-term2 = Expression('f', [Y, Expression('g', [Expression('b')])])
-
-if unify(term1, term2, subst):
-    substitutions = subst.get_final_substitutions()
-    print(substitutions)  # Expected output: {X: g(b), Y: a}
-else:
-    print("Unification failed")
+# def apply_substitution(theta):
+#     """Applies substitution to itself to ensure idempotence."""
+#     for var in list(theta.keys()):
+#         theta[var] = subst(theta, theta[var])
+#     return theta

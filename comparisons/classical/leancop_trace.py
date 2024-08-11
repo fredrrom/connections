@@ -1,10 +1,7 @@
-import os
 import sys
-from os.path import dirname, abspath
+import traceback
 
-sys.path.append(dirname(dirname(abspath(__file__))))
-
-from connections.calculi.classical import *
+from connections.env import *
 
 import argparse
 
@@ -12,9 +9,7 @@ parser = argparse.ArgumentParser(description='leanCoP Python version')
 parser.add_argument("file", help="The conjecture you want to prove")
 args = parser.parse_args()
 
-env = ConnectionEnv(args.file)
-import traceback
-import sys
+env = ConnectionEnv(args.file, Settings(iterative_deepening=True))
 
 try:
     observation = env.reset()

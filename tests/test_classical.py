@@ -17,8 +17,6 @@ class TestClassicalState:
 
         # ACT
         self.state, reward, done, info = self.env.step(action)
-        print(self.state.goal)
-        print(self.state.goal.children)
         assert isinstance(self.state.goal.literal, Literal)
         assert str([child.literal for child in self.state.tableau.children]) == '[big_f(_131041), big_f(f(_131041))]'
         assert str(self.state.tableau.children[0].literal) == str(self.state.goal.literal)
@@ -47,39 +45,43 @@ class TestConnectionEnv:
     def test_iterative_deepening_steps(self):
         # ARRANGE
         action = self.env.action_space[0]
+        print(action)
 
         # ACT
         observation, reward, done, info = self.env.step(action)
         action = self.env.action_space[0]
+        print(observation)
+        print(action)
 
         # ACT
-        self.state, reward, done, info = self.env.step(action)
+        observation, reward, done, info = self.env.step(action)
 
         # ASSERT
         assert str(action) == 'ex0: big_f(_131041) -> [big_f(_134442), -big_f(f(_134442))]'
         assert observation.max_depth == 1
         assert observation.goal.depth == 1
-        print(self.env.state.proof_sequence)
 
         action = self.env.action_space[0]
-        print(action)
-        print(self.env.action_space)
 
         # ACT
-        self.state, reward, done, info = self.env.step(action)
+        observation, reward, done, info = self.env.step(action)
         assert str(self.env.action_space) == '[ex1: big_f(_131041) -> [-big_f(_131043), -big_f(f(_131043))],'\
                                              ' ex2: big_f(_131041) -> [-big_f(_131044), -big_f(f(_131044))],'\
                                              ' Backtrack]'
-        assert observation.substitution == {}
+    
+        assert str(observation.substitution) == '{_131041: f(_134442)}'
         assert str(observation.proof_sequence) == '[st0: [big_f(_131041), big_f(f(_131041))]]'
 
     
     def test_time(self):
         # ARRANGE
-        settings = Settings(iterative_deepening=False)
+        settings = Settings(iterative_deepening=True)
         env = ConnectionEnv('tests/cnf_problems/SYN081+1.cnf', settings=settings)
-
+        from pprint import pprint
+        from pympler import asizeof
         # ACT
-        for _ in range(1000):
+        for i in range(1000):
             action = env.action_space[0]
+            print(i)
+            #pprint(asizeof.asizeof(env.state.substitutions) / (1024**3))
             env.step(action)
