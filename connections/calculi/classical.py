@@ -149,7 +149,7 @@ class ConnectionState:
     def backtrack(self):
         # Backtrack to previous choice point (goal). If no choice points left, reset. 
         actions = {}
-        while not actions or actions.keys() == ['bt'] or (self.settings.restricted_backtracking and self.goal.num_attempted > self.settings.backtrack_after):
+        while not actions or actions.keys() == ['bt'] or (self.settings.restricted_backtracking and (self.goal.num_attempted > self.settings.backtrack_after)):
             self.goal = self.goal.find_prev()
 
             if self.proof_sequence:

@@ -12,7 +12,7 @@ fof_path = '../../../conjectures/TPTP-v6.4.0/Problems/'
 translator_path = 'leancop_trans_v22fb/leancop_trans.sh'
 leancop_path = 'leancop10f_trace/leancop10.sh'
 pycop_path = 'leancop_trace.py'
-fof_filter = lambda filename : '+' in filename and '.p' in filename and filename.count('.') == 1 and 'SET061+1.p' in filename#filename[:3] in ['SET'] #'CSR103' in filename \
+fof_filter = lambda filename : '+' in filename and '.p' in filename and filename.count('.') == 1 and filename[:3] in ['SET']#'SET061+1.p' in filename# #'CSR103' in filename \
     #and filename[:3] in ['SET']#, 'GEO', 'NUM', 'SEU', 'SWV', 'SWW', 'SYN']
 
 def run_theorem_prover(problempath):

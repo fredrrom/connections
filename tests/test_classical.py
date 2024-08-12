@@ -76,12 +76,20 @@ class TestConnectionEnv:
     def test_time(self):
         # ARRANGE
         settings = Settings(iterative_deepening=True)
-        env = ConnectionEnv('tests/cnf_problems/SYN081+1.cnf', settings=settings)
+        problem = "tests/cnf_problems/SET027+3.p"
+        env = ConnectionEnv(problem, settings=settings)
         from pprint import pprint
         from pympler import asizeof
         # ACT
         for i in range(1000):
             action = env.action_space[0]
-            print(i)
+            print("-------------------------")
+            print(env.state.tableau)
+            print(env.state.substitution.to_dict())
+            print(env.state.goal)
+            print(action)
+            print("-------------------------")
             #pprint(asizeof.asizeof(env.state.substitutions) / (1024**3))
-            env.step(action)
+            self.state, reward, done, info = env.step(action)
+            if done:
+                break

@@ -94,7 +94,7 @@ class Substitution:
     def to_dict(self):
         substitutions = {}
         for var in self.parent:
-            if isinstance(var, Variable):
+            if isinstance(var, Variable) and var in self.parent:
                 term = self.find(var)
                 if term != var:
                     substitutions[var] = term
