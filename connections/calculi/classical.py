@@ -59,13 +59,13 @@ class ConnectionState:
         self.max_depth = depth
         self.tableau = Tableau()
         self.goal = self.tableau
+        self.substitution = Substitution()
         self.goal.actions = self._legal_actions()
 
         # Proof fields
         self.info = None
         self.is_terminal = False
         self.proof_sequence = []
-        self.substitution = Substitution()
 
     def _starts(self):
         starts = []
@@ -129,7 +129,11 @@ class ConnectionState:
             for clause_lit in clause:
                 #self.substitution.equal(path_lit, clause_lit)
                 if path_lit.neg == clause_lit.neg and path_lit.symbol == clause_lit.symbol:
-                    if self.substitution(path_lit) == self.substitution(clause_lit):
+                    # print(self.substitution.to_dict())
+                    # print(path_lit, clause_lit)
+                    # print(self.substitution(path_lit), self.substitution(clause_lit))
+                    # if self.substitution(path_lit) == self.substitution(clause_lit):
+                    if self.substitution.equal(path_lit, clause_lit):
                         return True
         return False
 

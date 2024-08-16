@@ -8,16 +8,19 @@ class Substitution:
         self.parent = {}
         self.trail = []
 
-    def find(self, item):
+    def find(self, item, add=True):
         if not isinstance(item, Variable):
             return item
         if item not in self.parent:
+            if not add:
+                return item
+            self.trail[-1].append(item)
             self.parent[item] = item
             return item
         elif self.parent[item] == item:
             return item
         else:
-            return self.find(self.parent[item])
+            return self.find(self.parent[item], add)
 
     def union(self, s, t):
         self.trail.append([])
@@ -49,27 +52,30 @@ class Substitution:
         return True
     
     def occurs_check(self, var, term):
-        if var == term:
+        term_root = self.find(term, add=False)
+        if var == term_root:
             return True
-        if isinstance(term, Variable):
-            term_root = self.find(term)
-            return var == term_root
-        if isinstance(term, Expression):
-            return any(self.occurs_check(var, arg) for arg in term.args)
+        if isinstance(term_root, Expression):
+            return any(self.occurs_check(var, arg) for arg in term_root.args)
         return False
     
     def backtrack(self):
         updates = self.trail.pop()
         for action in reversed(updates):
-            var, old_state, _ = action
-            if old_state == var:
+            if isinstance(action, Variable):
+                var = action
                 del self.parent[var]
-            else:
-                self.parent[var] = old_state
+                continue
+            var, old_state, _ = action
+            self.parent[var] = old_state
     
     def update(self, update):
-        self.trail.append([])
+        self.trail.append(update)
         for action in update:
+            if isinstance(action, Variable):
+                var = action
+                self.parent[var] = var
+                continue
             var, _, new_state = action
             self.parent[var] = new_state
 
@@ -83,19 +89,28 @@ class Substitution:
         updates = self.trail[-1]
         return unify, updates
     
+    def equal(self, s, t):
+        s = self.find(s, add=False)
+        t = self.find(t, add=False)
+        if s == t:
+            return True
+        if isinstance(s, Expression) and isinstance(t, Expression):
+            return s.symbol == t.symbol and len(s.args) == len(t.args) and all(self.equal(arg1, arg2) for arg1, arg2 in zip(s.args, t.args))
+        return False
+    
     def __call__(self, term):
-        if isinstance(term, Variable):
-            return self.find(term)
-        substituted_args = [self(arg) for arg in term.args]
-        return type(term)(term.symbol,
-                          substituted_args,
-                          term.prefix)
+        term_root = self.find(term, add=False)
+        if isinstance(term_root, Variable):
+            return term_root
+        return type(term_root)(term_root.symbol,
+                          [self(arg) for arg in term_root.args],
+                          term_root.prefix)
     
     def to_dict(self):
         substitutions = {}
         for var in self.parent:
             if isinstance(var, Variable) and var in self.parent:
-                term = self.find(var)
+                term = self.find(var, add=False)
                 if term != var:
                     substitutions[var] = term
         return substitutions

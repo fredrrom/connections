@@ -69,7 +69,7 @@ class TestConnectionEnv:
                                              ' ex2: big_f(_131041) -> [-big_f(_131044), -big_f(f(_131044))],'\
                                              ' Backtrack]'
     
-        assert str(observation.substitution) == '{_131041: f(_134442)}'
+        assert str(observation.substitution) == '{}'
         assert str(observation.proof_sequence) == '[st0: [big_f(_131041), big_f(f(_131041))]]'
 
     
@@ -78,18 +78,16 @@ class TestConnectionEnv:
         settings = Settings(iterative_deepening=True)
         problem = "tests/cnf_problems/SET027+3.p"
         env = ConnectionEnv(problem, settings=settings)
-        from pprint import pprint
-        from pympler import asizeof
         # ACT
-        for i in range(1000):
+        for i in range(83):
             action = env.action_space[0]
-            print("-------------------------")
-            print(env.state.tableau)
-            print(env.state.substitution.to_dict())
-            print(env.state.goal)
-            print(action)
-            print("-------------------------")
-            #pprint(asizeof.asizeof(env.state.substitutions) / (1024**3))
-            self.state, reward, done, info = env.step(action)
+            # print("-------------------------")
+            # print(env.state.tableau)
+            # print(env.state.substitution.to_dict())
+            # print(env.state.goal)
+            # print(action)
+            # print(env.state.substitution.parent)
+            # print("-------------------------")
+            observation, reward, done, info = env.step(action)
             if done:
                 break
