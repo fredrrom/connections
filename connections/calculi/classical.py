@@ -12,9 +12,10 @@ class Tableau:
         self.actions = {}
 
     def __str__(self):
-        ret = "\t" * self.depth + str(self.literal)
+        angle = "└── " if self.depth >= 0 else ""
+        ret = "    " * (self.depth) + angle + str(self.literal) + "\n"
         for child in self.children:
-            ret += "\n" + str(child)
+            ret += str(child)
         return ret
 
     def path(self):
@@ -53,6 +54,22 @@ class ConnectionState:
         self.matrix = matrix
         self.settings = settings
         self.reset()
+
+    def __str__(self):
+        substitution = "\n".join(
+            f"{k} → {v}" for k, v in self.substitution.to_dict().items()
+        )
+        actions = "\n".join(
+            f"{i}. {str(action)}" for i, action in enumerate(self.goal.actions.values())
+        )
+        return (
+            f"=========================\n"
+            f"Tableau Tree:\n{self.tableau}\n\n"
+            f"Substitution:\n{substitution}\n\n"
+            f"Available Actions:\n{actions}"
+            f"\n\nMax Depth: {self.max_depth}"
+            f"\n========================="
+        )
     
     def reset(self, depth=1):
         # Tableau fields

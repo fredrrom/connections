@@ -1,7 +1,7 @@
 import pytest
 
 from connections.utils.unification import *
-
+from connections.utils.primitives import *
 
 @pytest.fixture
 def symbols():
@@ -30,25 +30,25 @@ class TestUnify:
     def test_unify_constants_and_variables(self, symbols):
         assert self.sub.can_unify(symbols['a'], symbols['a']) == (True, [])
         assert self.sub.can_unify(symbols['a'], symbols['b']) == (False, [])
-        assert self.sub.can_unify(symbols['X'], symbols['X']) == (True, [])
-        assert self.sub.can_unify(symbols['a'], symbols['X']) == (True, [(symbols['X'], symbols['X'], symbols['a'])])
-        assert self.sub.can_unify(symbols['X'], symbols['Y']) == (True, [(symbols['X'], symbols['X'], symbols['Y'])])
+        assert self.sub.can_unify(symbols['X'], symbols['X']) == (True, [symbols['X']])
+        assert self.sub.can_unify(symbols['a'], symbols['X']) == (True, [symbols['X'], (symbols['X'], symbols['X'], symbols['a'])])
+        assert self.sub.can_unify(symbols['X'], symbols['Y']) == (True, [symbols['X'], symbols['Y'], (symbols['X'], symbols['X'], symbols['Y'])])
 
     def test_unify_functions(self, symbols):
-        assert self.sub.can_unify(symbols['fax'], symbols['fab']) == (True, [(symbols['X'], symbols['X'], symbols['b'])])
+        assert self.sub.can_unify(symbols['fax'], symbols['fab']) == (True, [symbols['X'], (symbols['X'], symbols['X'], symbols['b'])])
         assert self.sub.can_unify(symbols['fa'], symbols['ga']) == (False, [])
-        assert self.sub.can_unify(symbols['fx'], symbols['fy']) == (True, [(symbols['X'], symbols['X'], symbols['Y'])])
+        assert self.sub.can_unify(symbols['fx'], symbols['fy']) == (True, [symbols['X'], symbols['Y'], (symbols['X'], symbols['X'], symbols['Y'])])
         assert self.sub.can_unify(symbols['fx'], symbols['gy']) == (False, [])
         assert self.sub.can_unify(symbols['fx'], symbols['fyz']) == (False, [])
-        assert self.sub.can_unify(symbols['fgx'], symbols['fy']) == (True, [(symbols['Y'], symbols['Y'], symbols['gx'])])
-        assert self.sub.can_unify(symbols['fgxx'], symbols['fya']) == (True, [(symbols['X'], symbols['X'], symbols['a']),
-                                                                               (symbols['Y'], symbols['Y'], symbols['gx'])])
-        assert self.sub.can_unify(symbols['fxy'], symbols['fyx']) == (True, [(symbols['Y'], symbols['Y'], symbols['X'])])
-        assert self.sub.can_unify(symbols['fxy'], symbols['fab']) == (True, [(symbols['Y'], symbols['Y'], symbols['b']),
-                                                                             (symbols['X'], symbols['X'], symbols['a'])])
+        assert self.sub.can_unify(symbols['fgx'], symbols['fy']) == (True, [symbols['Y'], (symbols['Y'], symbols['Y'], symbols['gx'])])
+        assert self.sub.can_unify(symbols['fgxx'], symbols['fya']) == (True, [symbols['X'], (symbols['X'], symbols['X'], symbols['a']),
+                                                                            symbols['Y'], (symbols['Y'], symbols['Y'], symbols['gx'])])
+        assert self.sub.can_unify(symbols['fxy'], symbols['fyx']) == (True, [symbols['Y'], symbols['X'], (symbols['Y'], symbols['Y'], symbols['X'])])
+        assert self.sub.can_unify(symbols['fxy'], symbols['fab']) == (True, [symbols['Y'], (symbols['Y'], symbols['Y'], symbols['b']),
+                                                                             symbols['X'], (symbols['X'], symbols['X'], symbols['a'])])
 
     def test_unify_occur_check(self, symbols):
-        assert self.sub.can_unify(symbols['fx'], symbols['ffx']) == (False, [])
+        assert self.sub.can_unify(symbols['fx'], symbols['ffx']) == (False, [symbols['X']])
 
     def test_unify_incremental(self, symbols):
         sub1 = Substitution()

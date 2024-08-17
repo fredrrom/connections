@@ -20,7 +20,7 @@ class S4ConnectionState(IConnectionState):
             return super()._admissible_pairs()
         if self.settings.domain == 'varying':
             equations = []
-            for var, term in self.substitutions[-1].items():
+            for var, term in self.substitution.to_dict().items():
             # loop over eigenvariables (given by "f_skolem" symbol)
                 for eigen in self._find_eigenvariables(term):
                     equations.append((var.prefix, eigen.prefix))

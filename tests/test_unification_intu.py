@@ -49,10 +49,10 @@ class TestPreUnify:
         assert len(substitutions['all_4']) == 6
 
     def test_prefix_unification_first(self, substitutions):
-        assert substitutions['all_1'][0] == substitutions['first_1']
-        assert substitutions['all_2'][0] == substitutions['first_2']
-        assert substitutions['all_3'][0] == substitutions['first_3']
-        assert substitutions['all_4'][0] == substitutions['first_4']
+        assert str(substitutions['all_1'][0]) == str(substitutions['first_1'])
+        assert str(substitutions['all_2'][0]) == str(substitutions['first_2'])
+        assert str(substitutions['all_3'][0]) == str(substitutions['first_3'])
+        assert str(substitutions['all_4'][0]) == str(substitutions['first_4'])
 
     def test_prefix_unification_list(self, substitutions):
         print(substitutions['list'])

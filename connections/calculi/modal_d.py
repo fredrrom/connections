@@ -27,7 +27,7 @@ class DConnectionState(IConnectionState):
             return []
         if self.settings.domain == 'cumulative':
             equations = []
-            for var, term in self.substitutions[-1].items():
+            for var, term in self.substitution.to_dict().items():
                 # loop over eigenvariables (given by "f_skolem" symbol)
                 for eigen in self._find_eigenvariables(term):
                     var_pre = Function('string',var.prefix.args[:len(eigen.prefix.args)])
@@ -35,7 +35,7 @@ class DConnectionState(IConnectionState):
             return equations
         if self.settings.domain == 'varying':
             equations = []
-            for var, term in self.substitutions[-1].items():
+            for var, term in self.substitution.to_dict().items():
             # loop over eigenvariables (given by "f_skolem" symbol)
                 for eigen in self._find_eigenvariables(term):
                     equations.append((var.prefix, eigen.prefix))

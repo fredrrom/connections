@@ -53,10 +53,12 @@ while True:
         break
 ```
 
-`MConnectionEnv` currently supports modal logics S4, S5, D, and T each for the constant, cumulative, and varying domains. Logic and domain can be specifified during the creation of the environment as follows:
+In addition to classical first-order logic, `ConnectionEnv` supports intuitionistic logic and modal logics S4, S5, D, and T each for the constant, cumulative, and varying domains. Logic and domain can be specifified during the creation of the environment as by passing settings as follows:
 
 ```python
-env = MConnectionEnv("problem_path", logic="S5", domain="varying")
+settings = Settings(logic="S5", domain="varying")
+
+env = ConnectionEnv("problem_path", settings=settings)
 ```
 
 **NB** The environments cannot be registered as gym environments, as their state and action spaces do not inherit from `gym.spaces`. 

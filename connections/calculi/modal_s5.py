@@ -21,7 +21,7 @@ class S5ConnectionState(IConnectionState):
             return []
         if self.settings.domain == 'varying':
             equations = []
-            for var, term in self.substitutions[-1].items():
+            for var, term in self.substitution.to_dict().items():
             # loop over eigenvariables (given by "f_skolem" symbol)
                 for eigen in self._find_eigenvariables(term):
                     pre_1 = Function('string',args=var.prefix.args[-1:])

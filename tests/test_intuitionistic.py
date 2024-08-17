@@ -1,10 +1,10 @@
-from connections.calculi.intuitionistic import *
+from connections.env import *
 from connections.utils.primitives import *
-
 
 class TestIntuitionisticState:
     # ARRANGE
-    env = IConnectionEnv('tests/icnf_problems/SYN081+1.cnf')
+    settings = Settings(logic='intuitionistic')
+    env = ConnectionEnv('tests/icnf_problems/SYN081+1.cnf', settings=settings)
     state = env.state
 
 
@@ -36,7 +36,9 @@ class TestIntuitionisticState:
 
 class TestIConnectionEnv:
     # ARRANGE
-    env = IConnectionEnv('tests/icnf_problems/SYN081+1.cnf',iterative_deepening=True)
+    settings = Settings(iterative_deepening=True,
+                        logic='intuitionistic')
+    env = ConnectionEnv('tests/icnf_problems/SYN081+1.cnf', settings=settings)
 
     def test_iterative_deepening_steps(self):
         # ARRANGE
@@ -53,7 +55,7 @@ class TestIConnectionEnv:
         assert str(action) == 'ex0: big_f(_28061) -> [big_f(_34362), -big_f(f(_34362))]'
         assert observation.max_depth == 1
         assert observation.goal.depth == 1
-        print(self.env.state.proof_sequence)
+        #print(self.env.state.proof_sequence)
 
         action = self.env.action_space[0]
 
@@ -62,5 +64,18 @@ class TestIConnectionEnv:
         assert str(self.env.action_space) == '[ex1: big_f(_28061) -> [-big_f(f(_28063)), -big_f(_28063)],' \
                                              ' ex2: big_f(_28061) -> [-big_f(f(_28064)), -big_f(_28064)],' \
                                              ' Backtrack]'
-        assert observation.substitution == {}
+        assert observation.substitution.to_dict() == {}
         assert str(observation.proof_sequence) == '[st0: [big_f(_28061), big_f(f(_28061))]]'
+
+    def test_time(self):
+        # ARRANGE
+        problem = "tests/icnf_problems/SWV230+1.p"
+        env = ConnectionEnv(problem, settings=self.settings)
+        # ACT
+        for i in range(100):
+            action = env.action_space[0]
+            print(env.state)
+            print(action)
+            observation, reward, done, info = env.step(action)
+            if done:
+                break

@@ -1,10 +1,6 @@
-import os
 import sys
-from os.path import dirname, abspath
 
-sys.path.append(dirname(dirname(abspath(__file__))))
-
-from connections.calculi.intuitionistic import *
+from connections.env import *
 
 import argparse
 
@@ -12,7 +8,11 @@ parser = argparse.ArgumentParser(description='ileanCoP Python version')
 parser.add_argument("file", help="The conjecture you want to prove")
 args = parser.parse_args()
 
-env = IConnectionEnv(args.file, iterative_deepening=True)
+settings = Settings(iterative_deepening=True,
+                    logic='intuitionistic')
+
+env = ConnectionEnv(args.file, settings=settings)
+
 import traceback
 import sys
 

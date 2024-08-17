@@ -5,14 +5,14 @@ import signal
 import time
 import pandas as pd
 
-SAVE_LOGS = False
+SAVE_LOGS = True
 
 out_path = 'output'
 fof_path = '../../../conjectures/ILTP-v1.1.2-firstorder/Problems/'
 translator_path = 'leancop_itrans_v13fc/leancop_itrans.sh'
 leancop_path = 'ileancop10f_trace_extended/ileancop10.sh'
 pycop_path = 'ileancop_trace.py'
-fof_filter = lambda filename : '+' in filename and '.p' in filename and filename.count('.') == 1# and 'SYN' in filename# \
+fof_filter = lambda filename : '+' in filename and '.p' in filename and filename.count('.') == 1 and 'SWV230+1.p' in filename# \
     #and filename[:3] in ['KRS','SET','SWV','SYN','SYJ']
 
 def run_theorem_prover(problempath):
@@ -28,11 +28,13 @@ def run_theorem_prover(problempath):
     
     info = {}
     info['Problem'] = problem
+    os.makedirs(f'{out_path}/out', exist_ok=True)
+    os.makedirs(f'{out_path}/log', exist_ok=True)
     start_time = time.time()
     with open(f"{out_path}/out/{problem}_ipycop.out", 'w+') as f:
         with subprocess.Popen(['python',pycop_path,problem], stdout=f, preexec_fn=os.setsid) as process:
             try:
-                output, errors = process.communicate(timeout=1)
+                output, errors = process.communicate(timeout=5)
                 if output is not None: f.write(output)
             except subprocess.TimeoutExpired as err:
                 if err.stdout is not None:
@@ -44,7 +46,7 @@ def run_theorem_prover(problempath):
     with open(f"{out_path}/out/{problem}_ileancop.out", 'w+') as f:
         with subprocess.Popen([leancop_path, problempath], stdout=f, preexec_fn=os.setsid) as process:
             try:
-                output, errors = process.communicate(timeout=1)
+                output, errors = process.communicate(timeout=5)
                 if output is not None: f.write(output)
             except subprocess.TimeoutExpired as err:
                 if err.stdout is not None:

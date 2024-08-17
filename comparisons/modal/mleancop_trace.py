@@ -1,10 +1,8 @@
-import os
+import traceback
 import sys
-from os.path import dirname, abspath
+from copy import deepcopy
 
-sys.path.append(dirname(dirname(abspath(__file__))))
-
-from connections.calculi.modal import *
+from connections.env import *
 
 import argparse
 
@@ -14,19 +12,20 @@ parser.add_argument("logic", help="Which modal logic")
 parser.add_argument("domain", help="Which domain")
 args = parser.parse_args()
 
-env = MConnectionEnv(args.file, args.logic, args.domain, iterative_deepening=True)
+settings = Settings(iterative_deepening=True,
+                    logic=args.logic,
+                    domain=args.domain)
 
-if env.logic == 'D':
+env = ConnectionEnv(args.file, settings=settings)
+
+if settings.logic == 'D':
     from connections.calculi.modal_d import *
-elif env.logic == 'T':
+elif settings.logic == 'T':
     from connections.calculi.modal_t import *
-elif env.logic == 'S4':
+elif settings.logic == 'S4':
     from connections.calculi.modal_s4 import *
-elif env.logic == 'S5':
+elif settings.logic == 'S5':
     from connections.calculi.modal_s5 import *
-
-import traceback
-import sys
 
 try:
     observation = env.reset()
@@ -46,9 +45,11 @@ try:
                     else:
                         lit_2 = action.clause_copy[action.lit_idx]
                     pre_1, pre_2 = observation._pre_eq(lit_1, lit_2)
-                    s = pre_unify(pre_1.args, [], pre_2.args, action.sigma.copy())
+                    new_s = deepcopy(observation.substitution)
+                    new_s.update(action.sub_updates)
+                    s = pre_unify(pre_1.args, [], pre_2.args, new_s)
                     if s is not None:
-                        print(f'  weak_prefix_unify : {[subst(s,pre) for pre in pre_1.args], [subst(s,pre) for pre in pre_2.args]}')
+                        print(f'  weak_prefix_unify : {[s(pre) for pre in pre_1.args], [s(pre) for pre in pre_2.args]}')
                         print(f'  weak_prefix_unify_success')
                         print(action)
 

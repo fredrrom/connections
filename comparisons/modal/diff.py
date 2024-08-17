@@ -29,6 +29,8 @@ def run_theorem_prover(problempath):
     
     info = {}
     info['Problem'] = problem
+    os.makedirs(f'{out_path}/out', exist_ok=True)
+    os.makedirs(f'{out_path}/log', exist_ok=True)
     for logic,domain in logics:
         start_time = time.time()
         with open(f"{out_path}/out/{problem}_{logic}_{domain}_mpycop.out", 'w+') as f:

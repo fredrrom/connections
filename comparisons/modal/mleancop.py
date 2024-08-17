@@ -1,10 +1,8 @@
-import os
 import sys
-from os.path import dirname, abspath
+import traceback
+from copy import deepcopy
 
-sys.path.append(dirname(dirname(abspath(__file__))))
-
-from connections.calculi.modal import *
+from connections.env import *
 
 import argparse
 
@@ -14,9 +12,11 @@ parser.add_argument("logic", help="Which modal logic")
 parser.add_argument("domain", help="Which domain")
 args = parser.parse_args()
 
-env = MConnectionEnv(args.file, args.logic, args.domains, iterative_deepening=True)
-import traceback
-import sys
+Settings = Settings(iterative_deepening=True,
+                    logic=args.logic,
+                    domain=args.domain)
+
+env = ConnectionEnv(args.file, settings=Settings)
 
 try:
     observation = env.reset()

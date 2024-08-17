@@ -1,6 +1,6 @@
 from connections.calculi.classical import *
 from connections.utils.primitives import *
-from connections.utils.unification_intu import pre_unify, pre_unify_list, flatten
+from connections.utils.unification_intu import pre_unify, pre_unify_list
 
 
 class IConnectionState(ConnectionState):
@@ -39,8 +39,10 @@ class IConnectionState(ConnectionState):
             lit_1 = self.goal.literal
             lit_2 = ex.clause_copy[ex.lit_idx]
             pre_1, pre_2 = self._pre_eq(lit_1, lit_2)
-            if self.pre_unify(pre_1, pre_2, ex.sigma.copy()) is not None:
+            self.substitution.update(ex.sub_updates)
+            if self.pre_unify(pre_1, pre_2, self.substitution) is not None:
                 ret.append(ex)
+            self.substitution.backtrack()
         return ret
 
     def _reductions(self):
@@ -49,18 +51,20 @@ class IConnectionState(ConnectionState):
             lit_1 = self.goal.literal
             lit_2 = re.path_lit
             pre_1, pre_2 = self._pre_eq(lit_1, lit_2)
-            if self.pre_unify(pre_1, pre_2, re.sigma.copy()) is not None:
+            self.substitution.update(re.sub_updates)
+            if self.pre_unify(pre_1, pre_2, self.substitution) is not None:
                 ret.append(re)
+            self.substitution.backtrack()
         return ret
 
 
     # add check for syntactically equal prefixes
-    def _regularizable(self, clause, sub):
+    def _regularizable(self, clause):
         for path_lit in self.goal.path():
             for clause_lit in clause:
                 if path_lit.neg == clause_lit.neg and path_lit.symbol == clause_lit.symbol:
-                    if subst(sub, path_lit) == subst(sub, clause_lit):
-                        if subst(sub, path_lit.prefix) == subst(sub, clause_lit.prefix):
+                    if self.substitution.equal(path_lit, clause_lit):
+                        if self.substitution.equal(path_lit.prefix, clause_lit.prefix):
                             return True
         return False
 
@@ -74,7 +78,7 @@ class IConnectionState(ConnectionState):
     # single prefix subsitution for all pairs (var,eigenvar) in classical substitution and (lit,lit) in classical connections
     def _admissible_pairs(self):
         equations = []
-        for var, term in self.substitutions[-1].items():
+        for var, term in self.substitution.to_dict().items():
             # loop over eigenvariables (given by "f_skolem" symbol)
             for eigen in self._find_eigenvariables(term):
                 if var.prefix is None:
@@ -108,8 +112,8 @@ class IConnectionState(ConnectionState):
         # Classical proof, check intutitionistic proof
         addco_pairs = self._admissible_pairs()
         proof_pairs = self._proof_pairs()
-        print(f'prefix_unify({[(subst(self.substitutions[-1],l),subst(self.substitutions[-1],r)) for l,r in addco_pairs + proof_pairs]})')
-        s = self.pre_unify_list(addco_pairs + proof_pairs, self.substitutions[-1])
+        print(f'prefix_unify({[(self.substitution(l),self.substitution(r)) for l,r in addco_pairs + proof_pairs]})')
+        s = self.pre_unify_list(addco_pairs + proof_pairs, self.substitution)
         if s is not None:
             # Intuitonistic proof, return success
             self.info = 'Theorem'
@@ -124,7 +128,7 @@ class IConnectionState(ConnectionState):
         """
         # No intuitionistic proof, keep going from current goal
         self.proof_sequence.pop()
-        self.substitutions.pop()
+        self.substitution.backtrack()
         self.goal.children = []
         parent = self.goal
         while parent is not None:
