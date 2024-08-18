@@ -18,8 +18,9 @@ class ConnectionEnv:
         if settings is None:
             settings = Settings()
 
+        self.path = path
         self.settings = settings
-        self._parse_matrix(path)
+        self._parse_matrix(self.path)
         self._init_state()
 
     def _parse_matrix(self, path: str):
