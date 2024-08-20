@@ -8,6 +8,7 @@ DomainType = Literal['constant','cumulative','varying']
 class Settings:
     positive_start_clauses: bool = True
     iterative_deepening: bool = False
+    iterative_deepening_initial_depth: int = 1
     restricted_backtracking: bool = False
     backtrack_after: int = 2
     logic: LogicType = 'classical'

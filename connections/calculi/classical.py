@@ -71,9 +71,11 @@ class ConnectionState:
             f"\n========================="
         )
     
-    def reset(self, depth=1):
+    def reset(self, depth=None):
         # Tableau fields
         self.max_depth = depth
+        if depth is None:
+            self.max_depth = self.settings.iterative_deepening_initial_depth
         self.tableau = Tableau()
         self.goal = self.tableau
         self.substitution = Substitution()

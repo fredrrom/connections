@@ -91,3 +91,17 @@ class TestConnectionEnv:
             observation, reward, done, info = env.step(action)
             if done:
                 break
+
+    def test_depth(self):
+        # ARRANGE
+        settings = Settings(iterative_deepening=True,
+                            iterative_deepening_initial_depth=3)
+        problem = "tests/cnf_problems/SET027+3.p"
+        env = ConnectionEnv(problem, settings=settings)
+        # ACT
+        for i in range(2):
+            action = env.action_space[0]
+            print(env.state)
+            observation, reward, done, info = env.step(action)
+            if done:
+                break
