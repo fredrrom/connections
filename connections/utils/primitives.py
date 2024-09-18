@@ -13,30 +13,44 @@ class Expression(ABC):
         return f'{self.symbol}{arg_str}'
 
     def __eq__(self, other):
-        if len(self.args) != len(other.args):
+        if not isinstance(other, Expression):
             return False
-        return self.symbol == other.symbol and all(
-            arg1 == arg2 for (arg1, arg2) in zip(self.args, other.args)
-        )
+        return self.symbol == other.symbol and self.args == other.args
 
     def __hash__(self):
-        return hash(self.symbol) ^ hash(tuple(self.args))
+        return hash((self.symbol, tuple(self.args)))
 
 
 class Term(Expression):
     def copy(self, num):
-        new_prefix = None
-        if self.prefix is not None:
-            new_prefix = self.prefix.copy(num)
         return type(self)(self.symbol,
                           [arg.copy(num) for arg in self.args],
-                          new_prefix)
+                          None if self.prefix is None else self.prefix.copy(num))
 
 
 class Variable(Term):
+    show_copy_num = True
+
+    def __init__(self, symbol, args=[], prefix=None):
+        super().__init__(symbol, args, prefix)
+        self.copy_num = 0
+
+    def __repr__(self):
+        if Variable.show_copy_num and self.copy_num != 0:
+            copy_str = f'{self.copy_num}'
+        else:
+            copy_str = ''
+        return super(Term, self).__repr__() + copy_str
+
+    def __eq__(self, other):
+        return super().__eq__(other) and self.copy_num == other.copy_num
+
+    def __hash__(self):
+        return hash((self.symbol, self.copy_num))
+
     def copy(self, num):
         copy = super().copy(num)
-        copy.symbol = f"{self.symbol}{num}"
+        copy.copy_num = num
         return copy
 
 

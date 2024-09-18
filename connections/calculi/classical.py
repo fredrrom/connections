@@ -64,7 +64,7 @@ class ConnectionState:
         )
         return (
             f"=========================\n"
-            f"Tableau Tree:\n{self.tableau}\n\n"
+            f"Tableau:\n{self.tableau}\n\n"
             f"Substitution:\n{substitution}\n\n"
             f"Available Actions:\n{actions}"
             f"\n\nMax Depth: {self.max_depth}"
@@ -250,7 +250,7 @@ class ConnectionAction:
         self.clause_copy = clause_copy
         self.id = id
 
-    def __str__(self):
+    def __repr__(self):
         if self.type == "ex":
             return f"{self.id}: {str(self.principle_node.literal)} -> {str(self.clause_copy)}"
         if self.type == "re":
@@ -259,6 +259,3 @@ class ConnectionAction:
             return f"{self.id}: {str(self.clause_copy)}"
         if self.type == "bt":
             return 'Backtrack'
-
-    def __repr__(self):
-        return str(self)
