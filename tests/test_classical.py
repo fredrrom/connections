@@ -75,12 +75,17 @@ class TestConnectionEnv:
     
     def test_time(self):
         # ARRANGE
-        settings = Settings(iterative_deepening=True)
-        problem = "tests/cnf_problems/SET027+3.p"
+        settings = Settings(iterative_deepening=False)
+        problem = "tests/cnf_problems/SET718+4.p"
+        import time
+        start = time.time()
         env = ConnectionEnv(problem, settings=settings)
+        obs = env.reset()
+        print(f'time: {time.time() - start}')
         # ACT
-        for i in range(83):
+        for i in range(1000):
             action = env.action_space[0]
+            #print(env.state)
             # print("-------------------------")
             # print(env.state.tableau)
             # print(env.state.substitution.to_dict())
@@ -105,3 +110,82 @@ class TestConnectionEnv:
             observation, reward, done, info = env.step(action)
             if done:
                 break
+            
+    def test_big_problem(self):
+        # ARRANGE
+        settings = Settings(iterative_deepening=True)
+        problem = "tests/cnf_problems/NUM618+3.p"
+        env = ConnectionEnv(problem, settings=settings)
+        # ACT
+        # for i in range(2):
+        #     action = env.action_space[0]
+        #     print(env.state)
+        #     observation, reward, done, info = env.step(action)
+        #     if done:
+        #         break
+        
+    def test_many_steps(self):
+        # ARRANGE
+        settings = Settings(iterative_deepening=True)
+        problem = "tests/cnf_problems/MGT007+1.p"
+        env = ConnectionEnv(problem, settings=settings)
+        # ACT
+        for i in range(60_000):
+            action = env.action_space[0]
+            observation, reward, done, info = env.step(action)
+            if done:
+                break
+            
+    def test_unresolved_timeout(self):
+        # ARRANGE
+        settings = Settings(iterative_deepening=True)
+        problem = "tests/cnf_problems/GEO185+1.p" #NUM531+1.p" #CSR115+20.p" #LAT381+3.p"
+        env = ConnectionEnv(problem, settings=settings)
+        # ACT
+        for i in range(100_000):
+            action = env.action_space[0]
+            observation, reward, done, info = env.step(action)
+            if done:
+                break
+        print(observation)
+        
+    def test_max_recursion_depth(self):
+        # ARRANGE
+        import time
+        timeout = 0.1
+        begin = time.time()
+        proof = None
+        trajectory = []
+        settings = Settings(iterative_deepening=False)
+        problem = "tests/cnf_problems/SET875+1.p"
+        env = ConnectionEnv(problem, settings=settings)
+        obs = env.reset()
+        for i in range(1, 100_000):
+            try:
+                start = time.time()
+                action = env.action_space[0]
+                depth = obs.max_depth
+                obs, reward, done, _ = env.step(action)
+                print(i)
+            except Exception as e:
+                print(e)
+                break
+
+            if time.time() - start > timeout:
+                print(path, f'timeout: {i}')
+                break
+
+            trajectory.append((depth, action.id))
+
+            if done:
+                proof = (obs.max_depth, [a.id for a in obs.proof_sequence])
+                break
+        from pprint import pprint
+        pprint(env.state.substitution)
+        stats = {
+            'Proof Length': None if proof is None else int(len(proof)),
+            'Steps': i,
+            'Max Steps': 100_000,
+            'Time': time.time() - begin
+        }
+        print(stats)

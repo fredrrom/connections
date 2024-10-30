@@ -59,9 +59,11 @@ class ConnectionState:
         substitution = "\n".join(
             f"{k} → {v}" for k, v in self.substitution.to_dict().items()
         )
-        actions = "\n".join(
-            f"{i}. {str(action)}" for i, action in enumerate(self.goal.actions.values())
-        )
+        actions = None
+        if self.goal is not None:
+            actions = "\n".join(
+                f"{i}. {str(action)}" for i, action in enumerate(self.goal.actions.values())
+            )
         return (
             f"=========================\n"
             f"Tableau:\n{self.tableau}\n\n"
