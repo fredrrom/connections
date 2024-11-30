@@ -117,22 +117,27 @@ class TestConnectionEnv:
         problem = "tests/cnf_problems/NUM618+3.p"
         env = ConnectionEnv(problem, settings=settings)
         # ACT
-        # for i in range(2):
-        #     action = env.action_space[0]
-        #     print(env.state)
-        #     observation, reward, done, info = env.step(action)
-        #     if done:
-        #         break
+        for i in range(2):
+            action = env.action_space[0]
+            #print(env.state)
+            observation, reward, done, info = env.step(action)
+            if done:
+                break
         
     def test_many_steps(self):
         # ARRANGE
-        settings = Settings(iterative_deepening=True)
-        problem = "tests/cnf_problems/MGT007+1.p"
+        import time
+        settings = Settings(iterative_deepening=False)
+        problem = "tests/cnf_problems/GEO081+1.p"
         env = ConnectionEnv(problem, settings=settings)
         # ACT
         for i in range(60_000):
             action = env.action_space[0]
+            start = time.time()
             observation, reward, done, info = env.step(action)
+            if time.time() - start > 0.1:
+                print(f'timeout: {i}')
+                break
             if done:
                 break
             
@@ -172,7 +177,7 @@ class TestConnectionEnv:
                 break
 
             if time.time() - start > timeout:
-                print(path, f'timeout: {i}')
+                print(problem, f'timeout: {i}')
                 break
 
             trajectory.append((depth, action.id))
