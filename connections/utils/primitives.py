@@ -82,9 +82,6 @@ class Variable(Term):
     Variables can have a copy number to distinguish between different
     instances of the same variable.
     """
-
-    show_copy_num = True
-
     def __init__(
         self, symbol: str, args: List[Any] = None, prefix: Optional[Any] = None
     ) -> None:
@@ -191,106 +188,27 @@ class Literal(Expression):
             A string in the format '-symbol(args)' for negated literals.
         """
         neg_str = "-" if self.neg else ""
-        return neg_str + super().__repr__()
-
-    def copy(self, num: int) -> "Literal":
-        """Create a copy of the literal with a new copy number.
-
-        Args:
-            num: The new copy number.
-
-        Returns:
-            A new copy of the literal.
-        """
-        new_prefix = None
-        if self.prefix is not None:
-            new_prefix = self.prefix.copy(num)
-        return Literal(
-            self.symbol,
-            [arg.copy(num) for arg in self.args],
-            new_prefix,
-            self.neg,
-            self.matrix_pos,
-        )
+        return neg_str + super().__repr__() 
 
 
 class Matrix:
-    """Represents a matrix of clauses in CNF format.
-
-    Attributes:
-        index: Counter for creating fresh variables.
-        clauses: List of clauses in the matrix.
-        num_clauses: Number of clauses in the matrix.
-        complement: Mapping from (polarity, symbol) to clause positions.
-        flattened_idx: Mapping from matrix positions to flattened indices.
-        positive_clauses: List of indices of positive clauses.
-        num_lits: Total number of literals in the matrix.
-    """
+    """Represents a matrix of clauses in CNF format."""
 
     def __init__(self, clauses: List[List[Literal]]) -> None:
-        """Initialize a matrix from a list of clauses.
+        """Initialize a matrix by indexing a list of clauses.
 
         Args:
             clauses: List of clauses, where each clause is a list of literals.
         """
-        self.index = 0
         self.clauses = clauses
-        self.num_clauses = len(clauses)
-        self._update_mappings()
-
-    def reset(self) -> None:
-        """Reset the counter for creating fresh variables."""
-        self.index = 0
-
-    def _update_mappings(self) -> None:
-        """Update internal mappings for complement literals and indices."""
         self.complement = defaultdict(list)
-        self.flattened_idx = {}
         self.positive_clauses = []
-        self.num_lits = sum([len(clause) for clause in self.clauses])
-        lit_idx = 0
         for i, clause in enumerate(self.clauses):
             positive = True
             for j, lit in enumerate(clause):
                 lit.matrix_pos = (i, j)
-                self.flattened_idx[(i, j)] = lit_idx
-                lit_idx += 1
                 self.complement[(not lit.neg, lit.symbol)].append((i, j))
                 if lit.neg:
                     positive = False
             if positive:
                 self.positive_clauses.append(i)
-
-    def complements(self, literal: Literal) -> List[Tuple[int, int]]:
-        """Find all complement literals in the matrix.
-
-        Args:
-            literal: The literal to find complements for.
-
-        Returns:
-            List of matrix positions of complement literals.
-        """
-        return self.complement[(literal.neg, literal.symbol)]
-
-    def copy(self, clause_idx: int) -> List[Literal]:
-        """Create a copy of a clause with fresh variables.
-
-        Args:
-            clause_idx: Index of the clause to copy.
-
-        Returns:
-            A copy of the clause with fresh variables.
-        """
-        self.index += 1
-        return [lit.copy(self.index) for lit in self.clauses[clause_idx]]
-
-    def lit_idx(self, literal: Literal) -> int:
-        """Find the index of a literal in the flattened matrix.
-
-        Args:
-            literal: The literal to find the index of.
-
-        Returns:
-            The index of the literal in the flattened matrix.
-        """
-        return self.flattened_idx[literal.matrix_pos]
