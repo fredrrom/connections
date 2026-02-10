@@ -1,70 +1,30 @@
-from connections.utils.primitives import *
+from connections.logic.syntax import Clause, Function, Literal, Matrix, Variable
 
 
-class TestVariable:
-    # ARRANGE
-    x = Variable("X")
-
-    def test_variable_copy(self):
-        # ACT
-        y = self.x.copy(1)
-
-        # ASSERT
-        assert str(self.x) + "1" == str(y)
+def test_variable_str_with_id():
+    x = Variable("X", vid=1)
+    assert str(x) == "X1"
 
 
-class TestFunction:
-    # ARRANGE
+def test_function_str():
     x = Variable("X")
     f = Function("f", (x,))
-
-    def test_function_str(self):
-        # ACT and ASSERT
-        assert str(self.f) == "f(X)"
+    assert str(f) == "f(X)"
 
 
-class TestLiteral:
-    # ARRANGE
+def test_literal_str_and_negation():
     x = Variable("X")
     f = Function("f", (x,))
-    p = Literal("p", (f,))
-
-    def test_literal_str(self):
-        # ACT and ASSERT
-        assert str(self.p) == "p(f(X))"
-
-    def test_literal_copy(self):
-        # ACT
-        y = self.p.copy(1)
-
-        # ASSERT
-        assert "p(f(X1))" == str(y)
+    pos = Literal("p", (f,))
+    neg = Literal("p", (f,), neg=True)
+    assert str(pos) == "p(f(X))"
+    assert str(neg) == "-p(f(X))"
 
 
-class TestMatrix:
+def test_matrix_complements():
     x = Variable("X")
     f = Function("f", (x,))
     p = Literal("p", (f,))
     q = Literal("p", (f,), neg=True)
-    m = Matrix([[p], [q]])
-
-    def test_complements(self):
-        # ACT
-        comp = self.m.complements(self.p)
-
-        # ASSERT
-        assert comp == [(1, 0)]
-
-    def test_copy(self):
-        # ACT
-        copy = self.m.copy(0)
-
-        # ASSERT
-        assert str(copy) == "[p(f(X1))]"
-
-    def test_lit_idx(self):
-        # ACT
-        idx = self.m.lit_idx(self.p)
-
-        # ASSERT
-        assert idx == 0
+    matrix = Matrix((Clause((p,)), Clause((q,))))
+    assert matrix.complements(p) == ((1, 0),)

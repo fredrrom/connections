@@ -6,7 +6,7 @@ import sys
 import traceback
 from os.path import abspath, dirname
 
-from connections.env import *
+from connections.search.env import *
 
 parser = argparse.ArgumentParser(
     description="Python equivalent of version 1.0f of leanCoP, ileanCoP, and mleanCoP"

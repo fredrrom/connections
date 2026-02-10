@@ -6,7 +6,7 @@ sys.path.append(dirname(dirname(abspath(__file__))))
 
 import argparse
 
-from connections.env import *
+from connections.search.env import *
 
 parser = argparse.ArgumentParser(description="leanCoP Python version")
 parser.add_argument("file", help="The conjecture you want to prove")

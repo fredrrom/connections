@@ -2,8 +2,7 @@ import argparse
 import sys
 from copy import deepcopy
 
-from connections.calculi.intuitionistic import pre_unify
-from connections.env import *
+from connections.search.env import *
 
 parser = argparse.ArgumentParser(description="ileanCoP Python version")
 parser.add_argument("file", help="The conjecture you want to prove")
@@ -22,24 +21,31 @@ try:
     while True:
         if depth != observation.max_depth:
             depth = observation.max_depth
-            print(f"pathlim___________:{depth+1}")
+            print(f"pathlim___________:{depth + 1}")
         action = env.action_space[0]
         if observation is not None:
             if observation.goal is not None:
                 # for action in actions
-                if action is not None and action.type in ["re", "ex"]:
+                if action is not None and action.action_type in [
+                    "reduction",
+                    "extension",
+                ]:
                     lit_1 = observation.goal.literal
-                    if action.type == "re":
-                        lit_2 = action.path_lit
+                    if action.action_type == "reduction":
+                        lit_2 = action.path_node.literal
                     else:
                         lit_2 = action.clause_copy[action.lit_idx]
-                    pre_1, pre_2 = observation._pre_eq(lit_1, lit_2)
+                    pre_1, pre_2 = observation.prefix_substitution.relation_pair(
+                        lit_1,
+                        lit_2,
+                        fresh_variable=observation._next_prefix_variable(),
+                    )
                     new_s = deepcopy(observation.substitution)
                     new_s.update(action.sub_updates)
-                    s = pre_unify(pre_1.args, [], pre_2.args, new_s)
+                    s = observation.prefix_substitution.unify(pre_1, pre_2, new_s)
                     if s is not None:
                         print(
-                            f"  weak_prefix_unify : {[s(pre) for pre in pre_1.args], [s(pre) for pre in pre_2.args]}"
+                            f"  weak_prefix_unify : {[s(pre) for pre in pre_1.parts], [s(pre) for pre in pre_2.parts]}"
                         )
                         print(f"  weak_prefix_unify_success")
                         print(action)

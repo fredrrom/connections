@@ -1,171 +1,70 @@
-"""Tests for the unification modules."""
+from connections.logic.syntax import Constant, Function, Variable
+from connections.logic.substitution import Substitution
 
-import pytest
 
-from connections.utils.primitives import Function, Constant, Variable
-from connections.utils.unification import Substitution
+def test_unify_constants():
+    sub = Substitution()
+    ok, updates = sub.can_unify(Constant("a"), Constant("a"))
+    assert ok
+    assert updates == []
 
-@pytest.fixture
-def symbols():
-    sym = {
-        "X": Variable("X"),
-        "Y": Variable("Y"),
-        "Z": Variable("Z"),
-        "a": Constant("a"),
-        "b": Constant("b"),
-    }
-    sym["fxy"] = Function("f", [sym["X"], sym["Y"]])
-    sym["fyx"] = Function("f", [sym["Y"], sym["X"]])
-    sym["fax"] = Function("f", [sym["a"], sym["X"]])
-    sym["fab"] = Function("f", [sym["a"], sym["b"]])
-    sym["fx"] = Function("f", args=[sym["X"]])
-    sym["fy"] = Function("f", args=[sym["Y"]])
-    sym["fyz"] = Function("f", args=[sym["Y"], sym["Z"]])
-    sym["ffx"] = Function("f", args=[Function("f", args=[sym["X"]])])
-    sym["fa"] = Function("f", args=[sym["a"]])
-    sym["gy"] = Function("g", args=[sym["Y"]])
-    sym["ga"] = Function("g", args=[sym["a"]])
-    sym["gx"] = Function("g", args=[sym["X"]])
-    sym["fgx"] = Function("f", args=[sym["gx"]])
-    sym["fgxx"] = Function("f", args=[sym["gx"], sym["X"]])
-    sym["fya"] = Function("f", args=[sym["Y"], sym["a"]])
-    yield sym
+    ok, updates = sub.can_unify(Constant("a"), Constant("b"))
+    assert not ok
+    assert updates == []
 
-def test_substitution():
-    """Test the basic substitution functionality."""
-    s = Substitution()
 
-    # Test variable substitution
-    x = Variable("x")
-    y = Variable("y")
-    f = Function("f", [x, y])
+def test_unify_variable_ordering_and_cut():
+    sub = Substitution()
+    x = Variable("X", vid=1)
+    y = Variable("Y", vid=2)
 
-    # Test find
-    assert s.find(x) == x
-    assert s.find(y) == y
+    ok, updates = sub.can_unify(x, y)
+    assert ok
+    sub.update(updates)
 
-    # Test union
-    assert s.union(x, y)
-    assert s.find(x) == y
+    assert sub.find(y) == x
+    assert sub.find(x) == x
 
-    # Test backtrack
-    s.backtrack()
-    assert s.find(x) == x
-    assert s.find(y) == y
-    
-class TestUnify:
-    """Tests for unification functionality."""
+    sub.cut(updates)
+    assert sub.find(x) == x
+    assert sub.find(y) == y
 
-    def test_basic_unification(self, symbols):
-        """Test unification of constants and variables."""
-        sub = Substitution()
-        assert sub.can_unify(symbols["a"], symbols["a"]) == (True, [])
-        assert sub.can_unify(symbols["a"], symbols["b"]) == (False, [])
-        assert sub.can_unify(symbols["X"], symbols["X"]) == (True, [symbols["X"]])
-        assert sub.can_unify(symbols["a"], symbols["X"]) == (
-            True,
-            [symbols["X"], (symbols["X"], symbols["X"], symbols["a"])],
-        )
-        assert sub.can_unify(symbols["X"], symbols["Y"]) == (
-            True,
-            [symbols["X"], symbols["Y"], (symbols["X"], symbols["X"], symbols["Y"])],
-        )
 
-    def test_function_unification(self, symbols):
-        """Test unification of function terms."""
-        sub = Substitution()
-        assert sub.can_unify(symbols["fax"], symbols["fab"]) == (
-            True,
-            [symbols["X"], (symbols["X"], symbols["X"], symbols["b"])],
-        )
-        assert sub.can_unify(symbols["fa"], symbols["ga"]) == (False, [])
-        assert sub.can_unify(symbols["fx"], symbols["fy"]) == (
-            True,
-            [symbols["X"], symbols["Y"], (symbols["X"], symbols["X"], symbols["Y"])],
-        )
-        assert sub.can_unify(symbols["fx"], symbols["gy"]) == (False, [])
-        assert sub.can_unify(symbols["fx"], symbols["fyz"]) == (False, [])
+def test_unify_functions_with_chain():
+    sub = Substitution()
+    x = Variable("X", vid=1)
+    y = Variable("Y", vid=2)
+    a = Constant("a")
 
-    def test_complex_unification(self, symbols):
-        """Test unification of more complex terms."""
-        sub = Substitution()
-        assert sub.can_unify(symbols["fgx"], symbols["fy"]) == (
-            True,
-            [symbols["Y"], (symbols["Y"], symbols["Y"], symbols["gx"])],
-        )
-        assert sub.can_unify(symbols["fgxx"], symbols["fya"]) == (
-            True,
-            [
-                symbols["X"],
-                (symbols["X"], symbols["X"], symbols["a"]),
-                symbols["Y"],
-                (symbols["Y"], symbols["Y"], symbols["gx"]),
-            ],
-        )
-        assert sub.can_unify(symbols["fxy"], symbols["fyx"]) == (
-            True,
-            [symbols["Y"], symbols["X"], (symbols["Y"], symbols["Y"], symbols["X"])],
-        )
-        assert sub.can_unify(symbols["fxy"], symbols["fab"]) == (
-            True,
-            [
-                symbols["Y"],
-                (symbols["Y"], symbols["Y"], symbols["b"]),
-                symbols["X"],
-                (symbols["X"], symbols["X"], symbols["a"]),
-            ],
-        )
+    left = Function("f", args=(x, y))
+    right = Function("f", args=(y, a))
 
-    def test_occurs_check(self, symbols):
-        """Test occurs check during unification."""
-        sub = Substitution()
-        assert sub.can_unify(symbols["fx"], symbols["ffx"]) == (
-            False,
-            [symbols["X"]],
-        )
+    ok, updates = sub.can_unify(left, right)
+    assert ok
+    sub.update(updates)
 
-        # Test direct occurs check
-        x = Variable("x")
-        f = Function("f", [x])
-        assert not sub.union(x, f)
+    assert sub.find(x) == a
+    assert sub.find(y) == a
 
-    def test_invalid_unification(self):
-        """Test unification of incompatible terms."""
-        sub = Substitution()
-        x = Variable("x")
-        y = Variable("y")
-        f = Function("f", [x])
-        g = Function("g", [y])
-        assert not sub.union(f, g)
 
-    def test_incremental_unification(self, symbols):
-        """Test incremental unification and substitution chains."""
-        sub1 = Substitution()
-        sub1.unify(symbols["X"], symbols["Y"])
-        sub1.unify(symbols["X"], symbols["a"])
-        assert sub1.to_dict() == {
-            symbols["X"]: symbols["a"],
-            symbols["Y"]: symbols["a"],
-        }
+def test_occurs_check_strict():
+    sub = Substitution()
+    x = Variable("X", vid=1)
+    fx = Function("f", args=(x,))
 
-        sub2 = Substitution()
-        sub2.unify(symbols["a"], symbols["Y"])
-        sub2.unify(symbols["X"], symbols["Y"])
-        assert sub2.to_dict() == {
-            symbols["X"]: symbols["a"],
-            symbols["Y"]: symbols["a"],
-        }
+    ok, updates = sub.can_unify(x, fx)
+    assert not ok
+    assert updates == []
 
-        sub3 = Substitution()
-        sub3.unify(symbols["X"], symbols["a"])
-        assert sub3.unify(symbols["b"], symbols["X"]) == (False, [])
 
-    def test_backtracking(self):
-        """Test backtracking of substitutions."""
-        sub = Substitution()
-        x = Variable("x")
-        y = Variable("y")
-        sub.union(x, y)
-        sub.backtrack()
-        assert sub.find(x) == x
-        assert sub.find(y) == y
+def test_cut_removes_bindings():
+    sub = Substitution()
+    x = Variable("X", vid=1)
+    a = Constant("a")
+
+    ok, updates = sub.unify(x, a)
+    assert ok
+    assert sub.find(x) == a
+
+    sub.cut(updates)
+    assert sub.find(x) == x

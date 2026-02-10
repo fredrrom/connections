@@ -2,7 +2,7 @@ import argparse
 import sys
 import traceback
 
-from connections.env import *
+from connections.search.env import *
 
 parser = argparse.ArgumentParser(description="leanCoP Python version")
 parser.add_argument("file", help="The conjecture you want to prove")
