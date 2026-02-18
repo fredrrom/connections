@@ -11,14 +11,16 @@ parser.add_argument("logic", help="Which modal logic")
 parser.add_argument("domain", help="Which domain")
 args = parser.parse_args()
 
-Settings = Settings(iterative_deepening=True, logic=args.logic, domain=args.domain)
+Settings = Settings(logic=args.logic, domain=args.domain)
 
 env = ConnectionEnv(args.file, settings=Settings)
 
 try:
     observation = env.reset()
     while True:
-        action = env.action_space[0]
+        if not env.action_space:
+            break
+        action = next(iter(next(iter(env.action_space.values())).values()))
         print(action)
         observation, reward, done, info = env.step(action)
         if done:

@@ -40,8 +40,11 @@ print(env)
 
 try:
     observation = env.reset()
+    info = {"status": "No action"}
     while True:
-        action = env.action_space[0]
+        if not env.action_space:
+            break
+        action = next(iter(next(iter(env.action_space.values())).values()))
         print(action)
         observation, reward, done, info = env.step(action)
         if done:

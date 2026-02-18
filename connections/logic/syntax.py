@@ -88,32 +88,32 @@ class Clause:
 @dataclass(frozen=True)
 class Matrix:
     clauses: Tuple[Clause, ...]
-    complement: Dict[Tuple[bool, str], Tuple[Tuple[int, int], ...]] = field(
+    connection_graph: Dict[Tuple[bool, str], Tuple[Tuple[int, int], ...]] = field(
         init=False, repr=False
     )
     positive_clauses: Tuple[int, ...] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        complement: Dict[Tuple[bool, str], List[Tuple[int, int]]] = {}
+        connection_graph: Dict[Tuple[bool, str], List[Tuple[int, int]]] = {}
         positive: List[int] = []
         for clause_idx, clause in enumerate(self.clauses):
             is_positive = True
             for lit_idx, lit in enumerate(clause.literals):
                 key = (not lit.neg, lit.name)
-                complement.setdefault(key, []).append((clause_idx, lit_idx))
+                connection_graph.setdefault(key, []).append((clause_idx, lit_idx))
                 if lit.neg:
                     is_positive = False
             if is_positive:
                 positive.append(clause_idx)
         object.__setattr__(
             self,
-            "complement",
-            {key: tuple(value) for key, value in complement.items()},
+            "connection_graph",
+            {key: tuple(value) for key, value in connection_graph.items()},
         )
         object.__setattr__(self, "positive_clauses", tuple(positive))
 
     def complements(self, literal: Literal) -> Tuple[Tuple[int, int], ...]:
-        return self.complement.get((literal.neg, literal.name), ())
+        return self.connection_graph.get((literal.neg, literal.name), ())
 
     def __getitem__(self, idx: Union[int, slice, Tuple[int, int]]) -> Any:
         if isinstance(idx, tuple) and len(idx) == 2:

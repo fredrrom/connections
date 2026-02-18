@@ -1,29 +1,52 @@
 import pytest
 
-from connections.logic.prefix_substitution import PrefixSubstitution
-from connections.logic.substitution import Substitution
+from connections.logic.substitution import PrefixSubstitution, TermSubstitution
 from connections.logic.syntax import Constant, Function, Literal, Prefix, Variable
 
 
 def test_prefix_unify_intuitionistic_success():
     prefix_sub = PrefixSubstitution(logic="intuitionistic")
-    term_sub = Substitution()
+    term_sub = TermSubstitution()
+    prefix_sub.bind_term_substitution(term_sub)
     left = Prefix((Variable("A"), Variable("B"), Variable("C")))
     right = Prefix((Function("a"), Function("b"), Function("c")))
-    assert prefix_sub.unify(left, right, term_sub) is not None
+    ok, _ = prefix_sub.unify(left, right)
+    assert ok
 
 
 def test_prefix_unify_t_success():
     prefix_sub = PrefixSubstitution(logic="T")
-    term_sub = Substitution()
+    term_sub = TermSubstitution()
+    prefix_sub.bind_term_substitution(term_sub)
     left = Prefix((Variable("A"), Variable("B"), Variable("C")))
     right = Prefix((Variable("E"), Variable("F"), Variable("G")))
-    assert prefix_sub.unify(left, right, term_sub) is not None
+    ok, _ = prefix_sub.unify(left, right)
+    assert ok
+
+
+def test_prefix_unify_is_pure_until_update():
+    prefix_sub = PrefixSubstitution(logic="D", domain="varying")
+    term_sub = TermSubstitution()
+    prefix_sub.bind_term_substitution(term_sub)
+    x = Variable("X", vid=1)
+    left = Prefix((x,))
+    right = Prefix((Function("w"),))
+
+    ok, updates = prefix_sub.unify(left, right)
+    assert ok
+    assert x not in prefix_sub.bindings
+
+    prefix_sub.update(updates)
+    assert x in prefix_sub.bindings
+
+    prefix_sub.revert(updates)
+    assert x not in prefix_sub.bindings
 
 
 def test_prefix_unify_pairs_intuitionistic_success():
     prefix_sub = PrefixSubstitution(logic="intuitionistic")
-    term_sub = Substitution()
+    term_sub = TermSubstitution()
+    prefix_sub.bind_term_substitution(term_sub)
 
     a_1 = Function("c_skolem", args=(Constant("1"), Constant("a")))
     b_1 = Function(
@@ -37,6 +60,10 @@ def test_prefix_unify_pairs_intuitionistic_success():
     c_2 = Function("c_skolem", args=(Constant("2"), b_2, Constant("a")))
     pre_2 = Prefix((a_2, c_2))
 
+    ok_1, updates_1 = prefix_sub.unify(pre_1, pre_2)
+    assert ok_1
+    prefix_sub.update(updates_1)
+
     a_3 = Function("c_skolem", args=(Constant("1"), Constant("a")))
     b_3 = Function(
         "f", args=(Function("f_skolem", args=(Constant("1"), Constant("a"))),)
@@ -44,24 +71,8 @@ def test_prefix_unify_pairs_intuitionistic_success():
     c_3 = Function("c_skolem", args=(Constant("2"), b_3, Constant("a")))
     pre_3 = Prefix((a_3, c_3))
 
-    assert (
-        prefix_sub.unify_pairs([(pre_1, pre_2), (pre_2, pre_3)], term_sub) is not None
-    )
-
-
-def test_prefix_unify_pairs_t_success():
-    prefix_sub = PrefixSubstitution(logic="T")
-    term_sub = Substitution()
-    left = Prefix(
-        (
-            Function(
-                "c_skolem",
-                args=(Function("1"), Function("c_skolem", args=(Function("2"),))),
-            ),
-        )
-    )
-    right = Prefix((Function("c_skolem", args=(Function("1"), Variable("_76862"))),))
-    assert prefix_sub.unify_pairs([(left, right)], term_sub) is not None
+    ok_2, _ = prefix_sub.unify(pre_2, pre_3)
+    assert ok_2
 
 
 @pytest.mark.parametrize(
@@ -111,13 +122,3 @@ def test_relation_pair_dispatch_s5_keeps_last_world_only():
 
     assert left_prefix == Prefix((Function("w2"),))
     assert right_prefix == Prefix((Function("v2"),))
-
-
-def test_admissible_pair_dispatch_d_cumulative_truncates_left():
-    prefix_sub = PrefixSubstitution(logic="D", domain="cumulative")
-    left = Prefix((Function("w1"), Function("w2"), Function("w3")))
-    right = Prefix((Function("v1"), Function("v2")))
-
-    pair = prefix_sub.admissible_pair(left, right)
-
-    assert pair == (Prefix((Function("w1"), Function("w2"))), right)

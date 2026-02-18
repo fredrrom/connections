@@ -1,37 +1,48 @@
+from connections.logic.substitution import TermSubstitution
 from connections.logic.syntax import Constant, Function, Variable
-from connections.logic.substitution import Substitution
 
 
 def test_unify_constants():
-    sub = Substitution()
-    ok, updates = sub.can_unify(Constant("a"), Constant("a"))
+    sub = TermSubstitution()
+    ok, updates = sub.unify(Constant("a"), Constant("a"))
     assert ok
     assert updates == []
 
-    ok, updates = sub.can_unify(Constant("a"), Constant("b"))
+    ok, updates = sub.unify(Constant("a"), Constant("b"))
     assert not ok
     assert updates == []
 
 
-def test_unify_variable_ordering_and_cut():
-    sub = Substitution()
+def test_unify_is_pure_until_update():
+    sub = TermSubstitution()
+    x = Variable("X", vid=1)
+    a = Constant("a")
+
+    ok, updates = sub.unify(x, a)
+    assert ok
+    assert sub._find(x) == x
+
+    sub.update(updates)
+    assert sub._find(x) == a
+
+
+def test_update_and_revert():
+    sub = TermSubstitution()
     x = Variable("X", vid=1)
     y = Variable("Y", vid=2)
 
-    ok, updates = sub.can_unify(x, y)
+    ok, updates = sub.unify(x, y)
     assert ok
     sub.update(updates)
+    assert sub._find(y) == x
 
-    assert sub.find(y) == x
-    assert sub.find(x) == x
-
-    sub.cut(updates)
-    assert sub.find(x) == x
-    assert sub.find(y) == y
+    sub.revert(updates)
+    assert sub._find(x) == x
+    assert sub._find(y) == y
 
 
 def test_unify_functions_with_chain():
-    sub = Substitution()
+    sub = TermSubstitution()
     x = Variable("X", vid=1)
     y = Variable("Y", vid=2)
     a = Constant("a")
@@ -39,32 +50,19 @@ def test_unify_functions_with_chain():
     left = Function("f", args=(x, y))
     right = Function("f", args=(y, a))
 
-    ok, updates = sub.can_unify(left, right)
+    ok, updates = sub.unify(left, right)
     assert ok
     sub.update(updates)
 
-    assert sub.find(x) == a
-    assert sub.find(y) == a
+    assert sub._find(x) == a
+    assert sub._find(y) == a
 
 
 def test_occurs_check_strict():
-    sub = Substitution()
+    sub = TermSubstitution()
     x = Variable("X", vid=1)
     fx = Function("f", args=(x,))
 
-    ok, updates = sub.can_unify(x, fx)
+    ok, updates = sub.unify(x, fx)
     assert not ok
     assert updates == []
-
-
-def test_cut_removes_bindings():
-    sub = Substitution()
-    x = Variable("X", vid=1)
-    a = Constant("a")
-
-    ok, updates = sub.unify(x, a)
-    assert ok
-    assert sub.find(x) == a
-
-    sub.cut(updates)
-    assert sub.find(x) == x

@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser(description="ileanCoP Python version")
 parser.add_argument("file", help="The conjecture you want to prove")
 args = parser.parse_args()
 
-settings = Settings(iterative_deepening=True, logic="intuitionistic")
+settings = Settings(logic="intuitionistic")
 
 env = ConnectionEnv(args.file, settings=settings)
 
@@ -17,38 +17,44 @@ import traceback
 
 try:
     observation = env.reset()
-    depth = 2
+    info = {"status": "No action"}
     while True:
-        if depth != observation.max_depth:
-            depth = observation.max_depth
-            print(f"pathlim___________:{depth + 1}")
-        action = env.action_space[0]
+        if not env.action_space:
+            break
+        action = next(iter(next(iter(env.action_space.values())).values()))
         if observation is not None:
-            if observation.goal is not None:
-                # for action in actions
-                if action is not None and action.action_type in [
-                    "reduction",
-                    "extension",
-                ]:
-                    lit_1 = observation.goal.literal
-                    if action.action_type == "reduction":
-                        lit_2 = action.path_node.literal
-                    else:
-                        lit_2 = action.clause_copy[action.lit_idx]
-                    pre_1, pre_2 = observation.prefix_substitution.relation_pair(
-                        lit_1,
-                        lit_2,
-                        fresh_variable=observation._next_prefix_variable(),
+            if action is not None and action.action_type in ["reduction", "extension"]:
+                left_node = env.state.tableau.get_node(action.node_id)
+                if left_node is None or left_node.literal is None:
+                    continue
+                lit_1 = left_node.literal
+                if (
+                    action.action_type == "reduction"
+                    and action.path_node_id is not None
+                ):
+                    right_node = env.state.tableau.get_node(action.path_node_id)
+                    if right_node is None or right_node.literal is None:
+                        continue
+                    lit_2 = right_node.literal
+                elif action.lit_idx is not None and action.clause_copy is not None:
+                    lit_2 = action.clause_copy[action.lit_idx]
+                else:
+                    continue
+                pre_1, pre_2 = observation.prefix_substitution.relation_pair(
+                    lit_1,
+                    lit_2,
+                    fresh_variable=observation._next_prefix_variable(),
+                )
+                new_s = deepcopy(observation.term_substitution)
+                new_s.update(action.sub_updates)
+                observation.prefix_substitution.bind_term_substitution(new_s)
+                ok, _ = observation.prefix_substitution.unify(pre_1, pre_2)
+                if ok:
+                    print(
+                        f"  weak_prefix_unify : {[new_s(pre) for pre in pre_1.parts], [new_s(pre) for pre in pre_2.parts]}"
                     )
-                    new_s = deepcopy(observation.substitution)
-                    new_s.update(action.sub_updates)
-                    s = observation.prefix_substitution.unify(pre_1, pre_2, new_s)
-                    if s is not None:
-                        print(
-                            f"  weak_prefix_unify : {[s(pre) for pre in pre_1.parts], [s(pre) for pre in pre_2.parts]}"
-                        )
-                        print(f"  weak_prefix_unify_success")
-                        print(action)
+                    print(f"  weak_prefix_unify_success")
+                    print(action)
 
         observation, reward, done, info = env.step(action)
         if done:

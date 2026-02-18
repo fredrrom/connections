@@ -12,12 +12,15 @@ parser = argparse.ArgumentParser(description="leanCoP Python version")
 parser.add_argument("file", help="The conjecture you want to prove")
 args = parser.parse_args()
 
-env = ConnectionEnv(args.file, Settings(iterative_deepening=True))
+env = ConnectionEnv(args.file, Settings())
 
 try:
     observation = env.reset()
+    info = {"status": "No action"}
     while True:
-        action = env.action_space[0]
+        if not env.action_space:
+            break
+        action = next(iter(next(iter(env.action_space.values())).values()))
         if action is not None:
             print(action)
         observation, reward, done, info = env.step(action)
