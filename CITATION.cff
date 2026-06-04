@@ -1,17 +1,39 @@
-# This CITATION.cff file was generated with cffinit.
-# Visit https://bit.ly/cffinit to generate yours today!
-
 cff-version: 1.2.0
 title: Connections
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
 type: software
+version: 0.1.0
 authors:
   - given-names: Fredrik
-    family-names: 'R{\o}mming'
+    family-names: Rømming
     orcid: 'https://orcid.org/0000-0001-7545-4662'
 identifiers:
   - type: url
     value: 'https://github.com/fredrrom/connections'
 repository-code: 'https://github.com/fredrrom/connections'
+license: GPL-3.0-or-later
+abstract: >-
+  Classical, intuitionistic, and modal connection-tableaux construction
+  primitives for proof-search control.
+preferred-citation:
+  type: conference-paper
+  title: >-
+    Connections: Markov Decision Processes for Classical,
+    Intuitionistic and Modal Connection Calculi
+  authors:
+    - given-names: Fredrik
+      family-names: Rømming
+    - given-names: Jens
+      family-names: Otten
+    - given-names: Sean B.
+      family-names: Holden
+  year: 2023
+  collection-title: >-
+    Proceedings of the First International Workshop on Automated
+    Reasoning with Connection Calculi (AReCCa)
+  collection-type: proceedings
+  volume: 3613
+  start: 107
+  end: 118

@@ -1,0 +1,37 @@
+site_name: Connections
+site_description: Classical, intuitionistic, and modal connection-tableaux construction primitives for proof-search control.
+site_url: https://fredrrom.github.io/connections/
+repo_url: https://github.com/fredrrom/connections
+repo_name: fredrrom/connections
+docs_dir: src
+site_dir: site
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - search.highlight
+    - search.suggest
+  palette:
+    - scheme: default
+      primary: black
+      accent: blue
+
+nav:
+  - Home: index.md
+  - Prover API: prover-api.md
+  - State and Dynamics: state-dynamics.md
+  - Unification and Constraints: unification.md
+  - TPTP Parser: tptp-parser.md
+  - Corpus and Parity Tools: corpus-and-parity-tools.md
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format

@@ -1,0 +1,74 @@
+--------------------
+ileanCoP ReadMe File
+
+-----------
+Description
+
+ileanCoP is a theorem prover for intuitionistic first-order logic
+implemented in Prolog. See http://www.leancop.de for more details.
+
+--------
+Contents
+
+ReadMe_ileancop - this ReadMe file
+ileancop.sh     - shell script to invoke ileanCoP
+ileancop12.pl   - the ileanCoP core prover
+def_mm_intu.pl  - clausal form transformation
+leancop_tlimit  - invokes ileanCoP with a time limit
+format.leancop  - format file for the TPTP2X tool
+
+------------
+Installation
+
+Set the path for the ECLiPSe Prolog system (version 5 or greater)
+and the path for the ileanCoP prover in the file ileancop.sh.
+
+---------
+Execution
+
+./ileancop.sh %s [%d]
+where %s is the name of the problem file and %d is the (optional)
+time limit in seconds.
+
+Example: ./ileancop.sh SET/SET009+3 600
+
+Output if formula is valid:    %s is an Intuitionistic Theorem
+Output if formula is invalid:  %s is an Intuitionistic Non-Theorem
+
+Example: SET/SET009+3 is an Intuitionistic Theorem
+
+------
+Syntax
+
+The problem file has to contain a Prolog term of the form
+   f(<formula>).
+in which <formula> is a first-order formula made up of Prolog
+terms (atomic formulae), the logical connectives '~' (negation),
+';' (disjunction), ',' (conjunction), '=>' (implication), '<=>'
+(equivalence), and the logical quantifiers 'all X:' (universal)
+and 'ex X:' (existential) where X is a Prolog variable.
+
+Example: f( ((p , all X:(p=>q(X))) => q(a)) ).
+
+--------------
+Transformation
+
+Problems in the TPTP syntax are translated into the leanCoP format
+by using the TPTP2X tool.
+
+Format file:  format.leancop
+Options:      stdfof+add_equality
+
+Example: ./tptp2X -f leancop -t stdfof+add_equality SET/SET009+3.p
+
+-----------
+At a Glance
+
+System:    ileanCoP
+Version:   1.2
+URL:       http://www.leancop.de/ileancop/
+Command:   ./ileancop.sh %s %d
+Format:    leancop
+Transform: stdfof+add_equality
+Proved:    %s is an Intuitionistic Theorem
+Refuted:   %s is an Intuitionistic Non-Theorem

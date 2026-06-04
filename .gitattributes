@@ -1,0 +1,3 @@
+# TPTP FOF problem files commonly use the `.p` suffix, which GitHub's
+# extension-based detection can misclassify.
+*.p linguist-language=Prolog

@@ -1,1 +1,0 @@
-cnf('SET027+3.p',conjecture,[[-(subset(f_skolem(2),f_skolem(3)))],[-(subset(f_skolem(3),f_skolem(4)))],[subset(f_skolem(2),f_skolem(4))],[-(subset(_21174,_21174))],[-(subset(_20332,_20448)),-(member(f_skolem(1,_20448,_20332),_20332))],[-(subset(_20332,_20448)),member(f_skolem(1,_20448,_20332),_20448)],[subset(_20332,_20448),member(_20694,_20332),-(member(_20694,_20448))]]).

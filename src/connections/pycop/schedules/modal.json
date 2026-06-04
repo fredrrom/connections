@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {"settings": ["cut", "scut", "comp(7)"], "weight": 20},
+    {"settings": ["def", "cut"], "weight": 20},
+    {"settings": ["nodef"], "weight": 10},
+    {"settings": ["reo(23)", "cut", "scut"], "weight": 10},
+    {"settings": ["reo(31)", "cut", "scut"], "weight": 10},
+    {"settings": ["reo(47)", "cut", "scut"], "weight": 10},
+    {"settings": ["reo(25)", "def", "cut", "scut"], "weight": 5},
+    {"settings": ["reo(42)", "conj", "cut", "scut"], "weight": 5},
+    {"settings": ["conj", "def", "cut", "scut"], "weight": 5},
+    {"settings": ["def"], "weight": 99}
+  ]
+}

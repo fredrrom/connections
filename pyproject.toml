@@ -1,20 +1,57 @@
-[tool.poetry]
+[project]
 name = "connections"
 version = "0.1.0"
-description = ""
-authors = ["Fredrik Rømming <fr409@cam.ac.uk>"]
+description = "Connection-tableaux construction primitives for proof-search control."
 readme = "README.md"
+license = { text = "GPL-3.0-or-later" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Fredrik Rømming", email = "fr409@cam.ac.uk" },
+]
+keywords = [
+    "automated-reasoning",
+    "connection-tableaux",
+    "theorem-proving",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "lark>=1.2.2",
+]
 
-[tool.poetry.dependencies]
-python = "^3.10"
+[project.urls]
+Homepage = "https://github.com/fredrrom/connections"
+Documentation = "https://fredrrom.github.io/connections/"
+Repository = "https://github.com/fredrrom/connections"
+Issues = "https://github.com/fredrrom/connections/issues"
 
-[tool.poetry.dev-dependencies]
-pytest = "^7.2.0"
-pytest-cov = "^4.0.0"
-jupyter = "^1.0.0"
-tqdm = "^4.64.1"
-pandas = "^1.5.1"
+[project.scripts]
+pycop = "connections.pycop.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.2.0,<8",
+    "pytest-cov>=4.0.0,<5",
+    "ruff>=0.9.0",
+    "ty>=0.0.1",
+]
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.6",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.10.4,<0.11.0"]
+build-backend = "uv_build"

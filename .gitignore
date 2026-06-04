@@ -8,6 +8,15 @@ __pycache__/
 **/log/
 **/diff.csv
 
+# Project-local generated/runtime artifacts
+.codex/
+.agents/
+AGENTS.md
+.ruff_cache/
+.ty/
+artifacts/
+benchmarks/out/
+
 # C extensions
 *.so
 
@@ -143,6 +152,7 @@ venv.bak/
 
 # mkdocs documentation
 /site
+/docs/site
 
 # mypy
 .mypy_cache/

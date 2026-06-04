@@ -1,133 +1,196 @@
 # Connections
 
-[![tests](https://github.com/fredrrom/CoPs/actions/workflows/python-app.yml/badge.svg?branch=main)](https://github.com/fredrrom/CoPs/actions/workflows/python-app.yml)
-[![License: MIT](https://img.shields.io/github/license/fredrrom/connections)](https://github.com/fredrrom/connections/blob/main/LICENSE)
+[![tests](https://github.com/fredrrom/connections/actions/workflows/python-app.yml/badge.svg?branch=main)](https://github.com/fredrrom/connections/actions/workflows/python-app.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/fredrrom/connections/blob/main/LICENSE)
 
-Reinforcement learning environments for classical, intuitionistic, and modal first-order connection calculi in Python. 
+`connections` provides classical, intuitionistic, and modal connection-tableaux
+construction primitives for proof-search control. It
+contains a small prover core, reusable search policies, native
+FOF/CNF/QMF matrix construction, and `pycop`, a reimplementation of leanCoP 2.1,
+iLeanCoP 1.3, and mLeanCoP 1.2 in this same framework tested extensively for
+proof-step parity.
 
-For further details see the [paper](https://ceur-ws.org/Vol-3613/AReCCa2023_paper8.pdf).
 
-## Requirements
+## Package Layout
 
- - Python 3.10 or later
- - Git
- - SWI Prolog 8.4.3 (For TPTP/QMLTP translation and to run pyCoP provers)
+- `connections.prover`: prover loop, state, dynamics, actions, strategies, hooks,
+  and result types
+- `connections.policy`: DFS and iterative-deepening policies
+- `connections.pycop`: leanCoP-family pycop strategies, schedules, settings,
+  and CLI
+- `connections.constraints`: term and prefix unification, free-variable
+  constraints
+- `connections.clausification`: file-to-matrix construction
+- `tools/`: local developer diagnostics for corpus runs, profiling, and
+  leanCoP-family parity checks
 
-## Installation
+`tools/` is not part of the public package API.
 
-### Reinforcement Learning Environments
+## Install
 
-To begin using the reinforcement learning environments, simply install the `connections` Python package using the folllowing command:
-
+```bash
+pip install git+https://github.com/fredrrom/connections.git
 ```
-pip install git+https://github.com/fredrrom/connections.git 
-```
 
-### Conjectures and pyCoP provers
+For development:
 
-Each `connections` environment is initialized with a first-order conjecture as input. These conjectures are read in a custom cnf format. 
-
-To translate TPTP/QMLTP formated files or run the standalone pyCoP provers, either clone the repository:
-
-```
+```bash
 git clone https://github.com/fredrrom/connections.git
+cd connections
+uv sync --dev
 ```
 
-or download the repository [ZIP](https://github.com/fredrrom/connections/archive/refs/heads/main.zip).
+## pycop CLI
 
-## Getting Started
+Run the built-in prover on a TPTP problem:
 
-The environments closely follow the [OpenAI Gym](https://www.gymlibrary.dev/)/[Gymnasium](https://gymnasium.farama.org/) interface. Here is a simple connection prover implemented using the `ConnectionEnv` environment:
+```bash
+pycop Problems/SYN/SYN001+1.p classical
+```
+
+Run a single leanCoP strategy:
+
+```bash
+pycop Problems/SYN/SYN001+1.p classical \
+  --settings cut \
+  --settings 'comp(7)'
+```
+
+Run a schedule:
+
+```bash
+pycop Problems/SYN/SYN001+1.p classical \
+  --schedule classical
+```
+
+Supported logic arguments are `classical`, `intuitionistic`, `D`, `T`, `S4`,
+and `S5`. Supported domain arguments are `constant`, `cumulative`, and
+`varying`.
+
+Native 0.1 matrix construction supports classical `fof` and `cnf`
+input, intuitionistic ILTP `fof` input, and modal QMLTP `qmf` input.
+
+## API Use
 
 ```python
-from connections.calculi.classical import ConnectionEnv
+from connections.prover import Prover, StrategySchedule, WeightedStrategy
+from connections.pycop.strategy import PycopStrategy
 
-env = ConnectionEnv("problem_path")
-observation = env.reset()
+schedule = StrategySchedule.from_weighted(
+    [WeightedStrategy(PycopStrategy(), weight=1)],
+    steps=1000,
+    timeout_seconds=5.0,
+)
 
-while True:
-    action = env.action_space[0]
-    observation, reward, done, info = env.step(action)
+result = Prover().run(
+    "Problems/SYN/SYN001+1.p",
+    schedule=schedule,
+    logic="classical",
+    domain="constant",
+    source_file_dirs=("/path/to/TPTP",),
+)
 
-    if done:
-        break
+print(result.outcome)
+print(result.szs_status)
 ```
 
-In addition to classical first-order logic, `ConnectionEnv` supports intuitionistic logic and modal logics S4, S5, D, and T each for the constant, cumulative, and varying domains. Logic and domain can be specifified during the creation of the environment as by passing settings as follows:
+Policies implement action choice:
 
 ```python
-settings = Settings(logic="S5", domain="varying")
+from connections.policy import Policy
 
-env = ConnectionEnv("problem_path", settings=settings)
+class FirstActionPolicy(Policy):
+    def available_actions(self, state):
+        ...
+
+    def next_action(self, state, actions):
+        return actions[0]
 ```
 
-**NB** The environments cannot be registered as gym environments, as their state and action spaces do not inherit from `gym.spaces`. 
-They are, however, designed to be used as backends for your own gym environments.
+`Prover` executes the selected action. `Dynamics` owns legal action generation.
+Hooks observe choices, transitions, proof discovery, and strategy completion.
 
-## A Worked Example
-Consider double-negation elimination, that $p$ is equivalent to $\lnot \lnot p$. This is a theorem in classical logic, and is saved in the file `tests/cnf_problems/SYN001+1.p`
+## Docs
 
-That file contains 5 clauses, which are found by means of Definition 3 in [Otten's "Restricting Backtracking in Connection Calculi"](http://www.otten1.de/papers/restricting_backtracking_aicom10.pdf). 
+The documentation source lives in `docs/src/` and is built with MkDocs from
+`docs/mkdocs.yml`. Local generated HTML is written to `docs/site/`. GitHub
+Pages builds the deploy artifact from the same config using
+`.github/workflows/pages.yml`.
 
-Running the following code (from inside this project's directory):
-```python
-from connections.calculi.classical import ConnectionEnv
+Preview locally:
 
-env = ConnectionEnv("tests/cnf_problems/SYN001+1.p")
-observation = env.reset()
-
-while True:
-    action = env.action_space[0]
-    observation, reward, done, info = env.step(action)
-    if done:
-        print(observation.proof_sequence, "\n")
-        print(info)
-        break
+```bash
+uv run --group docs mkdocs serve -f docs/mkdocs.yml
 ```
 
-should print 
-```
-[st0: [p_defini(1), p_defini(2)], ex0: p_defini(1) -> [-p_defini(1), p], ex1: p -> [-p_defini(1), -p], re0: -p_defini(1) <- p_defini(1), ex0: p_defini(2) -> [-p_defini(2), p], ex0: p -> [-p_defini(2), -p], re0: -p_defini(2) <- p_defini(2)]
+Then open <http://127.0.0.1:8000/>.
 
-{'status': 'Theorem'}
-```
-The latter line tells us that this is a theorem, i.e. that the formula is valid. The former line gives us the proof sequence reached at the end, from which one can reconstruct the full proof tree. Alternatively, one can inspect the tableau by calling `print(observation.tableau)`.
+- [Prover API](docs/src/prover-api.md)
+- [State and Dynamics](docs/src/state-dynamics.md)
+- [Unification and Constraints](docs/src/unification.md)
+- [TPTP Parser](docs/src/tptp-parser.md)
+- [Corpus and Parity Tools](docs/src/corpus-and-parity-tools.md)
+- [Contributing](CONTRIBUTING.md)
+- [Changelog](CHANGELOG.md)
 
-## TPTP/QMLTP Translation
+## Developer Validation
 
-To translate TPTP/QMLTP formatted files into the `connections` format, run the following command
+Fast local checks:
 
-```
-translation/<logic>/translate.sh <file>
-```
-
-where `<file>` is the name of the problem file in TPTP/QMLTP syntax and `<logic>` is one of `classical`, `intuitionistic`, and `modal` depending on the target proof logic.
-
-To guarantee correct translation, please use SWI-Prolog version 8.4.3 and ensure that the `PROLOG_PATH` and `TPTP` variables in `translation/<logic>/translate.sh` are set to your SWI Prolog installation location and TPTP/QMLTP directory location, respectively.
-
-## The pyCoP, ipyCoP and mpyCoP Connection Provers
-
-`pycop.py` contains the standalone provers pyCoP, ipyCoP, and mpyCoP for classical, intuitionistic, and modal logics, respectively.
-
-The provers can be invoked (at the top level directory of this repository) with the following command
-
-```
-python pycop.py <file> [logic] [domain]
+```bash
+uv run pytest tests
+uv run ruff check .
+uv run ty check
+uv run --group docs mkdocs build --strict -f docs/mkdocs.yml
 ```
 
-where `<file>` is the path to the problem file in TPTP/QMLTP syntax, the optional argument `[logic]` is one of `classical` (default), `intuitionistic`, `D`, `T`, `S4`, or `S5`, and the optional argument `[domain]` is one of `constant` (default), `cumulative`, and `varying`. Note that the value of `[domain]` is inconsequential if `[logic]` is  `classical` or `intuitionistic`. If the formula in `<file>` is valid for the logic `[logic]` (with `[domain]` domains if logic is modal), then the prover reports `Theorem`.
+Curated parity checks against bundled reference provers:
 
-These connection provers are equivalent to version 1.0f of the leanCoP, ileanCoP and MleanCoP provers for classical, intuitionistic and modal logic, respectively, which can be found in the `comparisons` directory.
-
-## BibTeX Citation
-
+```bash
+uv run python tools/parity/run_all.py --json
 ```
+
+Classical trace-parity diagnostic against leanCoP:
+
+```bash
+uv run python tools/parity/run_trace_parity.py \
+  --path ../benchmarks/TPTP-v6.4.0/Problems \
+  --source-dir ../benchmarks/TPTP-v6.4.0 \
+  --limit 100 \
+  --timeout 20 \
+  --step-limit 5000 \
+  --logic classical \
+  --reference leancop21 \
+  --settings def \
+  --settings conj \
+  --settings nodef \
+  --settings scut \
+  --settings cut \
+  --settings 'comp(7)' \
+  --omit-traces \
+  --out artifacts/release-0.1/tptp-trace.jsonl \
+  --overwrite
+```
+
+The Prolog-backed parity diagnostics require `swipl` on `PATH`; the fast local
+checks above do not.
+
+## License
+
+This project is licensed under GNU GPL v3 or later. See `LICENSE`.
+
+Third-party reference prover assets under `tools/parity/reference_provers/` are
+kept for local parity diagnostics and are not part of the public package API.
+
+## Citation
+
+```bibtex
 @inproceedings{connections_2023,
     author     = {Rømming, Fredrik and Otten, Jens and Holden, Sean B.},
-    title      = {Connections: {Markov} {Decision} {Processes} for {Classical}, 
+    title      = {Connections: {Markov} {Decision} {Processes} for {Classical},
                   {Intuitionistic} and {Modal} {Connection} {Calculi}},
-    booktitle  = {Proceedings of the 1st {International} {Workshop} on    
-                  {Automated} {Reasoning} with {Connection} {Calculi}},
+    booktitle  = {Proceedings of the First International Workshop on
+                  Automated Reasoning with Connection Calculi (AReCCa)},
     series     = {{CEUR} {Workshop} {Proceedings}},
     volume     = {3613},
     year       = {2023},

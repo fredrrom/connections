@@ -1,0 +1,83 @@
+---------------------------
+MleanCoP ReadMe File (v1.3)
+
+-----------
+Description
+
+MleanCoP is a theorem prover implemented in Prolog for the
+first-order modal logics D, T, S4, and S5 (with constant,
+cumulative or varying domains) and heterogeneous multimodal
+logics. See http://www.leancop.de for details.
+
+--------
+Contents
+
+ReadMe_mleancop   - this ReadMe file
+mleancop.sh       - shell script to invoke MleanCoP
+mleancop12.pl     - the MleanCoP core prover for ECLiPSe
+                    (mleancop13_swi/sic.pl for SWI/SICStus)
+mleancop_defmm.pl - clausal form transformation
+mleancop_main.pl  - invokes the MleanCoP core prover
+mleancop_tptp2.pl - translates problems in modal TPTP syntax
+
+------------
+Installation
+
+Set the path for the Prolog system (ECLiPSe, SICStus or SWI)
+and the path for the MleanCoP prover in the file mleancop.sh.
+Modal logic and domain condition are specified by the variables
+LOGIC (d,t,s4,s5,multi) and DOMAIN (const,cumul,vary). This
+file also includes parameters to control the proof output.
+
+---------
+Execution
+
+./mleancop.sh %s [%d]
+where %s is the name of the problem file and %d is the (optional)
+time limit in seconds.
+
+Example: ./mleancop.sh SYM/SYM002+1 10
+
+Output if formula is valid:   %s is a modal (<Logic>) Theorem
+Output if formula is invalid: %s is a modal (<Logic>) Non-Theorem
+
+where <Logic> is the selected modal logic and domain condition.
+
+Example: SYM/SYM002+1 is a modal (s4/cumul) Theorem
+
+------
+Syntax
+
+The problem file has to contain a Prolog term of the form
+   f(<formula>).
+where <formula> is a modal first-order formula made up of Prolog
+terms (atomic formulae), the logical connectives '~' (negation),
+'#' (box operator), '*' (diamond operator), ';' (disjunction),
+',' (conjunction), '=>' (implication), '<=>' (equivalence),
+and the logical quantifiers 'all X:' (universal) and 'ex X:'
+(existential) where X is a Prolog variable.
+
+Example: f( ((# (all X: p(X))) => (all X: (# p(X)))) ).
+
+For multimodal logic each modal operator is indexed with a Prolog
+term and a modal logic (d,t,s4,s5).
+
+Example: f( ((# 1^s4: p) => ((# 1^s4: p) ; (* 2^s5: q))) ).
+
+Alternatively, the problem file can contain a formula in the
+modal TPTP syntax (see http://www.iltp.de/qmltp/).
+
+-----------
+At a Glance
+
+System:    MleanCoP
+Version:   1.3
+URL:       http://www.leancop.de/mleancop/
+Command:   ./mleancop.sh %s %d
+Format:    mleancop or modal tptp
+Output:  - valid:            %s is a modal (<Logic>) Theorem
+         - invalid:          %s is a modal (<Logic>) Non-Theorem
+         - unsatisfiable(*): %s is modal (<Logic>) Unsatisfiable
+         - satisfiable(*):   %s is modal (<Logic>) Satisfiable
+(where <Logic> is the selected modal logic and domain condition)
+(*: for problems in modal TPTP syntax without conjecture)
