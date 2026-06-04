@@ -13,6 +13,7 @@ provers.
 - [Unification and Constraints](unification.md)
 - [TPTP Parser](tptp-parser.md)
 - [Corpus and Parity Tools](corpus-and-parity-tools.md)
+- [Development Workflow](development.md)
 
 ## 0.1 Boundary
 

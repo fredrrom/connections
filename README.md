@@ -1,6 +1,7 @@
 # Connections
 
 [![tests](https://github.com/fredrrom/connections/actions/workflows/python-app.yml/badge.svg?branch=main)](https://github.com/fredrrom/connections/actions/workflows/python-app.yml)
+[![docs](https://github.com/fredrrom/connections/actions/workflows/pages.yml/badge.svg?branch=main)](https://fredrrom.github.io/connections/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/fredrrom/connections/blob/main/LICENSE)
 
 `connections` provides classical, intuitionistic, and modal connection-tableaux
@@ -32,13 +33,7 @@ proof-step parity.
 pip install git+https://github.com/fredrrom/connections.git
 ```
 
-For development:
-
-```bash
-git clone https://github.com/fredrrom/connections.git
-cd connections
-uv sync --dev
-```
+For development, see [Development Workflow](docs/src/development.md).
 
 ## pycop CLI
 
@@ -112,68 +107,14 @@ Hooks observe choices, transitions, proof discovery, and strategy completion.
 
 ## Docs
 
-The documentation source lives in `docs/src/` and is built with MkDocs from
-`docs/mkdocs.yml`. Local generated HTML is written to `docs/site/`. GitHub
-Pages builds the deploy artifact from the same config using
-`.github/workflows/pages.yml`.
-
-Preview locally:
-
-```bash
-uv run --group docs mkdocs serve -f docs/mkdocs.yml
-```
-
-Then open <http://127.0.0.1:8000/>.
-
 - [Prover API](docs/src/prover-api.md)
 - [State and Dynamics](docs/src/state-dynamics.md)
 - [Unification and Constraints](docs/src/unification.md)
 - [TPTP Parser](docs/src/tptp-parser.md)
 - [Corpus and Parity Tools](docs/src/corpus-and-parity-tools.md)
+- [Development Workflow](docs/src/development.md)
 - [Contributing](CONTRIBUTING.md)
 - [Changelog](CHANGELOG.md)
-
-## Developer Validation
-
-Fast local checks:
-
-```bash
-uv run pytest tests
-uv run ruff check .
-uv run ty check
-uv run --group docs mkdocs build --strict -f docs/mkdocs.yml
-```
-
-Curated parity checks against bundled reference provers:
-
-```bash
-uv run python tools/parity/run_all.py --json
-```
-
-Classical trace-parity diagnostic against leanCoP:
-
-```bash
-uv run python tools/parity/run_trace_parity.py \
-  --path ../benchmarks/TPTP-v6.4.0/Problems \
-  --source-dir ../benchmarks/TPTP-v6.4.0 \
-  --limit 100 \
-  --timeout 20 \
-  --step-limit 5000 \
-  --logic classical \
-  --reference leancop21 \
-  --settings def \
-  --settings conj \
-  --settings nodef \
-  --settings scut \
-  --settings cut \
-  --settings 'comp(7)' \
-  --omit-traces \
-  --out artifacts/release-0.1/tptp-trace.jsonl \
-  --overwrite
-```
-
-The Prolog-backed parity diagnostics require `swipl` on `PATH`; the fast local
-checks above do not.
 
 ## License
 
