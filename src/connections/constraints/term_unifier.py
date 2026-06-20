@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from connections.core.formula import Atom, Function
+from connections.syntax.formula import Atom, Function
 from connections.constraints.term_resolution import (
     occurs_check,
     resolve_ref,

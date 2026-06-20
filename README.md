@@ -6,7 +6,7 @@
 
 `connections` provides classical, intuitionistic, and modal connection-tableaux
 construction primitives for proof-search control. It
-contains a small prover core, reusable search policies, native
+contains a small prover loop, reusable search policies, native
 FOF/CNF/QMF matrix construction, and `pycop`, a reimplementation of leanCoP 2.1,
 iLeanCoP 1.3, and mLeanCoP 1.2 in this same framework tested extensively for
 proof-step parity.
@@ -14,16 +14,17 @@ proof-step parity.
 
 ## Package Layout
 
-- `connections.prover`: prover loop, state, dynamics, actions, strategies, hooks,
-  and result types
+- `connections.prover`: prover loop, state, dynamics, actions, strategies, and
+  result types
+- `connections.runs`: reusable corpus selection, prover-run rows, summaries,
+  and generic corpus execution
 - `connections.policy`: DFS and iterative-deepening policies
-- `connections.pycop`: leanCoP-family pycop strategies, schedules, settings,
+- `provers.pycop`: leanCoP-family pycop strategies, schedules, settings,
   and CLI
 - `connections.constraints`: term and prefix unification, free-variable
   constraints
 - `connections.clausification`: file-to-matrix construction
-- `tools/`: local developer diagnostics for corpus runs, profiling, and
-  leanCoP-family parity checks
+- `tools/`: local leanCoP-family parity diagnostics
 
 `tools/` is not part of the public package API.
 
@@ -58,6 +59,18 @@ pycop Problems/SYN/SYN001+1.p classical \
   --schedule classical
 ```
 
+Run over a directory or file list and write corpus rows:
+
+```bash
+pycop Problems/SYN --out artifacts/corpus/syn.jsonl --steps 1000 --overwrite
+```
+
+Download benchmark corpora:
+
+```bash
+connections-download-benchmarks --list
+```
+
 Supported logic arguments are `classical`, `intuitionistic`, `D`, `T`, `S4`,
 and `S5`. Supported domain arguments are `constant`, `cumulative`, and
 `varying`.
@@ -68,42 +81,49 @@ input, intuitionistic ILTP `fof` input, and modal QMLTP `qmf` input.
 ## API Use
 
 ```python
-from connections.prover import Prover, StrategySchedule, WeightedStrategy
-from connections.pycop.strategy import PycopStrategy
+from connections.prover import (
+    ProblemSpec,
+    Prover,
+    StrategySchedule,
+    WeightedStrategy,
+)
+from provers.pycop import LeancopSettingsCodec
 
+problem = ProblemSpec(
+    "Problems/SYN/SYN001+1.p",
+    logic="classical",
+    domain="constant",
+    source_file_dirs=("/path/to/TPTP",),
+)
+strategy = LeancopSettingsCodec.from_tokens(["cut", "comp(7)"])
 schedule = StrategySchedule.from_weighted(
-    [WeightedStrategy(PycopStrategy(), weight=1)],
+    [WeightedStrategy(strategy, weight=1)],
     steps=1000,
     timeout_seconds=5.0,
 )
 
 result = Prover().run(
-    "Problems/SYN/SYN001+1.p",
+    problem,
     schedule=schedule,
-    logic="classical",
-    domain="constant",
-    source_file_dirs=("/path/to/TPTP",),
 )
 
 print(result.outcome)
 print(result.szs_status)
 ```
 
-Policies implement action choice:
+Policies are called with the current state and return the next action:
 
 ```python
 from connections.policy import Policy
 
-class FirstActionPolicy(Policy):
-    def available_actions(self, state):
+class MyPolicy(Policy):
+    def __call__(self, state):
         ...
-
-    def next_action(self, state, actions):
-        return actions[0]
 ```
 
-`Prover` executes the selected action. `Dynamics` owns legal action generation.
-Hooks observe choices, transitions, proof discovery, and strategy completion.
+Plain policies return `Action | None`. Search policies such as DFS and ID may
+return `ProverOutcome` when their search space is exhausted. `Prover` executes
+the selected action. `Dynamics` owns legal action generation.
 
 ## Docs
 

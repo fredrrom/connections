@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from connections.core.formula import Function, Prefix, Term, Variable
+from connections.syntax.formula import Function, Prefix, Term, Variable
 
 
 def parse_prefix(text: str, *, variables: dict[str, Variable] | None = None) -> Prefix:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TypeVar
 
-from connections.core.matrix import Clause, Literal
+from connections.syntax.matrix import Clause, Literal
 from connections.constraints import FreeVariableReference
 from connections.prover.actions import Action, ApplyAction, ApplyActions, UndoAction
 from connections.prover.rules import (

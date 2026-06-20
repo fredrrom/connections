@@ -15,12 +15,12 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(_ROOT))
     sys.path.insert(0, str(_ROOT / "src"))
 
-from connections.core.logic import Domain, Logic
-from connections.core.status import SZSStatus
-from connections.prover.prover import Prover
+from connections.syntax.logic import Domain, Logic
+from connections.prover.status import SZSStatus
+from connections.prover.prover import ProblemSpec, Prover
 from connections.prover.strategy import StrategySchedule
-from connections.pycop.settings_codec import LeancopSettingsCodec
-from tools.corpus.selection import select_problem_paths
+from provers.pycop.settings_codec import LeancopSettingsCodec
+from connections.runs import select_problem_paths
 from tools.parity.benchmark_status import benchmark_status
 
 ReferenceProver = Literal["leancop21", "ileancop12", "mleancop13"]
@@ -177,15 +177,18 @@ def native_pycop_status(
     source_file_dirs: Sequence[str | Path] = (),
 ) -> str | None:
     strategy = LeancopSettingsCodec.from_tokens(list(case.settings))
-    result = Prover().run(
+    problem = ProblemSpec(
         problem_path,
+        logic=case.logic,
+        domain=case.domain,
+        source_file_dirs=tuple(source_file_dirs),
+    )
+    result = Prover().run(
+        problem,
         schedule=StrategySchedule.single(
             strategy,
             timeout_seconds=timeout_seconds,
         ),
-        logic=case.logic,
-        domain=case.domain,
-        source_file_dirs=source_file_dirs,
     )
     return None if result.szs_status is None else result.szs_status.value
 

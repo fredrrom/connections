@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from lark import Transformer, Tree, v_args
 
-from connections.core.formula import (
+from connections.syntax.formula import (
     And,
     Atom,
     Box,

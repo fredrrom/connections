@@ -5,13 +5,12 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import cast
 
-from connections.core.logic import Logic
-from connections.pycop.settings_codec import LeancopSettingsCodec
-from connections.prover.strategy import WeightedStrategy
-from connections.pycop.strategy import PycopStrategy
+from connections.syntax.logic import Logic
+from provers.pycop.settings_codec import LeancopSettingsCodec
+from connections.prover.strategy import Strategy, WeightedStrategy
 
 
-def _entry(tokens: list[str], weight: int) -> WeightedStrategy[PycopStrategy]:
+def _entry(tokens: list[str], weight: int) -> WeightedStrategy[Strategy]:
     return WeightedStrategy(strategy=LeancopSettingsCodec.from_tokens(tokens), weight=weight)
 
 
@@ -23,24 +22,24 @@ _BUILTIN_SCHEDULE_PATHS = {
 }
 
 
-def load_schedule_entries(path_or_name: str | Path) -> list[WeightedStrategy[PycopStrategy]]:
+def load_schedule_entries(path_or_name: str | Path) -> list[WeightedStrategy[Strategy]]:
     if isinstance(path_or_name, str) and path_or_name in _BUILTIN_SCHEDULE_PATHS:
         return _load_schedule_file(_BUILTIN_SCHEDULE_PATHS[path_or_name])
     return _load_schedule_file(Path(path_or_name))
 
 
-def _load_schedule_file(path: Path) -> list[WeightedStrategy[PycopStrategy]]:
+def _load_schedule_file(path: Path) -> list[WeightedStrategy[Strategy]]:
     return _entries_from_json(json.loads(path.read_text(encoding="utf-8")))
 
 
-def _entries_from_json(data: object) -> list[WeightedStrategy[PycopStrategy]]:
+def _entries_from_json(data: object) -> list[WeightedStrategy[Strategy]]:
     if isinstance(data, Mapping):
         root = cast(Mapping[str, object], data)
         data = root.get("entries")
     if not isinstance(data, list):
         raise ValueError("schedule file must contain a list or an object with entries")
 
-    entries: list[WeightedStrategy[PycopStrategy]] = []
+    entries: list[WeightedStrategy[Strategy]] = []
     for index, item in enumerate(data, start=1):
         if not isinstance(item, Mapping):
             raise ValueError(f"schedule entry {index} must be an object")
@@ -60,7 +59,7 @@ def _entries_from_json(data: object) -> list[WeightedStrategy[PycopStrategy]]:
     return entries
 
 
-def _load_builtin_schedule(name: str) -> list[WeightedStrategy[PycopStrategy]]:
+def _load_builtin_schedule(name: str) -> list[WeightedStrategy[Strategy]]:
     return _load_schedule_file(_BUILTIN_SCHEDULE_PATHS[name])
 
 
@@ -68,7 +67,7 @@ _CLASSICAL_SCHEDULE = _load_builtin_schedule("classical")
 _INTUITIONISTIC_SCHEDULE = _load_builtin_schedule("intuitionistic")
 _MODAL_SCHEDULE = _load_builtin_schedule("modal")
 
-SCHEDULE_BY_LOGIC: dict[Logic, list[WeightedStrategy[PycopStrategy]]] = {
+SCHEDULE_BY_LOGIC: dict[Logic, list[WeightedStrategy[Strategy]]] = {
     "classical": _CLASSICAL_SCHEDULE,
     "intuitionistic": _INTUITIONISTIC_SCHEDULE,
     "D": _MODAL_SCHEDULE,

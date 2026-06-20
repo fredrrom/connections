@@ -18,11 +18,11 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(_ROOT / "src"))
 
 from connections.clausification import matrix_from_file
-from connections.core.formula import Function, Prefix, Term, Variable
-from connections.core.logic import Domain, Logic
-from connections.core.matrix import Clause, Literal as MatrixLiteral
-from connections.pycop.settings_codec import LeancopSettingsCodec
-from tools.corpus.selection import select_problem_paths
+from connections.syntax.formula import Function, Prefix, Term, Variable
+from connections.syntax.logic import Domain, Logic
+from connections.syntax.matrix import Clause, Literal as MatrixLiteral
+from provers.pycop.settings_codec import LeancopSettingsCodec
+from connections.runs import select_problem_paths
 from tools.parity.run_status_check import ReferenceProver
 
 ReferenceSupport = Literal["supported", "translator_limit"]
@@ -167,11 +167,12 @@ def native_matrix_dump(
     source_file_dirs: Sequence[str | Path] = (),
 ) -> dict[str, Any]:
     strategy = LeancopSettingsCodec.from_tokens(list(case.settings))
+    matrix_options = strategy.matrix
     matrix = matrix_from_file(
         problem_path,
-        translation=strategy.matrix.translation,
-        reorder=strategy.matrix.reorder,
-        start_clauses=strategy.matrix.start_clauses,
+        translation=matrix_options.translation,
+        reorder=matrix_options.reorder,
+        start_clauses=matrix_options.start_clauses,
         logic=case.logic,
         domain=case.domain,
         source_file_dirs=source_file_dirs,

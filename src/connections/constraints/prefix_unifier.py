@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from connections.core.formula import Function, Variable
+from connections.syntax.formula import Function, Variable
 from connections.constraints.prefix_types import PrefixBinding
 
 

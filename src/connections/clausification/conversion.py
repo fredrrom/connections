@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from connections.core.formula import (
+from connections.syntax.formula import (
     And,
     Atom,
     Eq,
@@ -15,7 +15,7 @@ from connections.core.formula import (
     Term,
     Variable,
 )
-from connections.core.matrix import Literal
+from connections.syntax.matrix import Literal
 
 
 def cnf_formula_to_literals(formula: Formula) -> tuple[Literal, ...]:

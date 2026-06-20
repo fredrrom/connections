@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, TypeAlias
 
-from connections.core.formula import Atom, Term, Variable
-from connections.core.matrix import Literal
+from connections.syntax.formula import Atom, Term, Variable
+from connections.syntax.matrix import Literal
 
 
 @dataclass(frozen=True, slots=True, eq=False)

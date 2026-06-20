@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from connections.core.formula import And, Eq, Exists, Forall, Impl, Not
+from connections.syntax.formula import And, Eq, Exists, Forall, Impl, Not
 from connections.parsing.tptp.parser import (
     E_NON_FOF_TOPLEVEL,
     TPTPParseError,

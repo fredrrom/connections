@@ -7,7 +7,7 @@ from typing import Iterable
 from lark import UnexpectedInput
 from lark.exceptions import UnexpectedToken
 
-from connections.core.formula import And, Formula, Impl
+from connections.syntax.formula import And, Formula, Impl
 from connections.parsing.tptp.grammar import PARSER
 from connections.parsing.tptp.transformer import (
     StmtCNF,

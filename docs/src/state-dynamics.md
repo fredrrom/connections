@@ -19,20 +19,17 @@ sequenceDiagram
     participant P as Policy
     participant D as Dynamics
     participant S as State
-    participant H as ProverHook
 
     R->>P: __call__(state)
-    P->>D: available_actions(state)
+    P->>D: query legal actions
     D->>S: read tableau, constraints, caches
     S-->>D: local proof context
     D-->>P: tuple[Action]
-    P-->>R: ActionChoice(action, index)
-    R->>H: on_choice(state, choice)
+    P-->>R: Action | ProverOutcome | None
     R->>D: transition(state, action)
     D->>S: commit delta, edit tableau, propagate
-    R->>H: on_transition(state, action)
     alt tableau closed
-        R->>H: on_proof_found(state)
+        R-->>R: store closed_state in result
     end
 ```
 
@@ -57,7 +54,7 @@ a selected start clause.
 ## Goal Identity
 
 The prover uses integer `goal_id`s instead of object references as action
-targets. This gives stable action data for policies, caches, traces, hooks, and
+targets. This gives stable action data for policies, caches, traces, and
 debugging. Addresses remain useful for tree order, but they are not the primary
 action identity.
 
@@ -86,7 +83,7 @@ policy/prover loop is either:
 - `UndoAction` calls `State.undo_rule_application`
 
 The transition function assumes the policy selected an action from the current
-action space. Validation happens in `Policy.__call__`.
+action space.
 
 ## Constraint Transactions
 
@@ -178,19 +175,20 @@ Frame.goal_id: int
 Frame.actions: list[Action]
 ```
 
-Each frame is a choicepoint for one goal. DFS synchronizes the stack with the
-first open fringe goal reported by `State`; `Dynamics.apply_actions` supplies
-the legal actions for that goal, and DFS/ID/pycop restrict or order those
-actions as policy. If the top frame exhausts its actions, DFS returns an
-`UndoAction` for the appropriate earlier proof step.
+Work frames contain the remaining sibling goals at one AND level. Choicepoint
+frames contain the remaining actions for one selected goal. `Dynamics` supplies
+legal rule applications; DFS/ID restrict the order in which those legal actions
+become visible. Concrete prover policies choose one visible action. If the
+active branch exhausts its actions, DFS returns an `UndoAction` for the
+appropriate earlier proof step.
 
 `cut` removes remaining actions for closed goals. `scut` keeps only the first
-root start action when applicable. `IterativeDeepeningPolicy` extends DFS with
+root start action when applicable. `IDPolicy` extends DFS with
 path-limit iteration and optional `comp(I)` behavior.
 
 The action-space boundary is intentionally stricter than some reference-prover
 trace bookkeeping. `Dynamics.apply_actions` produces only executable actions.
-`IterativeDeepeningPolicy` asks DFS for those legal actions, filters non-ground
+`IDPolicy` asks DFS for those legal actions, filters non-ground
 extension actions that exceed the current path limit, and records
 `pathlim_hit` markers in the same order as the remaining frame actions. Those
 markers are emitted only when DFS reaches them: immediately before the selected
@@ -223,9 +221,8 @@ Supported native 0.1 constraint slices:
 Extensions should compose with this state/dynamics layer rather than replace it:
 
 - use a policy to choose among actions
-- use `available_actions(state)` to define the action space
-- use hooks to observe choices, transitions, and closed tableaux
-- use `on_proof_found(state)` when the closed tableau is needed
+- call a policy with `policy(state)` rather than applying actions directly
+- use `ProverResult.closed_state` when the closed tableau is needed
 
 The state/dynamics layer does not know about downstream output formats or
 external orchestration.

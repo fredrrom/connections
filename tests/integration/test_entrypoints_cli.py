@@ -55,7 +55,7 @@ def test_pycop_accepts_explicit_source_dir_without_tptp_env(tmp_path):
         [
             sys.executable,
             "-m",
-            "connections.pycop.cli",
+            "provers.pycop.cli",
             str(problem),
             "classical",
             "constant",
@@ -83,7 +83,7 @@ def test_pycop_reports_satisfiable_when_no_start_clause_exists(tmp_path):
         [
             sys.executable,
             "-m",
-            "connections.pycop.cli",
+            "provers.pycop.cli",
             str(problem),
             "classical",
             "constant",
@@ -108,7 +108,7 @@ def test_pycop_supports_intuitionistic_matrix_construction(tmp_path):
         [
             sys.executable,
             "-m",
-            "connections.pycop.cli",
+            "provers.pycop.cli",
             str(problem),
             "intuitionistic",
             "constant",
@@ -134,7 +134,7 @@ def test_pycop_supports_modal_matrix_construction(tmp_path):
         [
             sys.executable,
             "-m",
-            "connections.pycop.cli",
+            "provers.pycop.cli",
             str(problem),
             "D",
             "cumulative",
@@ -160,7 +160,7 @@ def test_pycop_reports_counter_satisfiable_for_counterexample_problem(tmp_path):
         [
             sys.executable,
             "-m",
-            "connections.pycop.cli",
+            "provers.pycop.cli",
             str(problem),
             "classical",
             "constant",
@@ -191,7 +191,7 @@ def test_pycop_reports_unsatisfiable_for_closed_cnf_with_negated_conjecture(
         [
             sys.executable,
             "-m",
-            "connections.pycop.cli",
+            "provers.pycop.cli",
             str(problem),
             "classical",
             "constant",
@@ -223,7 +223,7 @@ def test_pycop_reports_satisfiable_for_exhausted_cnf_with_negated_conjecture(
         [
             sys.executable,
             "-m",
-            "connections.pycop.cli",
+            "provers.pycop.cli",
             str(problem),
             "classical",
             "constant",
@@ -255,7 +255,7 @@ def test_pycop_schedule_prints_strategy_status_without_trace(tmp_path):
         [
             sys.executable,
             "-m",
-            "connections.pycop.cli",
+            "provers.pycop.cli",
             str(problem),
             "classical",
             "constant",
@@ -286,7 +286,7 @@ def test_pycop_default_cli_runs_single_strategy(tmp_path):
         [
             sys.executable,
             "-m",
-            "connections.pycop.cli",
+            "provers.pycop.cli",
             str(problem),
             "classical",
             "constant",

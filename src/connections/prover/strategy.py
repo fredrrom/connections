@@ -1,17 +1,17 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 import math
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from connections.clausification import (
     ClausificationTranslationMode,
     StartClausesMode,
 )
-from connections.policy.dfs import DFSOptions, create_dfs_policy
+from connections.policy import Policy
 
 StrategyT = TypeVar("StrategyT")
-
 
 @dataclass(frozen=True, slots=True)
 class MatrixOptions:
@@ -21,12 +21,18 @@ class MatrixOptions:
 
 
 @dataclass(frozen=True, slots=True)
-class DFSStrategy:
-    matrix: MatrixOptions = field(default_factory=MatrixOptions)
-    dfs: DFSOptions = field(default_factory=DFSOptions)
+class PolicyOptions:
+    policy_class: type[Policy]
+    args: Mapping[str, Any] = field(default_factory=dict)
 
-    def create_policy(self):
-        return create_dfs_policy(self.dfs)
+    def instantiate(self) -> Policy:
+        return self.policy_class(**dict(self.args))
+
+
+@dataclass(frozen=True, slots=True)
+class Strategy:
+    matrix: MatrixOptions
+    policy: PolicyOptions
 
 
 @dataclass(frozen=True, slots=True)
@@ -153,9 +159,10 @@ def _allocate_float_budget(
     return tuple(allocated)
 
 __all__ = [
-    "DFSStrategy",
     "MatrixOptions",
+    "PolicyOptions",
     "ScheduledStrategy",
+    "Strategy",
     "StrategySchedule",
     "WeightedStrategy",
 ]

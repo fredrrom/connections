@@ -1,6 +1,6 @@
 # Developer Tools
 
-`tools/` contains checkout-local developer diagnostics and runnable utilities.
+`tools/` contains checkout-local parity diagnostics and runnable utilities.
 They are not part of the importable `connections` library API, and they are not
 normal pytest tests.
 
@@ -8,7 +8,7 @@ These commands may:
 
 - call external programs such as SWI-Prolog
 - run over problem corpora
-- write JSONL, summaries, profiles, and other artifacts
+- write JSONL, summaries, and other parity artifacts
 - take longer than deterministic tests
 - be used manually or in release validation
 
@@ -21,9 +21,7 @@ They should not:
 
 The current tool families are:
 
-- `tools/corpus/`: run a prover over one or more problem files and write rows.
 - `tools/parity/`: compare native behavior with leanCoP-family references.
-- `tools/profiling/`: measure pycop performance over files or corpora.
 - `tools/parity/reference_provers/`: bundled reference prover assets used by
   parity diagnostics.
 
@@ -33,11 +31,21 @@ Use normal tests for deterministic unit and integration checks:
 uv run pytest tests
 ```
 
+Normal tests cover importable package behavior under `src/connections`. Tool
+commands are checked manually as release diagnostics.
+
 Use tools for explicit diagnostics and release validation:
 
 ```bash
 uv run python tools/parity/run_all.py --json
-uv run python tools/profiling/run.py path/to/problems --out artifacts/profile --overwrite
+```
+
+Use package commands for ordinary pycop runs, profiling, and benchmark setup:
+
+```bash
+uv run pycop path/to/problems --out artifacts/corpus/runs.jsonl --overwrite
+uv run pycop path/to/problems --profile artifacts/profile/run --overwrite
+uv run connections-download-benchmarks --list
 ```
 
 ## Parity Triage

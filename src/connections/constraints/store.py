@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from connections.core.formula import Function, Prefix, Term, Variable
-from connections.core.matrix import Literal
+from connections.syntax.formula import Function, Prefix, Term, Variable
+from connections.syntax.matrix import Literal
 from connections.constraints.delta import (
     ConstraintDelta,
     FreeVariableReference,

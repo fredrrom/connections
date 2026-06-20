@@ -8,8 +8,8 @@ from connections.clausification.translate import (
     StartClausesMode,
     clausify,
 )
-from connections.core.logic import Domain, Logic
-from connections.core.matrix import Matrix
+from connections.syntax.logic import Domain, Logic
+from connections.syntax.matrix import Matrix
 from connections.trace_logging import TRACE_LEVEL, clausification_trace_logger, trace
 
 

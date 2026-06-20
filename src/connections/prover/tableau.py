@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from connections.core.matrix import Literal, SignedPredicateSymbol
+from connections.syntax.matrix import Literal, SignedPredicateSymbol
 from connections.prover.rules import Extension, Rule, Start
 
 

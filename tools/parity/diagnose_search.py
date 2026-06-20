@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 import sys
 import time
-from typing import Any, Sequence
+from typing import Any, Sequence, cast
 
 if __package__ in {None, ""}:
     _ROOT = Path(__file__).resolve().parents[2]
@@ -18,20 +18,18 @@ from connections.clausification import matrix_from_file
 from connections.constraints.prefix import prefix_equations_satisfiable
 from connections.constraints.prefix_types import PrefixEquation
 from connections.constraints.term import TermBinding
-from connections.core.formula import Prefix
-from connections.core.logic import Domain, Logic
-from connections.core.matrix import Clause, Literal
-from connections.core.status import ProverOutcome, to_szs_status
+from connections.syntax.formula import Prefix
+from connections.syntax.logic import Domain, Logic
+from connections.syntax.matrix import Clause, Literal
+from connections.prover.status import ProverOutcome, to_szs_status
 from connections.prover.actions import Action, ApplyAction, UndoAction
-from connections.prover.actions import ActionChoice
 from connections.prover.dynamics import Dynamics
 from connections.prover.prover import Problem
 from connections.prover.rules import Extension, Factorization, Reduction, Start
 from connections.prover.state import State
 from connections.prover.strategy import MatrixOptions
 from connections.prover.tableau import Tableau, TableauNode
-from connections.pycop.policy import PycopPolicy
-from connections.pycop.settings_codec import LeancopSettingsCodec
+from provers.pycop.settings_codec import LeancopSettingsCodec
 
 
 @dataclass(slots=True)
@@ -90,7 +88,8 @@ def diagnose(
         domain=domain,
         source_file_dirs=source_file_dirs,
     )
-    policy = PycopPolicy(strategy)
+    policy = strategy.policy.instantiate()
+    replay_policy = cast(Any, policy)
     audit = SearchAudit(witness_limit=witness_limit)
     started_at = time.monotonic()
     deadline = None if timeout_seconds is None else started_at + timeout_seconds
@@ -100,7 +99,6 @@ def diagnose(
 
     while outcome is None:
         if state.tableau.root.closed:
-            policy.record_proof_found(state)
             outcome = ProverOutcome.PROVED
             break
         if choices >= max_choices:
@@ -111,7 +109,12 @@ def diagnose(
             break
 
         audit_state(state, audit=audit)
-        output = policy(state)
+        actions = replay_policy._available_actions(state)
+        output = (
+            replay_policy._exhausted_outcome()
+            if not actions
+            else replay_policy._next_action(state, actions)
+        )
         choices += 1
 
         if isinstance(output, ProverOutcome):
@@ -120,8 +123,9 @@ def diagnose(
         if output is None:
             break
 
-        action = output.action
-        _audit_choice(output, audit=audit)
+        action = output
+        replay_policy._after_action(state, actions, action)
+        _audit_choice(actions, action, audit=audit)
         if isinstance(action, ApplyAction):
             if step_limit is not None and inference_actions >= step_limit:
                 outcome = ProverOutcome.STEP_BUDGET
@@ -448,15 +452,20 @@ def _oriented_substituted_prefixes(
     )
 
 
-def _audit_choice(choice: ActionChoice, *, audit: SearchAudit) -> None:
+def _audit_choice(
+    actions: tuple[Action, ...],
+    action: Action,
+    *,
+    audit: SearchAudit,
+) -> None:
     audit.count("choices")
-    audit.count(f"chosen_{_action_kind(choice.action)}")
-    audit.count("choice_action_count", len(choice.actions))
-    audit.count(f"chosen_index_{choice.chosen_index}")
+    audit.count(f"chosen_{_action_kind(action)}")
+    audit.count("choice_action_count", len(actions))
+    audit.count(f"chosen_index_{actions.index(action)}")
     audit.count("policy_action_spaces")
-    audit.count("policy_available_actions", len(choice.actions))
-    for action in choice.actions:
-        audit.count(f"policy_available_{_action_kind(action)}")
+    audit.count("policy_available_actions", len(actions))
+    for available_action in actions:
+        audit.count(f"policy_available_{_action_kind(available_action)}")
 
 
 def _actionable_fringe_goals(state: State) -> tuple[TableauNode, ...]:
@@ -514,7 +523,7 @@ def _equation_summary(equation: PrefixEquation) -> dict[str, str]:
 
 
 def _empty_literal() -> Literal:
-    from connections.core.formula import Atom
+    from connections.syntax.formula import Atom
 
     return Literal(Atom("$empty", ()))
 

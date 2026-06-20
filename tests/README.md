@@ -31,6 +31,6 @@ uv run pytest tests
 uv run pytest -m external_tptp_corpus --tptp-root /path/to/TPTP
 ```
 
-Corpus-scale prover runs, parity sweeps, and profiling runs live under
-`tools/` as explicit developer commands. Keep this test suite deterministic and
-small enough for regular local verification.
+Corpus-scale prover runs, parity sweeps, download helpers, and profiling runs
+live under `tools/` as explicit developer commands. Pytest should cover
+importable behavior under `src/connections`, not tool implementation details.

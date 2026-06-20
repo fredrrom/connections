@@ -51,7 +51,7 @@ flowchart TB
 
 ## FOF
 
-FOF statements are parsed into the core formula AST:
+FOF statements are parsed into the syntax formula AST:
 
 - `Atom`
 - `Eq`

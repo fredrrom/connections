@@ -1,5 +1,5 @@
-from connections.core.formula import Atom
-from connections.core.matrix import Clause, Literal, Matrix
+from connections.syntax.formula import Atom
+from connections.syntax.matrix import Clause, Literal, Matrix
 from connections.prover.state import State
 from connections.prover.prover import Problem
 from connections.prover.rules import Extension, Reduction, Start

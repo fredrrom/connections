@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Protocol, cast
 
-from connections.core.formula import Atom, Function, Prefix, Term, Variable
-from connections.core.matrix import Literal
+from connections.syntax.formula import Atom, Function, Prefix, Term, Variable
+from connections.syntax.matrix import Literal
 from connections.constraints.term_types import (
     LiteralCacheEntry,
     ResolveCacheEntry,

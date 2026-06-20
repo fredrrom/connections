@@ -4,7 +4,7 @@ import pytest
 
 from connections.clausification import clausify
 from connections.clausification.conversion import mat, prefixed_dnf, prefixed_mat
-from connections.core.formula import (
+from connections.syntax.formula import (
     And,
     Atom,
     Box,
@@ -19,7 +19,7 @@ from connections.core.formula import (
     Prefix,
     Variable,
 )
-from connections.core.matrix import Matrix
+from connections.syntax.matrix import Matrix
 from connections.parsing.tptp.parser import parse_tptp_file
 from connections.trace_logging import CLAUSIFICATION_TRACE_LOGGER_NAME, TRACE_LEVEL
 

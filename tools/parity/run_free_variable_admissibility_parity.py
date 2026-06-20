@@ -12,7 +12,7 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(_ROOT / "src"))
 
 from connections.constraints.prefix import free_variables_admissible
-from connections.core.formula import Function, Prefix, Term, Variable
+from connections.syntax.formula import Function, Prefix, Term, Variable
 from tools.parity.prefix_cases import (
     DEFAULT_FREE_VARIABLE_CASES,
     FreeVariableCase,

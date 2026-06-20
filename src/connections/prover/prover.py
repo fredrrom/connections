@@ -3,50 +3,45 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 import time
-from typing import Any, Generic, Iterable, Protocol, Sequence, TypeAlias, TypeVar, cast
+from collections.abc import Callable
+from typing import Any, Generic, TypeVar, cast
 
 from connections.clausification import StartClausesMode, matrix_from_file
-from connections.core.logic import Domain, Logic
-from connections.core.matrix import Matrix
-from connections.core.status import ProverOutcome, SZSStatus, to_szs_status
-from connections.policy import Policy
-from connections.prover.actions import Action, ActionChoice, ApplyAction
+from connections.syntax.logic import Domain, Logic
+from connections.syntax.matrix import Matrix
+from connections.prover.status import ProverOutcome, SZSStatus, to_szs_status
+from connections.policy import DFSPolicy, Policy
+from connections.prover.actions import Action, ApplyAction
 from connections.prover.dynamics import Dynamics
 from connections.prover.state import State
 from connections.prover.strategy import (
     MatrixOptions,
     ScheduledStrategy,
+    Strategy,
     StrategySchedule,
-    WeightedStrategy,
 )
 from connections.prover.tableau import Tableau
 from connections.trace_logging import trace, trace_logger
 
 
-class _Strategy(Protocol):
-    matrix: MatrixOptions
-
-    def create_policy(self) -> Policy: ...
-
-
-StrategyT = TypeVar("StrategyT", bound=_Strategy)
-_StrategyArg: TypeAlias = (
-    StrategyT
-    | WeightedStrategy[StrategyT]
-    | ScheduledStrategy[StrategyT]
-    | Sequence[StrategyT | WeightedStrategy[StrategyT] | ScheduledStrategy[StrategyT]]
-)
+StrategyT = TypeVar("StrategyT", bound=Strategy)
+ProofFoundCallback = Callable[["ProofFound[StrategyT]"], Any]
 
 
 @dataclass(frozen=True, slots=True)
-class _ProblemInput:
+class ProblemSpec:
     path: str | Path
     logic: Logic = "classical"
     domain: Domain = "constant"
-    source_file_dirs: tuple[str | Path, ...] = ()
+    source_file_dirs: tuple[str | Path, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "source_file_dirs", tuple(self.source_file_dirs))
+        object.__setattr__(self, "path", Path(self.path))
+        object.__setattr__(
+            self,
+            "source_file_dirs",
+            tuple(Path(directory) for directory in self.source_file_dirs),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,6 +70,7 @@ class Problem:
 class StrategyResult(Generic[StrategyT]):
     strategy: StrategyT
     outcome: ProverOutcome | None
+    steps: int
     inference_actions: int
     elapsed_seconds: float
     step_limit: int | None = None
@@ -88,31 +84,22 @@ class ProverResult(Generic[StrategyT]):
     strategy_results: tuple[StrategyResult[StrategyT], ...]
     winning_strategy_index: int | None = None
     szs_status: SZSStatus | None = None
+    proof_payload: Any | None = None
 
 
-class ProverHook:
-    def on_strategy_start(
-        self,
-        strategy_index: int,
-        entry: ScheduledStrategy[Any],
-    ) -> None:
-        return None
+@dataclass(frozen=True, slots=True)
+class _StrategyRun(Generic[StrategyT]):
+    result: StrategyResult[StrategyT]
+    proof_state: State | None = None
 
-    def on_choice(self, state: State, choice: ActionChoice) -> None:
-        return None
 
-    def on_transition(self, state: State, action: Action) -> None:
-        return None
-
-    def on_proof_found(self, state: State) -> None:
-        return None
-
-    def on_strategy_end(
-        self,
-        result: StrategyResult[Any],
-        state: State | None,
-    ) -> None:
-        return None
+@dataclass(frozen=True, slots=True)
+class ProofFound(Generic[StrategyT]):
+    problem: ProblemSpec
+    strategy_index: int
+    strategy: StrategyT
+    result: StrategyResult[StrategyT]
+    state: State
 
 
 class ProverTimeoutError(RuntimeError):
@@ -122,42 +109,42 @@ class ProverTimeoutError(RuntimeError):
 class Prover:
     def run(
         self,
-        problem: str | Path,
+        problem: ProblemSpec,
         *,
-        strategy: _StrategyArg[StrategyT] | None = None,
-        schedule: StrategySchedule[StrategyT] | None = None,
-        logic: Logic = "classical",
-        domain: Domain = "constant",
-        source_file_dirs: Sequence[str | Path] = (),
-        hooks: Iterable[ProverHook] = (),
+        schedule: StrategyT | StrategySchedule[StrategyT],
+        on_proof_found: ProofFoundCallback[StrategyT] | None = None,
     ) -> ProverResult[StrategyT]:
-        problem_input = _ProblemInput(
-            problem,
-            logic=logic,
-            domain=domain,
-            source_file_dirs=tuple(source_file_dirs),
-        )
-        schedule = self._normalize_schedule(schedule=schedule, strategy=strategy)
+        schedule = self._strategy_schedule(schedule)
         strategy_results: list[StrategyResult[StrategyT]] = []
         winning_strategy_index: int | None = None
         outcome: ProverOutcome | None = None
         szs_status: SZSStatus | None = None
+        proof_payload: Any | None = None
         matrix_cache: dict[tuple[object, ...], Matrix] = {}
-        hooks_tuple = tuple(hooks)
 
         for strategy_index, entry in enumerate(schedule.entries):
-            result = self._run_strategy(
-                problem_input,
+            strategy_run = self._run_strategy(
+                problem,
                 entry=entry,
                 matrix_cache=matrix_cache,
-                strategy_index=strategy_index,
-                hooks=hooks_tuple,
             )
+            result = strategy_run.result
             strategy_results.append(result)
             outcome = result.outcome
             szs_status = result.szs_status
             if outcome is ProverOutcome.PROVED:
                 winning_strategy_index = strategy_index
+                closed_state = strategy_run.proof_state
+                if on_proof_found is not None and closed_state is not None:
+                    proof_payload = on_proof_found(
+                        ProofFound(
+                            problem=problem,
+                            strategy_index=strategy_index,
+                            strategy=entry.strategy,
+                            result=result,
+                            state=closed_state,
+                        )
+                    )
                 break
 
         return ProverResult(
@@ -165,61 +152,29 @@ class Prover:
             strategy_results=tuple(strategy_results),
             winning_strategy_index=winning_strategy_index,
             szs_status=szs_status,
+            proof_payload=proof_payload,
         )
 
-    def _normalize_schedule(
+    def _strategy_schedule(
         self,
-        *,
-        schedule: StrategySchedule[StrategyT] | None,
-        strategy: _StrategyArg[StrategyT] | None,
+        schedule: StrategyT | StrategySchedule[StrategyT],
     ) -> StrategySchedule[StrategyT]:
-        if schedule is not None and strategy is not None:
-            raise ValueError("pass either schedule or strategy, not both")
-        if schedule is not None:
+        if isinstance(schedule, StrategySchedule):
             return schedule
-        if strategy is None:
-            raise ValueError("pass strategy or schedule")
-
-        if isinstance(strategy, ScheduledStrategy):
-            return StrategySchedule(entries=(strategy,))
-        if isinstance(strategy, WeightedStrategy):
-            return StrategySchedule.from_weighted((strategy,))
-        if not isinstance(strategy, Sequence):
-            return StrategySchedule.single(strategy)
-
-        normalized = tuple(strategy)
-        if not normalized:
-            return StrategySchedule(entries=())
-        if all(isinstance(strategy, ScheduledStrategy) for strategy in normalized):
-            return StrategySchedule(
-                entries=cast(tuple[ScheduledStrategy[StrategyT], ...], normalized)
-            )
-        if any(isinstance(strategy, ScheduledStrategy) for strategy in normalized):
-            raise ValueError("do not mix scheduled strategies with unscheduled strategies")
-
-        weighted_entries = tuple(
-            strategy
-            if isinstance(strategy, WeightedStrategy)
-            else WeightedStrategy(strategy=strategy)
-            for strategy in normalized
-        )
-        return StrategySchedule.from_weighted(weighted_entries)
+        return StrategySchedule.single(schedule)
 
     def _run_strategy(
         self,
-        problem: _ProblemInput,
+        problem: ProblemSpec,
         *,
         entry: ScheduledStrategy[StrategyT],
         matrix_cache: dict[tuple[object, ...], Matrix] | None = None,
-        strategy_index: int = 0,
-        hooks: tuple[ProverHook, ...] = (),
-    ) -> StrategyResult[StrategyT]:
+    ) -> _StrategyRun[StrategyT]:
         strategy = entry.strategy
         outcome: ProverOutcome | None = None
-        for hook in hooks:
-            hook.on_strategy_start(strategy_index, entry)
         started_at = time.monotonic()
         deadline = self._deadline(entry.timeout_seconds)
+        steps = 0
         inference_actions = 0
         state: State | None = None
         try:
@@ -229,13 +184,12 @@ class Prover:
                 matrix_cache=matrix_cache,
                 deadline=deadline,
             )
-            policy = strategy.create_policy()
-            inference_actions, outcome = self._run_strategy_loop(
+            policy = strategy.policy.instantiate()
+            steps, inference_actions, outcome = self._run_strategy_loop(
                 state,
                 policy=policy,
                 step_limit=entry.step_limit,
                 timeout_seconds=self._remaining_seconds(deadline),
-                hooks=hooks,
             )
         except ProverTimeoutError:
             outcome = ProverOutcome.TIMEOUT
@@ -247,15 +201,17 @@ class Prover:
         result = StrategyResult(
             strategy=strategy,
             outcome=outcome,
+            steps=steps,
             inference_actions=inference_actions,
             elapsed_seconds=time.monotonic() - started_at,
             step_limit=entry.step_limit,
             timeout_seconds=entry.timeout_seconds,
             szs_status=szs_status,
         )
-        for hook in hooks:
-            hook.on_strategy_end(result, state)
-        return result
+        return _StrategyRun(
+            result=result,
+            proof_state=state if outcome is ProverOutcome.PROVED else None,
+        )
 
     def _run_strategy_loop(
         self,
@@ -264,48 +220,42 @@ class Prover:
         policy: Policy,
         step_limit: int | None,
         timeout_seconds: float | None,
-        hooks: tuple[ProverHook, ...],
-    ) -> tuple[int, ProverOutcome | None]:
+    ) -> tuple[int, int, ProverOutcome | None]:
         deadline = self._deadline(timeout_seconds)
         if deadline is not None and time.monotonic() >= deadline:
-            return 0, ProverOutcome.TIMEOUT
+            return 0, 0, ProverOutcome.TIMEOUT
 
         outcome: ProverOutcome | None = None
+        steps = 0
         inference_actions = 0
         while outcome is None:
             if state.tableau.root.closed and state.constraints.satisfiable(
                 logic=state.problem.logic,
                 domain=state.problem.domain,
             ):
-                outcome = self._record_proof_found(state, hooks, policy=policy)
+                outcome = ProverOutcome.PROVED
                 break
             if deadline is not None and time.monotonic() >= deadline:
                 outcome = ProverOutcome.TIMEOUT
                 break
+            if step_limit is not None and steps >= step_limit:
+                outcome = ProverOutcome.STEP_BUDGET
+                break
 
-            output = policy(state)
+            output = cast(Action | ProverOutcome | None, policy(state))
+            steps += 1
             if isinstance(output, ProverOutcome):
                 outcome = output
                 break
             if output is None:
                 break
-            choice = output
-            action = choice.action
+            action = output
 
             if isinstance(action, ApplyAction):
-                if step_limit is not None and inference_actions >= step_limit:
-                    outcome = ProverOutcome.STEP_BUDGET
-                    break
                 inference_actions += 1
 
-            if hooks:
-                for hook in hooks:
-                    hook.on_choice(state, choice)
             Dynamics.transition(state, action)
             trace(trace_logger, action.trace_event())
-            if hooks:
-                for hook in hooks:
-                    hook.on_transition(state, action)
             if (
                 state.tableau.root.closed
                 and outcome is None
@@ -314,26 +264,15 @@ class Prover:
                     domain=state.problem.domain,
                 )
             ):
-                outcome = self._record_proof_found(state, hooks, policy=policy)
+                if isinstance(policy, DFSPolicy):
+                    policy._on_tableau_closed(state)
+                outcome = ProverOutcome.PROVED
 
-        return inference_actions, outcome
-
-    def _record_proof_found(
-        self,
-        state: State,
-        hooks: tuple[ProverHook, ...],
-        *,
-        policy: Policy | None = None,
-    ) -> ProverOutcome:
-        if policy is not None:
-            policy.record_proof_found(state)
-        for hook in hooks:
-            hook.on_proof_found(state)
-        return ProverOutcome.PROVED
+        return steps, inference_actions, outcome
 
     def _build_state_from_file(
         self,
-        problem: _ProblemInput,
+        problem: ProblemSpec,
         *,
         matrix_options: MatrixOptions,
         matrix_cache: dict[tuple[object, ...], Matrix] | None,
@@ -362,7 +301,7 @@ class Prover:
 
     def _matrix_from_file(
         self,
-        problem: _ProblemInput,
+        problem: ProblemSpec,
         *,
         matrix_options: MatrixOptions,
         matrix_cache: dict[tuple[object, ...], Matrix] | None,
@@ -412,7 +351,7 @@ class Prover:
 
     def _matrix_cache_key(
         self,
-        problem: _ProblemInput,
+        problem: ProblemSpec,
         *,
         matrix_options: MatrixOptions,
     ) -> tuple[object, ...]:
@@ -430,8 +369,10 @@ __all__ = [
     "Domain",
     "Logic",
     "Problem",
+    "ProofFound",
+    "ProofFoundCallback",
+    "ProblemSpec",
     "Prover",
-    "ProverHook",
     "ProverResult",
     "StrategyResult",
 ]

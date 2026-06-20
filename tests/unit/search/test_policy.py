@@ -6,25 +6,20 @@ from typing import Any, cast
 import pytest
 
 from connections.clausification import matrix_from_file
-from connections.core.formula import Atom, Variable
-from connections.core.matrix import Clause, Literal, Matrix
-from connections.core.status import ProverOutcome
+from connections.syntax.formula import Atom, Variable
+from connections.syntax.matrix import Clause, Literal, Matrix
+from connections.prover.status import ProverOutcome
 import connections.policy.dfs as policy_module
 import connections.policy.id as id_policy_module
-from connections.policy import (
-    DFSPolicy,
-    IterativeDeepeningPolicy,
-)
+from connections.policy import FirstActionIDPolicy
 from connections.prover.actions import (
     Action,
-    ActionChoice,
     AnyApplyAction,
     ApplyAction,
     ApplyActions,
     UndoAction,
 )
 from connections.prover.dynamics import Dynamics
-from connections.pycop.policy import PycopPolicy
 from connections.prover.prover import Problem
 from connections.prover.rules import Extension, Factorization, Reduction, Start
 from connections.prover.state import State
@@ -39,6 +34,12 @@ def _lit(label: str) -> Literal:
 _DUMMY_PROBLEM = Problem(
     matrix=Matrix((Clause((_lit("dummy"),)),)), start_clauses="positive"
 )
+
+
+class _ChooseFirstDFSPolicy(policy_module.DFSPolicy):
+    def _next_action(self, state, actions):
+        _ = state
+        return actions[0]
 
 
 def _apply(kind: str, token: int, goal_id: int) -> AnyApplyAction:
@@ -177,8 +178,6 @@ def _make_state(
 
 
 def _selected_action(output):
-    if isinstance(output, ActionChoice):
-        return output.action
     return output
 
 
@@ -230,7 +229,7 @@ def test_dfs_policy_selects_first_available_action(monkeypatch):
     )
 
     _patch_dynamics(monkeypatch, dynamics)
-    action = DFSPolicy()(state)
+    action = _ChooseFirstDFSPolicy()(state)
 
     assert _label(dynamics, action) == "ex0"
 
@@ -250,7 +249,7 @@ def test_dfs_policy_with_scut_only_tries_first_start_clause(monkeypatch):
         ],
     )
     _patch_dynamics(monkeypatch, dynamics)
-    policy = DFSPolicy(scut=True)
+    policy = _ChooseFirstDFSPolicy(scut=True)
 
     first = policy(state)
 
@@ -259,7 +258,7 @@ def test_dfs_policy_with_scut_only_tries_first_start_clause(monkeypatch):
 
 
 def test_dfs_policy_reads_cut_and_scut_from_constructor_args():
-    policy = DFSPolicy(cut=True, scut=True)
+    policy = _ChooseFirstDFSPolicy(cut=True, scut=True)
 
     assert policy.cut_enabled is True
     assert policy.scut_enabled is True
@@ -303,7 +302,7 @@ def test_dfs_policy_tries_remaining_actions_then_backtracks_ancestor_step(monkey
     child_tableau.goals[child_root_goal.goal_id].applied_rule_application_id = 100
     child_tableau.rule_applications[100].child_goal_ids = (child_goal.goal_id,)
     dynamics_switch = _patch_dynamics(monkeypatch, root_dynamics)
-    policy = DFSPolicy()
+    policy = _ChooseFirstDFSPolicy()
 
     first = policy(root_state)
     dynamics_switch.current = child_dynamics
@@ -376,7 +375,7 @@ def test_dfs_policy_backtracks_highest_exhausted_subtree(monkeypatch):
     leaf_tableau.rule_applications[100].child_goal_ids = (leaf_child_goal.goal_id,)
     leaf_tableau.rule_applications[200].child_goal_ids = (leaf_goal.goal_id,)
     dynamics_switch = _patch_dynamics(monkeypatch, root_dynamics)
-    policy = DFSPolicy(backtrack="maximal")
+    policy = _ChooseFirstDFSPolicy(backtrack="maximal")
 
     first = policy(root_state)
     dynamics_switch.current = child_dynamics
@@ -445,7 +444,7 @@ def test_dfs_policy_step_backtracking_keeps_nearest_exhausted_step(monkeypatch):
     leaf_tableau.rule_applications[100].child_goal_ids = (leaf_child_goal.goal_id,)
     leaf_tableau.rule_applications[200].child_goal_ids = (leaf_goal.goal_id,)
     dynamics_switch = _patch_dynamics(monkeypatch, root_dynamics)
-    policy = DFSPolicy(backtrack="step")
+    policy = _ChooseFirstDFSPolicy(backtrack="step")
 
     first = policy(root_state)
     dynamics_switch.current = child_dynamics
@@ -523,7 +522,7 @@ def test_dfs_policy_closed_goal_without_cut_backtracks_before_parent_actions(
     solved_tableau.goals[solved_root_goal.goal_id].applied_rule_application_id = 100
     solved_tableau.rule_applications[100].child_goal_ids = (child_goal.goal_id,)
     dynamics_switch = _patch_dynamics(monkeypatch, root_dynamics)
-    policy = DFSPolicy()
+    policy = _ChooseFirstDFSPolicy()
 
     assert _label(root_dynamics, policy(root_state)) == "st0"
     dynamics_switch.current = child_dynamics
@@ -595,7 +594,7 @@ def test_dfs_policy_cut_returns_undo_before_remaining_child_actions(monkeypatch)
     solved_tableau.goals[solved_root_goal.goal_id].applied_rule_application_id = 100
     solved_tableau.rule_applications[100].child_goal_ids = (child_goal.goal_id,)
     dynamics_switch = _patch_dynamics(monkeypatch, root_dynamics)
-    policy = DFSPolicy(cut=True)
+    policy = _ChooseFirstDFSPolicy(cut=True)
 
     assert _label(root_dynamics, policy(root_state)) == "st0"
     dynamics_switch.current = child_dynamics
@@ -628,7 +627,7 @@ def test_iterative_deepening_policy_at_depth_limit_prefers_factorization_and_red
         ],
     )
     _patch_dynamics(monkeypatch, dynamics)
-    policy = IterativeDeepeningPolicy()
+    policy = FirstActionIDPolicy()
     policy.depth_limit = 1
 
     first = policy(state)
@@ -658,7 +657,7 @@ def test_iterative_deepening_logs_path_limit_before_ground_extension(
         goals=[(goal, [nonground_extension, ground_extension])],
     )
     _patch_dynamics(monkeypatch, dynamics)
-    policy = IterativeDeepeningPolicy()
+    policy = FirstActionIDPolicy()
     policy.depth_limit = 0
 
     caplog.set_level(TRACE_LEVEL, logger="connections.trace")
@@ -690,7 +689,7 @@ def test_iterative_deepening_does_not_log_path_limit_after_chosen_extension(
         goals=[(goal, [ground_extension, nonground_extension])],
     )
     _patch_dynamics(monkeypatch, dynamics)
-    policy = IterativeDeepeningPolicy()
+    policy = FirstActionIDPolicy()
     policy.depth_limit = 0
 
     caplog.set_level(TRACE_LEVEL, logger="connections.trace")
@@ -707,7 +706,7 @@ def test_iterative_deepening_increments_depth_when_frame_stack_is_empty(monkeypa
         goals=[(goal, [_apply("extension", 0, goal.goal_id)])],
     )
     _patch_dynamics(monkeypatch, dynamics)
-    policy = IterativeDeepeningPolicy()
+    policy = FirstActionIDPolicy()
 
     assert policy.depth_limit == 0
     assert _label(dynamics, policy(state)) == "ex0"
@@ -728,7 +727,7 @@ def test_iterative_deepening_uses_configured_initial_depth(monkeypatch):
         goals=[(goal, [nonground_extension])],
     )
     _patch_dynamics(monkeypatch, dynamics)
-    policy = IterativeDeepeningPolicy(initial_depth=3)
+    policy = FirstActionIDPolicy(initial_depth=3)
 
     assert _selected_action(policy(state)) == nonground_extension
     assert policy.depth_limit == 3
@@ -736,7 +735,7 @@ def test_iterative_deepening_uses_configured_initial_depth(monkeypatch):
 
 def test_iterative_deepening_rejects_nonpositive_initial_depth():
     with pytest.raises(ValueError, match="at least 1"):
-        IterativeDeepeningPolicy(initial_depth=0)
+        FirstActionIDPolicy(initial_depth=0)
 
 
 def test_iterative_deepening_counts_root_child_as_path_length_one(monkeypatch, caplog):
@@ -753,7 +752,7 @@ def test_iterative_deepening_counts_root_child_as_path_length_one(monkeypatch, c
         goals=[(goal, [nonground_extension])],
     )
     _patch_dynamics(monkeypatch, dynamics)
-    policy = IterativeDeepeningPolicy()
+    policy = FirstActionIDPolicy()
 
     caplog.set_level(TRACE_LEVEL, logger="connections.trace")
     first = policy(state)
@@ -776,7 +775,7 @@ def test_modal_iterative_deepening_traces_rejected_prefix_path_limit_candidate(
         problem=Problem(matrix=matrix, start_clauses="positive", logic="D"),
         tableau=Tableau(),
     )
-    policy = IterativeDeepeningPolicy(cut=True, scut=True, comp=7)
+    policy = FirstActionIDPolicy(cut=True, scut=True, comp=7)
 
     start = _selected_action(policy(state))
     assert isinstance(start, ApplyAction)
@@ -809,7 +808,7 @@ def test_iterative_deepening_continues_after_comp_with_plain_settings(
         goals=[(goal, [nonground_extension])],
     )
     _patch_dynamics(monkeypatch, dynamics)
-    policy = IterativeDeepeningPolicy(cut=True, scut=True, comp=1)
+    policy = FirstActionIDPolicy(cut=True, scut=True, comp=1)
 
     caplog.set_level(TRACE_LEVEL, logger="connections.trace")
     first = policy(state)
@@ -826,31 +825,24 @@ def test_iterative_deepening_continues_after_comp_with_plain_settings(
     ]
 
 
-def test_pycop_policy_traces_leancop_empty_matrix_choicepoints(caplog):
+def test_iterative_deepening_empty_matrix_has_no_start_choicepoint(caplog):
     state = State(
         problem=Problem(matrix=Matrix(()), start_clauses="positive"),
         tableau=Tableau(),
     )
-    policy = PycopPolicy(scut=True, comp=3)
+    policy = FirstActionIDPolicy(
+        scut=True,
+        comp=3,
+        factorization="equal",
+    )
 
     caplog.set_level(TRACE_LEVEL, logger="connections.trace")
     action = policy(state)
 
     assert action is ProverOutcome.ID_FIXED_POINT
     assert caplog.messages == [
-        "scut",
-        "start",
-        "backtrack",
         "pathlim",
-        "scut",
-        "start",
-        "backtrack",
         "pathlim",
-        "scut",
-        "start",
-        "backtrack",
-        "start",
-        "backtrack",
     ]
 
 
@@ -859,7 +851,11 @@ def test_pycop_policy_keeps_real_empty_clause_as_start_action(caplog):
         problem=Problem(matrix=Matrix((Clause(()),)), start_clauses="positive"),
         tableau=Tableau(),
     )
-    policy = PycopPolicy(scut=True, comp=3)
+    policy = FirstActionIDPolicy(
+        scut=True,
+        comp=3,
+        factorization="equal",
+    )
 
     caplog.set_level(TRACE_LEVEL, logger="connections.trace")
     action = policy(state)

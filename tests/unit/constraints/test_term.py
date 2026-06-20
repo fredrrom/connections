@@ -1,7 +1,7 @@
 import pytest
 
-from connections.core.formula import Atom, Function, Variable
-from connections.core.matrix import Literal
+from connections.syntax.formula import Atom, Function, Variable
+from connections.syntax.matrix import Literal
 from connections.constraints.term import TermBinding, TermSubstitution, TableauVariable
 
 

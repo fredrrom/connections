@@ -12,7 +12,7 @@ from typing import (
     TypeAlias,
 )
 
-from connections.core.formula import Atom, Prefix, Variable
+from connections.syntax.formula import Atom, Prefix, Variable
 ClauseRole: TypeAlias = TypingLiteral["axiom", "conjecture"]
 LiteralPosition: TypeAlias = tuple[int, int]
 SignedPredicateSymbol: TypeAlias = tuple[bool, str]

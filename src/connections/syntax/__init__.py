@@ -1,4 +1,4 @@
-from connections.core.formula import (
+from connections.syntax.formula import (
     And,
     Atom,
     Box,
@@ -16,8 +16,8 @@ from connections.core.formula import (
     Term,
     Variable,
 )
-from connections.core.logic import Domain, Logic
-from connections.core.matrix import Clause, Literal, Matrix
+from connections.syntax.logic import Domain, Logic
+from connections.syntax.matrix import Clause, Literal, Matrix
 
 __all__ = [
     "Not",

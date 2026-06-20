@@ -2,7 +2,7 @@
 
 `connections` provides classical, intuitionistic, and modal connection-tableaux
 construction primitives for proof-search control. Version
-0.1 focuses on a clean prover core, reusable symbolic policies, native matrix
+0.1 focuses on a clean prover loop, reusable symbolic policies, native matrix
 construction, `pycop`, and local diagnostics against leanCoP-family reference
 provers.
 

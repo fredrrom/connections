@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from connections.core.formula import Variable
+from connections.syntax.formula import Variable
 from connections.constraints.prefix import PrefixEquation
 from connections.constraints.term import TermBinding
 

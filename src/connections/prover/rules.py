@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal, TypeAlias
 
-from connections.core.matrix import Clause
+from connections.syntax.matrix import Clause
 from connections.constraints import ConstraintDelta
 
 FactorizationMode: TypeAlias = Literal["equal", "unify"]

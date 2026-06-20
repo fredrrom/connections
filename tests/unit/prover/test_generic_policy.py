@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from connections.core.formula import Atom
-from connections.core.matrix import Clause, Literal, Matrix
-from connections.core.status import ProverOutcome
+from connections.syntax.formula import Atom
+from connections.syntax.matrix import Clause, Literal, Matrix
+from connections.prover.status import ProverOutcome
 from connections.policy import DFSPolicy
-from connections.prover.actions import ActionChoice, ApplyAction, UndoAction
+from connections.prover.actions import ApplyAction, UndoAction
 from connections.prover.dynamics import Dynamics
 from connections.prover.prover import Problem
 from connections.prover.rules import Start
@@ -23,15 +23,16 @@ def _state(matrix: Matrix) -> State:
     )
 
 
-def _action(output):
-    if isinstance(output, ActionChoice):
-        return output.action
-    return output
-
-
 class _SecondActionPolicy(DFSPolicy):
-    def next_action(self, state, actions):
-        return self.choose(actions, 1)
+    def _next_action(self, state, actions):
+        _ = state
+        return actions[1]
+
+
+class _ChooseFirstDFSPolicy(DFSPolicy):
+    def _next_action(self, state, actions):
+        _ = state
+        return actions[0]
 
 
 def test_dfs_policy_delegates_action_ordering() -> None:
@@ -44,7 +45,7 @@ def test_dfs_policy_delegates_action_ordering() -> None:
         )
     )
 
-    action = _action(_SecondActionPolicy()(state))
+    action = _SecondActionPolicy()(state)
 
     assert isinstance(action, ApplyAction)
     assert isinstance(action.rule, Start)
@@ -61,7 +62,7 @@ def test_dfs_policy_returns_selected_action() -> None:
         )
     )
 
-    action = _action(DFSPolicy()(state))
+    action = _ChooseFirstDFSPolicy()(state)
 
     assert isinstance(action, ApplyAction)
     assert action.goal_id == state.tableau.root_goal_id
@@ -76,22 +77,24 @@ def test_dfs_policy_focuses_first_open_sibling_by_default() -> None:
             )
         )
     )
-    policy = DFSPolicy()
+    policy = _ChooseFirstDFSPolicy()
 
-    start = _action(policy(state))
+    start = policy(state)
+    assert isinstance(start, ApplyAction)
     Dynamics.transition(state, start)
-    action = _action(policy(state))
+    action = policy(state)
 
     assert isinstance(action, UndoAction)
 
 
 def test_dfs_policy_returns_non_theorem_after_root_exhaustion() -> None:
     state = _state(Matrix((Clause((_lit("p"),)),)))
-    policy = DFSPolicy()
+    policy = _ChooseFirstDFSPolicy()
 
-    start = _action(policy(state))
+    start = policy(state)
+    assert isinstance(start, ApplyAction)
     Dynamics.transition(state, start)
-    undo = _action(policy(state))
+    undo = policy(state)
 
     assert isinstance(undo, UndoAction)
     Dynamics.transition(state, undo)

@@ -3,7 +3,7 @@ from __future__ import annotations
 from bisect import bisect_left
 from typing import TYPE_CHECKING
 
-from connections.core.matrix import Literal, SignedPredicateSymbol
+from connections.syntax.matrix import Literal, SignedPredicateSymbol
 from connections.constraints import ConstraintStore
 from connections.prover.rules import (
     Extension,

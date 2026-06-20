@@ -1,111 +1,61 @@
 from __future__ import annotations
 
-import argparse
 import cProfile
 from collections import Counter
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 import json
 from pathlib import Path
 import pstats
-import sys
-from typing import Any, Sequence
+from typing import Any
 
-if __package__ in {None, ""}:
-    _ROOT = Path(__file__).resolve().parents[2]
-    sys.path.insert(0, str(_ROOT))
-    sys.path.insert(0, str(_ROOT / "src"))
+from connections.runs.run_corpus import (
+    RunRow,
+    row_to_json,
+)
 
-from connections.core.logic import Domain, Logic
-from connections.prover.prover import Prover
-from connections.prover.strategy import StrategySchedule
-from connections.pycop.schedule import SCHEDULE_BY_LOGIC
-from connections.pycop.settings_codec import LeancopSettingsCodec
-
-from tools.corpus.records import CorpusRunRow, row_to_json
-from tools.corpus.run import run_corpus
-from tools.corpus.selection import select_problem_paths
+RunRows = Callable[[], Iterable[RunRow]]
 
 
 @dataclass(frozen=True, slots=True)
-class ConnectionsProfileConfig:
-    paths: tuple[str | Path, ...]
+class ProfileConfig:
     output_dir: str | Path
-    pattern: str = "*.p"
-    recursive: bool = True
-    limit: int | None = None
-    shuffle: bool = False
-    seed: int = 0
-    logic: Logic = "classical"
-    domain: Domain = "constant"
-    timeout_seconds: float | None = None
-    steps: int | None = None
-    settings: tuple[str, ...] = ()
     sort: str = "cumulative"
     limit_functions: int = 40
-    source_file_dirs: tuple[str | Path, ...] = ()
-    problem_root: str | Path | None = None
+    metadata: dict[str, Any] | None = None
     write_summary: bool = True
 
 
-def run_connections_profile(config: ConnectionsProfileConfig) -> dict[str, object]:
-    problem_paths = select_problem_paths(
-        config.paths,
-        pattern=config.pattern,
-        recursive=config.recursive,
-        limit=config.limit,
-        shuffle=config.shuffle,
-        seed=config.seed,
-    )
-    if not problem_paths:
-        raise RuntimeError("no problem files found")
-
+def profile_run_rows(
+    run_rows: RunRows,
+    config: ProfileConfig,
+) -> dict[str, object]:
     output = Path(config.output_dir).resolve()
     output.mkdir(parents=True, exist_ok=True)
     profile_path = output / "profile.pstats"
     runs_jsonl_path = output / "runs.jsonl"
 
-    schedule = _pycop_schedule(
-        logic=config.logic,
-        settings=config.settings,
-        steps=config.steps,
-        timeout_seconds=config.timeout_seconds,
-    )
-    source_file_dirs = tuple(Path(path).resolve() for path in config.source_file_dirs)
-
     profiler = cProfile.Profile()
     profiler.enable()
-    rows = [
-        _profile_row(row)
-        for row in run_corpus(
-            problem_paths,
-            prover_factory=Prover,
-            schedule=schedule,
-            logic=config.logic,
-            domain=config.domain,
-            source_file_dirs=source_file_dirs,
-            continue_on_error=True,
-            problem_root=config.problem_root or _single_root(config.paths),
-        )
-    ]
+    rows = [_profile_row(row) for row in run_rows()]
     profiler.disable()
     profiler.dump_stats(profile_path)
     _write_jsonl(runs_jsonl_path, rows)
 
-    summary = summarize_connections_profile(
+    summary = summarize_profile(
         profile_path,
         output_dir=output,
         run_rows=rows,
         sort=config.sort,
         limit_functions=config.limit_functions,
-        settings=config.settings,
+        metadata=config.metadata,
         runs_jsonl_path=runs_jsonl_path,
-        source_file_dirs=source_file_dirs,
     )
     if config.write_summary:
         _write_json(output / "summary.json", summary)
 
     return {
-        "schema": "connections.profile_run.v1",
+        "schema": "connections.runs_profile_run.v1",
         "profile_path": str(profile_path),
         "runs_jsonl_path": str(runs_jsonl_path),
         "output_dir": str(output),
@@ -114,7 +64,7 @@ def run_connections_profile(config: ConnectionsProfileConfig) -> dict[str, objec
     }
 
 
-def summarize_connections_profile(
+def summarize_profile(
     profile_path: str | Path,
     *,
     output_dir: str | Path | None = None,
@@ -157,8 +107,8 @@ def summarize_connections_profile(
     _write_json(overview_path, overview)
 
     summary: dict[str, object] = {
-        "schema": "connections.profile_summary.v1",
-        "kind": "connections_profile",
+        "schema": "connections.runs_profile_summary.v1",
+        "kind": "runs_profile",
         **extra_metadata,
         "profile_path": str(profile),
         "profile_overview_path": str(overview_path),
@@ -205,7 +155,7 @@ def build_profile_overview(
         row for row in rows if "error" in str(row.get("status", "")).lower()
     ]
     overview: dict[str, Any] = {
-        "schema": "connections.profile_overview.v1",
+        "schema": "connections.runs_profile_overview.v1",
         "total_elapsed_seconds": sum(elapsed_values)
         if elapsed_values
         else profile_total_seconds,
@@ -238,102 +188,7 @@ def build_profile_overview(
     return overview
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Profile pycop over a file or corpus."
-    )
-    parser.add_argument(
-        "path",
-        nargs="+",
-        help="Problem file or directory. Directories are searched for problem files.",
-    )
-    parser.add_argument("--out", required=True, help="Output artifact directory")
-    parser.add_argument("--pattern", default="*.p")
-    parser.add_argument("--no-recursive", action="store_true")
-    parser.add_argument("--limit", type=int, default=None)
-    parser.add_argument("--shuffle", action="store_true")
-    parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument(
-        "--logic",
-        default="classical",
-        choices=("classical", "intuitionistic", "D", "T", "S4", "S5"),
-    )
-    parser.add_argument(
-        "--domain",
-        default="constant",
-        choices=("constant", "cumulative", "varying"),
-    )
-    parser.add_argument("--timeout", type=_nonnegative_float, default=None)
-    parser.add_argument("--steps", type=_nonnegative_int, default=None)
-    parser.add_argument(
-        "--settings",
-        "--setting",
-        action="append",
-        dest="settings",
-        default=[],
-        help="pycop strategy token; repeatable, e.g. --settings cut",
-    )
-    parser.add_argument("--sort", default="cumulative")
-    parser.add_argument("--limit-functions", type=int, default=40)
-    parser.add_argument(
-        "--source-dir",
-        action="append",
-        default=[],
-        help="Directory used to resolve included problem source files.",
-    )
-    parser.add_argument("--overwrite", action="store_true")
-    return parser
-
-
-def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
-    output = Path(args.out)
-    if output.exists() and any(output.iterdir()) and not args.overwrite:
-        raise RuntimeError(f"{output} is not empty; pass --overwrite")
-    result = run_connections_profile(
-        ConnectionsProfileConfig(
-            paths=tuple(args.path),
-            output_dir=output,
-            pattern=args.pattern,
-            recursive=not args.no_recursive,
-            limit=args.limit,
-            shuffle=args.shuffle,
-            seed=args.seed,
-            logic=args.logic,
-            domain=args.domain,
-            timeout_seconds=args.timeout,
-            steps=args.steps,
-            settings=tuple(args.settings),
-            sort=args.sort,
-            limit_functions=args.limit_functions,
-            source_file_dirs=tuple(args.source_dir),
-        )
-    )
-    print(json.dumps(result, indent=2, sort_keys=True))
-    return 0
-
-
-def _pycop_schedule(
-    *,
-    logic: Logic,
-    settings: tuple[str, ...],
-    steps: int | None,
-    timeout_seconds: float | None,
-) -> StrategySchedule[Any]:
-    if settings:
-        return StrategySchedule.single(
-            LeancopSettingsCodec.from_tokens(list(settings)),
-            steps=steps,
-            timeout_seconds=timeout_seconds,
-        )
-    return StrategySchedule.from_weighted(
-        SCHEDULE_BY_LOGIC[logic],
-        steps=steps,
-        timeout_seconds=timeout_seconds,
-    )
-
-
-def _profile_row(row: CorpusRunRow) -> dict[str, Any]:
+def _profile_row(row: RunRow) -> dict[str, Any]:
     serialized = row_to_json(row)
     return {
         "problem_path": serialized["path"],
@@ -488,7 +343,7 @@ def _reference_overview(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
         and float(row["pycop_speedup_vs_reference"]) < 1
     ]
     return {
-        "schema": "connections.profile_reference_overview.v1",
+        "schema": "connections.runs_profile_reference_overview.v1",
         "rows": len(rows),
         "status_matches": status_matches,
         "status_match_rate": status_matches / len(rows) if rows else None,
@@ -593,40 +448,13 @@ def _write_json(path: Path, data: dict[str, Any]) -> None:
     path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def _single_root(paths: Sequence[str | Path]) -> Path | None:
-    if len(paths) != 1:
-        return None
-    root = Path(paths[0]).resolve()
-    return root if root.is_dir() else root.parent
-
-
 def _number_or_zero(value: object) -> float:
     return float(value) if isinstance(value, int | float) else 0.0
 
 
-def _nonnegative_int(value: str) -> int:
-    parsed = int(value)
-    if parsed < 0:
-        raise argparse.ArgumentTypeError("value must be non-negative")
-    return parsed
-
-
-def _nonnegative_float(value: str) -> float:
-    parsed = float(value)
-    if parsed < 0:
-        raise argparse.ArgumentTypeError("value must be non-negative")
-    return parsed
-
-
 __all__ = [
-    "ConnectionsProfileConfig",
-    "build_parser",
+    "ProfileConfig",
     "build_profile_overview",
-    "main",
-    "run_connections_profile",
-    "summarize_connections_profile",
+    "profile_run_rows",
+    "summarize_profile",
 ]
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

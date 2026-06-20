@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 import re
 
-from connections.core.logic import Domain, Logic
-from connections.core.status import SZSStatus
+from connections.syntax.logic import Domain, Logic
+from connections.prover.status import SZSStatus
 
 _SIMPLE_STATUS_RE = re.compile(r"^%\s*Status\s+:\s*(?P<label>.+?)\s*$")
 _INTUITIONISTIC_STATUS_RE = re.compile(

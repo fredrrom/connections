@@ -1,4 +1,4 @@
-from connections.core.formula import Variable
+from connections.syntax.formula import Variable
 from connections.constraints.term import TableauVariable
 
 

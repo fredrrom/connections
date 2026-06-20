@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from connections.core.formula import Function, Prefix, Variable
+from connections.syntax.formula import Function, Prefix, Variable
 from connections.constraints.prefix import (
     PrefixBinding,
     PrefixConstraintStore,

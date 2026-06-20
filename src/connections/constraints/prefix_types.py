@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from connections.core.formula import Prefix, Variable
+from connections.syntax.formula import Prefix, Variable
 
 
 @dataclass(frozen=True, slots=True)

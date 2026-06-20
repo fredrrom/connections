@@ -13,8 +13,8 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(_ROOT))
     sys.path.insert(0, str(_ROOT / "src"))
 
-from connections.core.logic import Domain, Logic
-from tools.corpus.selection import select_problem_paths
+from connections.syntax.logic import Domain, Logic
+from connections.runs import select_problem_paths
 from tools.parity.run_matrix_parity import MatrixParityCase, matrix_parity_row
 from tools.parity.run_status_check import (
     ReferenceMode,

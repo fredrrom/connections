@@ -18,12 +18,12 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(_ROOT))
     sys.path.insert(0, str(_ROOT / "src"))
 
-from connections.core.status import SZSStatus
-from connections.prover.prover import Prover
+from connections.prover.status import SZSStatus
+from connections.prover.prover import ProblemSpec, Prover
 from connections.prover.strategy import StrategySchedule
-from connections.pycop.settings_codec import LeancopSettingsCodec
+from provers.pycop.settings_codec import LeancopSettingsCodec
 from connections.trace_logging import trace_event_sink
-from tools.corpus.selection import select_problem_paths
+from connections.runs import select_problem_paths
 from tools.parity.run_status_check import (
     DEFAULT_STATUS_CASES,
     ReferenceMode,
@@ -226,16 +226,19 @@ def native_pycop_trace(
     try:
         with trace_event_sink(events.append), _hard_timeout(timeout_seconds):
             strategy = LeancopSettingsCodec.from_tokens(list(case.settings))
-            result = Prover().run(
+            problem = ProblemSpec(
                 problem_path,
+                logic=case.logic,
+                domain=case.domain,
+                source_file_dirs=tuple(source_file_dirs),
+            )
+            result = Prover().run(
+                problem,
                 schedule=StrategySchedule.single(
                     strategy,
                     steps=step_limit,
                     timeout_seconds=timeout_seconds,
                 ),
-                logic=case.logic,
-                domain=case.domain,
-                source_file_dirs=source_file_dirs,
             )
     except _TraceTimeout:
         return SZSStatus.TIMEOUT.value, events

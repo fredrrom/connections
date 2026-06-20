@@ -3,11 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TypeGuard
 
-from connections.core.matrix import Clause
-from connections.core.status import ProverOutcome
+from connections.syntax.matrix import Clause
+from connections.prover.status import ProverOutcome
 from connections.policy.base import BacktrackGranularity
-from connections.policy.dfs import DFSPolicy, Frame
-from connections.prover.actions import Action, ApplyAction, UndoAction
+from connections.policy.dfs import ChoicepointFrame, DFSPolicy
+from connections.prover.actions import Action, ApplyAction
 from connections.prover.dynamics import Dynamics
 from connections.prover.rules import Extension, FactorizationMode
 from connections.prover.state import State
@@ -23,7 +23,7 @@ class IterativeDeepeningOptions:
     initial_depth: int = 1
 
 
-class IterativeDeepeningPolicy(DFSPolicy):
+class IDPolicy(DFSPolicy):
     def __init__(
         self,
         *,
@@ -198,59 +198,50 @@ class IterativeDeepeningPolicy(DFSPolicy):
             raise RuntimeError("source-less extension action has no matrix clause")
         return state.problem.matrix.clauses[clause_idx]
 
-    def _push_frame(self, state: State, goal_id: int) -> Frame | None:
-        frame = super()._push_frame(state, goal_id)
-        if frame is None:
-            return None
+    def _after_choicepoint_created(self, choicepoint: ChoicepointFrame) -> None:
         if self._pending_path_limit_plan is None:
-            return frame
+            return
         pending_goal_id, hits_before_action, terminal_hits = self._pending_path_limit_plan
         self._pending_path_limit_plan = None
-        if pending_goal_id != frame.goal_id:
-            return frame
-        frame_id = id(frame)
-        if hits_before_action:
-            self._path_limit_hits_before_action[frame_id] = hits_before_action
-        if terminal_hits:
-            self._terminal_path_limit_hits[frame_id] = terminal_hits
-        return frame
-
-    def record_action_choice(self, state: State, action: Action) -> None:
-        if not isinstance(action, ApplyAction) or not self._stack:
-            super().record_action_choice(state, action)
+        if pending_goal_id != choicepoint.goal_id:
             return
-        frame = self._stack[-1]
-        hits_by_action = self._path_limit_hits_before_action.get(id(frame))
+        key = id(choicepoint)
+        if hits_before_action:
+            self._path_limit_hits_before_action[key] = hits_before_action
+        if terminal_hits:
+            self._terminal_path_limit_hits[key] = terminal_hits
+
+    def _before_choicepoint_action(
+        self,
+        choicepoint: ChoicepointFrame,
+        action: Action,
+    ) -> None:
+        if not isinstance(action, ApplyAction):
+            return
+        hits_by_action = self._path_limit_hits_before_action.get(
+            id(choicepoint)
+        )
         if hits_by_action is not None:
             self._record_path_limit_hits(hits_by_action.pop(id(action), 0))
-        super().record_action_choice(state, action)
 
-    def _backtrack_action(self, state: State) -> UndoAction | None:
-        if self._stack:
-            if not self._stack[-1].actions:
-                self._record_terminal_path_limit_hits(self._stack[-1])
-            self._pop_frame()
-        if not self._stack:
-            return None
+    def _before_choicepoint_exhausted(
+        self,
+        choicepoint: ChoicepointFrame,
+    ) -> None:
+        self._record_terminal_path_limit_hits(choicepoint)
 
-        if self.backtrack == "maximal":
-            while len(self._stack) > 1 and not self._stack[-1].actions:
-                self._record_terminal_path_limit_hits(self._stack[-1])
-                self._pop_frame()
+    def _before_choicepoint_removed(self, choicepoint: ChoicepointFrame) -> None:
+        key = id(choicepoint)
+        self._path_limit_hits_before_action.pop(key, None)
+        self._terminal_path_limit_hits.pop(key, None)
 
-        return self._undo_frame(state, len(self._stack) - 1)
-
-    def _record_terminal_path_limit_hits(self, frame: Frame) -> None:
+    def _record_terminal_path_limit_hits(
+        self,
+        choicepoint: ChoicepointFrame,
+    ) -> None:
         self._record_path_limit_hits(
-            self._terminal_path_limit_hits.pop(id(frame), 0)
+            self._terminal_path_limit_hits.pop(id(choicepoint), 0)
         )
-
-    def _pop_frame(self) -> Frame:
-        frame = super()._pop_frame()
-        frame_id = id(frame)
-        self._path_limit_hits_before_action.pop(frame_id, None)
-        self._terminal_path_limit_hits.pop(frame_id, None)
-        return frame
 
     def _record_path_limit_hits(self, count: int) -> None:
         if count <= 0:
@@ -258,16 +249,16 @@ class IterativeDeepeningPolicy(DFSPolicy):
         for _ in range(count):
             trace(trace_logger, "pathlim_hit")
 
-    def available_actions(self, state: State) -> tuple[Action, ...]:
+    def _available_actions(self, state: State) -> tuple[Action, ...]:
         while True:
-            if not self._stack:
+            if self._stack_empty():
                 self._start_next_depth()
-            actions = super().available_actions(state)
+            actions = super()._available_actions(state)
             if actions:
                 return actions
             if not self._should_continue_after_empty_stack():
                 return ()
-            self._stack = []
+            self._reset_search()
             self._path_limit_hits_before_action.clear()
             self._terminal_path_limit_hits.clear()
 
@@ -288,7 +279,7 @@ class IterativeDeepeningPolicy(DFSPolicy):
             return True
         return self._path_limit_hit
 
-    def no_action(self, state: State):
+    def _exhausted_outcome(self) -> ProverOutcome:
         return ProverOutcome.ID_FIXED_POINT
 
 
@@ -296,7 +287,14 @@ def _is_extension_action(action: Action) -> TypeGuard[ApplyAction[Extension]]:
     return isinstance(action, ApplyAction) and isinstance(action.rule, Extension)
 
 
+class FirstActionIDPolicy(IDPolicy):
+    def _next_action(self, state: State, actions: tuple[Action, ...]) -> Action:
+        _ = state
+        return actions[0]
+
+
 __all__ = [
+    "FirstActionIDPolicy",
+    "IDPolicy",
     "IterativeDeepeningOptions",
-    "IterativeDeepeningPolicy",
 ]

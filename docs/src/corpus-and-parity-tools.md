@@ -9,17 +9,17 @@ are not imported by the library package.
 Download benchmark corpora with:
 
 ```bash
-python tools/corpus/download.py --list
-python tools/corpus/download.py tptp-v6.4.0 iltp qmltp --root benchmarks
+connections-download-benchmarks --list
+connections-download-benchmarks tptp-v6.4.0 iltp qmltp --root benchmarks
 ```
 
 Use `--all` to download every known corpus and `--force` to replace existing
 targets. Archives are cached under `ROOT/.downloads` by default.
 
-The first corpus tool is:
+Run pycop over a corpus slice with:
 
 ```bash
-python tools/corpus/run.py PATH --out artifacts/corpus/runs.jsonl --overwrite
+pycop PATH --out artifacts/corpus/runs.jsonl --overwrite
 ```
 
 It selects problem files from one or more paths, runs pycop over each problem,
@@ -29,7 +29,7 @@ default: `artifacts/corpus/runs.summary.json`.
 Useful options:
 
 ```bash
-python tools/corpus/run.py Problems/SYN \
+pycop Problems/SYN \
   --out artifacts/corpus/syn.jsonl \
   --pattern "*.p" \
   --limit 25 \
@@ -58,9 +58,10 @@ The output row schema is intentionally small and stable:
 - `error_type`
 - `error_message`
 
-The runner is generic internally: `tools.corpus.run.run_corpus` accepts a
-`prover_factory`, a schedule, source directories, and problem paths. The CLI
-currently exposes pycop because that is the built-in prover line.
+The runner delegates to `connections.runs.run_corpus`, which accepts a
+schedule, source directories, and problem paths. The `pycop` CLI supplies
+pycop strategies and output-file handling. Downstream experiment code should
+import `connections.runs`, not developer tool modules.
 
 The summary schema is:
 
@@ -79,16 +80,17 @@ The summary schema is:
 
 ## Boundary
 
-Corpus running belongs in `connections` because it is basic prover validation
-and measurement infrastructure. The tool owns file selection and generic prover
-execution; callers choose paths, schedules, settings, and output locations.
+Reusable corpus selection, run rows, summaries, and generic prover execution
+belong in `connections.runs`. `pycop` owns pycop-specific CLI argument
+parsing, progress printing, and output-file plumbing.
 
 ## Profiling
 
-The profiling tool also lives in `connections`:
+Profiling is available through the `pycop` CLI and uses `connections.runs`
+profile helpers internally:
 
 ```bash
-python tools/profiling/run.py PATH --out artifacts/profile --overwrite
+pycop PATH --profile artifacts/profile --overwrite
 ```
 
 It selects problem files, runs pycop under `cProfile`, and writes:
@@ -105,8 +107,8 @@ schedule for the selected logic. When settings are supplied, it profiles that
 single pycop strategy:
 
 ```bash
-python tools/profiling/run.py Problems/SYN \
-  --out artifacts/profile/syn-cut-comp7 \
+pycop Problems/SYN \
+  --profile artifacts/profile/syn-cut-comp7 \
   --settings cut \
   --settings "comp(7)" \
   --steps 1000 \
@@ -114,12 +116,12 @@ python tools/profiling/run.py Problems/SYN \
   --overwrite
 ```
 
-The profiling logic stays here because it is developer measurement
-infrastructure for the prover.
+The profiling logic is reusable package code because learning experiments may
+profile their own prover runs with the same run-row artifacts.
 
 ## Parity
 
-Reference-prover and parity tools live beside the corpus runner. They are
+Reference-prover and parity tools live under `tools/parity`. They are
 developer diagnostics, not package APIs:
 
 ```text

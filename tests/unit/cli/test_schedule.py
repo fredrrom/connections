@@ -2,10 +2,16 @@ from __future__ import annotations
 
 import pytest
 
-from connections.pycop.schedule import SCHEDULE_BY_LOGIC, load_schedule_entries
-from connections.pycop.settings_codec import LeancopSettingsCodec
-from connections.pycop.strategy import PycopStrategy
-from connections.prover.strategy import StrategySchedule, WeightedStrategy
+from provers.pycop.schedule import SCHEDULE_BY_LOGIC, load_schedule_entries
+from provers.pycop.settings_codec import LeancopSettingsCodec
+from connections.prover.strategy import (
+    StrategySchedule,
+    WeightedStrategy,
+)
+
+
+def _args(strategy):
+    return dict(strategy.policy.args)
 
 
 def test_pycop_schedule_has_expected_classical_first_strategy():
@@ -19,8 +25,8 @@ def test_pycop_schedule_has_expected_classical_first_strategy():
 
     schedule = StrategySchedule.from_weighted(SCHEDULE_BY_LOGIC["classical"]).entries
     assert len(schedule) == 30
-    assert schedule[0].strategy.dfs.cut is True
-    assert schedule[0].strategy.id.comp == 7
+    assert _args(schedule[0].strategy)["cut"] is True
+    assert _args(schedule[0].strategy)["comp"] == 7
     assert schedule[-1].strategy.matrix.translation == "def"
 
 
@@ -42,8 +48,8 @@ def test_load_schedule_entries_from_json_file(tmp_path):
 
     assert len(entries) == 2
     assert entries[0].weight == 3
-    assert entries[0].strategy.dfs.cut is True
-    assert entries[0].strategy.id.comp == 7
+    assert _args(entries[0].strategy)["cut"] is True
+    assert _args(entries[0].strategy)["comp"] == 7
     assert entries[1].strategy.matrix.translation == "def"
     assert entries[1].strategy.matrix.start_clauses == "conjecture"
 
@@ -58,8 +64,8 @@ def test_pycop_schedule_has_expected_intuitionistic_first_strategy():
     schedule = StrategySchedule.from_weighted(SCHEDULE_BY_LOGIC["intuitionistic"]).entries
     assert len(schedule) == 5
     assert schedule[0].strategy.matrix.translation == "def"
-    assert schedule[0].strategy.dfs.scut is True
-    assert schedule[0].strategy.id.comp == 7
+    assert _args(schedule[0].strategy)["scut"] is True
+    assert _args(schedule[0].strategy)["comp"] == 7
 
 
 def test_pycop_schedule_has_expected_modal_shape():
@@ -72,9 +78,9 @@ def test_pycop_schedule_has_expected_modal_shape():
 
     schedule = StrategySchedule.from_weighted(SCHEDULE_BY_LOGIC["S4"]).entries
     assert len(schedule) == 10
-    assert schedule[0].strategy.dfs.cut is True
-    assert schedule[0].strategy.dfs.scut is True
-    assert schedule[0].strategy.id.comp == 7
+    assert _args(schedule[0].strategy)["cut"] is True
+    assert _args(schedule[0].strategy)["scut"] is True
+    assert _args(schedule[0].strategy)["comp"] == 7
     assert any(entry.strategy.matrix.reorder > 0 for entry in schedule)
 
 
@@ -97,12 +103,12 @@ def test_schedule_time_budget_allocation_sums_to_total():
 def test_schedule_rejects_zero_total_weight_for_budget_allocation():
     with pytest.raises(ValueError, match="weights must sum to a positive value"):
         StrategySchedule.from_weighted(
-            [WeightedStrategy(strategy=PycopStrategy(), weight=0)],
+            [WeightedStrategy(strategy=LeancopSettingsCodec.from_tokens(None), weight=0)],
             steps=1,
         )
 
     with pytest.raises(ValueError, match="weights must sum to a positive value"):
         StrategySchedule.from_weighted(
-            [WeightedStrategy(strategy=PycopStrategy(), weight=0)],
+            [WeightedStrategy(strategy=LeancopSettingsCodec.from_tokens(None), weight=0)],
             timeout_seconds=1.0,
         )

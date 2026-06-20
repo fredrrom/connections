@@ -12,8 +12,8 @@ def test_prover_public_api_exports_documented_boundary():
         FactorizationAction,
         MatrixOptions,
         Problem,
+        ProblemSpec,
         Prover,
-        ProverHook,
         ReductionAction,
         StartAction,
         State,
@@ -22,8 +22,8 @@ def test_prover_public_api_exports_documented_boundary():
     )
 
     assert Prover is not None
-    assert ProverHook is not None
     assert Problem is not None
+    assert ProblemSpec is not None
     assert State is not None
     assert Dynamics is not None
     assert MatrixOptions is not None

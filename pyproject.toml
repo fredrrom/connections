@@ -35,7 +35,8 @@ Repository = "https://github.com/fredrrom/connections"
 Issues = "https://github.com/fredrrom/connections/issues"
 
 [project.scripts]
-pycop = "connections.pycop.cli:main"
+pycop = "provers.pycop.cli:main"
+connections-download-benchmarks = "connections.runs.download:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

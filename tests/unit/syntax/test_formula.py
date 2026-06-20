@@ -1,4 +1,4 @@
-from connections.core.formula import Atom, Function, Variable
+from connections.syntax.formula import Atom, Function, Variable
 
 
 def test_variable_vid_is_preserved():

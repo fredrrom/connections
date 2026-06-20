@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Iterable
 
-from connections.core.formula import (
+from connections.syntax.formula import (
     And,
     Atom,
     Box,

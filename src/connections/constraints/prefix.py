@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from connections.core.formula import Function, Prefix, Term, Variable
-from connections.core.logic import (
+from connections.syntax.formula import Function, Prefix, Term, Variable
+from connections.syntax.logic import (
     INTUITIONISTIC_LOGICS,
     SUPPORTED_DOMAINS,
     normalize_domain,

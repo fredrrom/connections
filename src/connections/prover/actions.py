@@ -79,27 +79,6 @@ Action: TypeAlias = AnyApplyAction | UndoAction
 
 
 @dataclass(frozen=True, slots=True)
-class ActionChoice:
-    """A policy choice at one prover state before transition."""
-
-    actions: tuple[Action, ...]
-    action: Action
-    chosen_index: int
-
-    @classmethod
-    def from_action(
-        cls,
-        actions: tuple[Action, ...],
-        action: Action,
-    ) -> ActionChoice:
-        return cls(
-            actions=actions,
-            action=action,
-            chosen_index=actions.index(action),
-        )
-
-
-@dataclass(frozen=True, slots=True)
 class ApplyActions:
     start: tuple[StartAction, ...] = ()
     factorization: tuple[FactorizationAction, ...] = ()
@@ -117,7 +96,6 @@ class ApplyActions:
 
 __all__ = [
     "Action",
-    "ActionChoice",
     "AnyApplyAction",
     "ApplyAction",
     "ApplyActions",

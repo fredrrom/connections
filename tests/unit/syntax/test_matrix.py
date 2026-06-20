@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from connections.core.formula import Atom, Function, Prefix, Variable
-from connections.core.matrix import Clause, Literal, Matrix, SignedPredicateSymbol
+from connections.syntax.formula import Atom, Function, Prefix, Variable
+from connections.syntax.matrix import Clause, Literal, Matrix, SignedPredicateSymbol
 from connections.prover.prover import Problem
 
 

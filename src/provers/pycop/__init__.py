@@ -4,9 +4,7 @@ from importlib import import_module
 from typing import Any
 
 _EXPORTS = {
-    "LeancopSettingsCodec": "connections.pycop.settings_codec",
-    "PycopStrategy": "connections.pycop.strategy",
-    "PycopPolicy": "connections.pycop.policy",
+    "LeancopSettingsCodec": "provers.pycop.settings_codec",
 }
 
 __all__ = sorted(_EXPORTS)

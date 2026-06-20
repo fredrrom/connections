@@ -13,7 +13,7 @@ from connections.clausification.conversion import (
     prefixed_mat as _prefixed_mat,
 )
 from connections.clausification.equality import add_equality_axioms
-from connections.core.formula import (
+from connections.syntax.formula import (
     And,
     Atom,
     Box,
@@ -37,13 +37,13 @@ from connections.clausification.formula_ops import (
     substitute_variable,
     univar,
 )
-from connections.core.logic import (
+from connections.syntax.logic import (
     CLASSICAL_LOGICS,
     INTUITIONISTIC_LOGICS,
     MODAL_LOGICS,
     normalize_logic,
 )
-from connections.core.matrix import Clause, ClauseRole, Literal, Matrix
+from connections.syntax.matrix import Clause, ClauseRole, Literal, Matrix
 from connections.clausification.reorder import mreorder_items
 from connections.parsing.tptp.parser import ParsedTPTPDocument
 

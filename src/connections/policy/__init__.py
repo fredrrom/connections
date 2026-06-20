@@ -3,24 +3,29 @@ from __future__ import annotations
 from connections.policy.base import (
     BacktrackGranularity,
     Policy,
-    PolicyOutput,
+    PolicyDecision,
 )
 from connections.policy.dfs import (
-    DFSOptions,
+    ChoicepointFrame,
     DFSPolicy,
     Frame,
-    create_dfs_policy,
+    WorkFrame,
 )
-from connections.policy.id import IterativeDeepeningOptions, IterativeDeepeningPolicy
+from connections.policy.id import (
+    FirstActionIDPolicy,
+    IDPolicy,
+    IterativeDeepeningOptions,
+)
 
 __all__ = [
     "BacktrackGranularity",
-    "DFSOptions",
+    "ChoicepointFrame",
     "DFSPolicy",
+    "FirstActionIDPolicy",
     "Frame",
+    "IDPolicy",
     "IterativeDeepeningOptions",
-    "IterativeDeepeningPolicy",
     "Policy",
-    "PolicyOutput",
-    "create_dfs_policy",
+    "PolicyDecision",
+    "WorkFrame",
 ]

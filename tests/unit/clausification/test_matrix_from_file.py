@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from connections.clausification import matrix_from_file
-from connections.core.matrix import Matrix, SignedPredicateSymbol
+from connections.syntax.matrix import Matrix, SignedPredicateSymbol
 from connections.parsing.tptp.parser import TPTPParseError
 from connections.prover.prover import Problem
 from connections.trace_logging import CLAUSIFICATION_TRACE_LOGGER_NAME, TRACE_LEVEL

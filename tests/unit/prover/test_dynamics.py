@@ -1,5 +1,5 @@
-from connections.core.formula import Atom, Function, Prefix, Variable
-from connections.core.matrix import Clause, Literal, Matrix
+from connections.syntax.formula import Atom, Function, Prefix, Variable
+from connections.syntax.matrix import Clause, Literal, Matrix
 from connections.prover.actions import ApplyAction, UndoAction
 from connections.prover.dynamics import Dynamics
 from connections.prover.rules import (
@@ -10,7 +10,6 @@ from connections.prover.rules import (
 from connections.prover.prover import Problem
 from connections.prover.state import State
 from connections.prover.tableau import Tableau
-from connections.pycop.strategy import PycopStrategy
 
 
 def lit(name: str, *args, neg: bool = False) -> Literal:
@@ -53,13 +52,8 @@ def binding(variable, target, instance_id=None):
     return variable, (target, instance_id)
 
 
-def _settings() -> PycopStrategy:
-    return PycopStrategy()
-
-
 def _state_for(matrix: Matrix) -> State:
-    settings = _settings()
-    problem = Problem(matrix=matrix, start_clauses=settings.matrix.start_clauses)
+    problem = Problem(matrix=matrix, start_clauses="positive")
     tableau = Tableau()
     return State(problem, tableau)
 

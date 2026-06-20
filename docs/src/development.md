@@ -133,7 +133,7 @@ The useful trace-parity release numbers are:
 Run native `pycop` over a problem slice:
 
 ```bash
-uv run python tools/corpus/run.py Problems/SYN \
+uv run pycop Problems/SYN \
   --out artifacts/corpus/syn.jsonl \
   --settings cut \
   --settings 'comp(7)' \
@@ -147,8 +147,8 @@ uv run python tools/corpus/run.py Problems/SYN \
 Profile a corpus slice:
 
 ```bash
-uv run python tools/profiling/run.py Problems/SYN \
-  --out artifacts/profile/syn-cut-comp7 \
+uv run pycop Problems/SYN \
+  --profile artifacts/profile/syn-cut-comp7 \
   --settings cut \
   --settings 'comp(7)' \
   --steps 1000 \

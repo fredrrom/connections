@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from connections.core.formula import (
+from connections.syntax.formula import (
     And,
     Atom,
     Box,
