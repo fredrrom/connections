@@ -9,6 +9,7 @@ class ProverOutcome(Enum):
     DFS_EXHAUSTED = "DFSExhausted"
     TIMEOUT = "Timeout"
     STEP_BUDGET = "StepBudget"
+    MEMORY_OUT = "MemoryOut"
     ERROR = "Error"
 
 
@@ -19,6 +20,8 @@ class SZSStatus(str, Enum):
     UNSATISFIABLE = "Unsatisfiable"
     SATISFIABLE = "Satisfiable"
     TIMEOUT = "Timeout"
+    RESOURCE_OUT = "ResourceOut"
+    MEMORY_OUT = "MemoryOut"
     GAVE_UP = "GaveUp"
     ERROR = "Error"
 
@@ -42,8 +45,13 @@ def to_szs_status(
         )
     if outcome is ProverOutcome.TIMEOUT:
         return SZSStatus.TIMEOUT
+    if outcome is ProverOutcome.MEMORY_OUT:
+        return SZSStatus.MEMORY_OUT
     if outcome is ProverOutcome.STEP_BUDGET:
-        return SZSStatus.GAVE_UP
+        # The step budget is the prover's own resource; exhausting it is a
+        # ResourceOut in SZS terms. Wall-clock and memory verdicts (Timeout,
+        # MemoryOut) belong to whatever supervises the prover process.
+        return SZSStatus.RESOURCE_OUT
     if outcome is ProverOutcome.ERROR:
         return SZSStatus.ERROR
     return None

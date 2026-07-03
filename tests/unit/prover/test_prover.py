@@ -13,7 +13,6 @@ from connections.prover.dynamics import Dynamics
 from connections.prover.prover import (
     ProblemSpec,
     Prover,
-    ProverTimeoutError,
 )
 from connections.prover.state import State
 from connections.prover.strategy import (
@@ -340,17 +339,15 @@ def test_prover_reports_expired_timeout_before_state_construction(tmp_path):
     assert result.inference_actions == 0
 
 
-def test_prover_reports_matrix_construction_timeout_as_time_limit(
-    tmp_path, monkeypatch
-):
-    def timeout_matrix(**kwargs):
+def test_prover_reports_memory_error_as_memory_out(tmp_path, monkeypatch):
+    def exploding_matrix(**kwargs):
         _ = kwargs
-        raise ProverTimeoutError("Matrix construction timed out")
+        raise MemoryError
 
     monkeypatch.setattr(
         prover_module,
         "matrix_from_file",
-        lambda *args, **kwargs: timeout_matrix(**kwargs),
+        lambda *args, **kwargs: exploding_matrix(**kwargs),
     )
     problem = tmp_path / "problem.p"
     problem.write_text(
@@ -365,8 +362,8 @@ def test_prover_reports_matrix_construction_timeout_as_time_limit(
     )
     result = run_result.strategy_results[0]
 
-    assert result.outcome is ProverOutcome.TIMEOUT
-    assert result.szs_status is SZSStatus.TIMEOUT
+    assert result.outcome is ProverOutcome.MEMORY_OUT
+    assert result.szs_status is SZSStatus.MEMORY_OUT
     assert result.inference_actions == 0
 
 
@@ -417,3 +414,19 @@ def test_pycop_prover_reinitializes_policy_for_each_run(tmp_path, monkeypatch):
     assert second.szs_status is SZSStatus.COUNTER_SATISFIABLE
     assert len(TrackingPolicy.policies) == 2
     assert TrackingPolicy.policies[0] is not TrackingPolicy.policies[1]
+
+
+def test_prover_wall_alarm_restores_signal_state(tmp_path):
+    import signal
+
+    problem = tmp_path / "theorem.p"
+    problem.write_text("fof(c,conjecture,p|~p).\n", encoding="utf-8")
+    handler_before = signal.getsignal(signal.SIGALRM)
+
+    Prover().run(
+        ProblemSpec(problem),
+        schedule=_single_entry_schedule(_first_strategy(), timeout_seconds=30.0),
+    )
+
+    assert signal.getsignal(signal.SIGALRM) is handler_before
+    assert signal.getitimer(signal.ITIMER_REAL) == (0.0, 0.0)

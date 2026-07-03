@@ -39,7 +39,7 @@ def test_no_success_outcome_maps_to_szs_no_success() -> None:
     )
     assert (
         to_szs_status(ProverOutcome.STEP_BUDGET, has_conjecture=True)
-        is SZSStatus.GAVE_UP
+        is SZSStatus.RESOURCE_OUT
     )
     assert (
         to_szs_status(ProverOutcome.ERROR, has_conjecture=True)

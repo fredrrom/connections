@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
+import signal
 import time
 from collections.abc import Callable
 from typing import Any, Generic, TypeVar, cast
@@ -102,12 +104,101 @@ class ProofFound(Generic[StrategyT]):
     state: State
 
 
-class ProverTimeoutError(RuntimeError):
-    """Raised when prover setup crosses its time budget."""
+class _WallClockExceeded(BaseException):
+    """Raised by the SIGALRM handler; BaseException so policy code with broad
+    `except Exception` handlers cannot swallow it."""
+
+
+@contextmanager
+def _wall_clock_alarm(seconds: float | None):
+    """Enforce a wall-clock budget over the enclosed block via SIGALRM.
+
+    The prover self-limits the way E does with --cpu-limit: the OS interrupts
+    the attempt wherever it is (parsing, clausification, search) and the
+    signal handler raises. Requires the main thread; when signals are
+    unavailable (non-main thread, non-POSIX) the budget is not enforced and
+    external supervision must cover it. Nested use is unsupported: the
+    enclosed block must not arm ITIMER_REAL itself.
+    """
+
+    if seconds is None or not hasattr(signal, "SIGALRM"):
+        yield
+        return
+    if seconds <= 0:
+        # setitimer(0) would disarm rather than fire; an exhausted budget
+        # times out before any work happens.
+        raise _WallClockExceeded
+
+    def _raise(_signum: int, _frame: Any) -> None:
+        raise _WallClockExceeded
+
+    try:
+        previous = signal.signal(signal.SIGALRM, _raise)
+    except ValueError:  # not the main thread
+        yield
+        return
+    signal.setitimer(signal.ITIMER_REAL, seconds)
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous)
+
+
+@contextmanager
+def _memory_limit(limit_mb: int | None):
+    """Best-effort process memory cap (E's --memory-limit analog).
+
+    On Linux, lowering RLIMIT_AS makes a runaway allocation raise MemoryError
+    at the failing allocation site, which the prover reports as MemoryOut.
+    macOS rejects lowering memory rlimits, so there this is a no-op and only
+    external supervision bounds memory.
+    """
+
+    if limit_mb is None:
+        yield
+        return
+    try:
+        import resource
+    except ImportError:
+        yield
+        return
+    res = getattr(resource, "RLIMIT_AS", None)
+    if res is None:
+        yield
+        return
+    try:
+        soft, hard = resource.getrlimit(res)
+        resource.setrlimit(res, (limit_mb * 1024**2, hard))
+    except (ValueError, OSError):
+        yield
+        return
+    try:
+        yield
+    finally:
+        try:
+            resource.setrlimit(res, (soft, hard))
+        except (ValueError, OSError):
+            pass
 
 
 class Prover:
     def run(
+        self,
+        problem: ProblemSpec,
+        *,
+        schedule: StrategyT | StrategySchedule[StrategyT],
+        on_proof_found: ProofFoundCallback[StrategyT] | None = None,
+        memory_limit_mb: int | None = None,
+    ) -> ProverResult[StrategyT]:
+        with _memory_limit(memory_limit_mb):
+            return self._run_schedule(
+                problem,
+                schedule=schedule,
+                on_proof_found=on_proof_found,
+            )
+
+    def _run_schedule(
         self,
         problem: ProblemSpec,
         *,
@@ -173,26 +264,26 @@ class Prover:
         strategy = entry.strategy
         outcome: ProverOutcome | None = None
         started_at = time.monotonic()
-        deadline = self._deadline(entry.timeout_seconds)
         steps = 0
         inference_actions = 0
         state: State | None = None
         try:
-            state = self._build_state_from_file(
-                problem,
-                matrix_options=strategy.matrix,
-                matrix_cache=matrix_cache,
-                deadline=deadline,
-            )
-            policy = strategy.policy.instantiate()
-            steps, inference_actions, outcome = self._run_strategy_loop(
-                state,
-                policy=policy,
-                step_limit=entry.step_limit,
-                timeout_seconds=self._remaining_seconds(deadline),
-            )
-        except ProverTimeoutError:
+            with _wall_clock_alarm(entry.timeout_seconds):
+                state = self._build_state_from_file(
+                    problem,
+                    matrix_options=strategy.matrix,
+                    matrix_cache=matrix_cache,
+                )
+                policy = strategy.policy.instantiate()
+                steps, inference_actions, outcome = self._run_strategy_loop(
+                    state,
+                    policy=policy,
+                    step_limit=entry.step_limit,
+                )
+        except _WallClockExceeded:
             outcome = ProverOutcome.TIMEOUT
+        except MemoryError:
+            outcome = ProverOutcome.MEMORY_OUT
         has_conjecture = None if state is None else state.problem.has_conjecture
         szs_status = to_szs_status(
             outcome,
@@ -219,12 +310,7 @@ class Prover:
         *,
         policy: Policy,
         step_limit: int | None,
-        timeout_seconds: float | None,
     ) -> tuple[int, int, ProverOutcome | None]:
-        deadline = self._deadline(timeout_seconds)
-        if deadline is not None and time.monotonic() >= deadline:
-            return 0, 0, ProverOutcome.TIMEOUT
-
         outcome: ProverOutcome | None = None
         steps = 0
         inference_actions = 0
@@ -234,9 +320,6 @@ class Prover:
                 domain=state.problem.domain,
             ):
                 outcome = ProverOutcome.PROVED
-                break
-            if deadline is not None and time.monotonic() >= deadline:
-                outcome = ProverOutcome.TIMEOUT
                 break
             if step_limit is not None and steps >= step_limit:
                 outcome = ProverOutcome.STEP_BUDGET
@@ -276,11 +359,7 @@ class Prover:
         *,
         matrix_options: MatrixOptions,
         matrix_cache: dict[tuple[object, ...], Matrix] | None,
-        deadline: float | None,
     ) -> State:
-        if self._deadline_reached(deadline):
-            raise ProverTimeoutError("strategy timed out before state construction")
-
         matrix = self._matrix_from_file(
             problem,
             matrix_options=matrix_options,
@@ -295,8 +374,6 @@ class Prover:
             ),
             tableau=Tableau(),
         )
-        if self._deadline_reached(deadline):
-            raise ProverTimeoutError("strategy timed out during state construction")
         return state
 
     def _matrix_from_file(
@@ -332,22 +409,6 @@ class Prover:
         if matrix_key is not None and matrix_cache is not None:
             matrix_cache[matrix_key] = matrix
         return matrix
-
-    @staticmethod
-    def _deadline(timeout_seconds: float | None) -> float | None:
-        if timeout_seconds is None:
-            return None
-        return time.monotonic() + timeout_seconds
-
-    @staticmethod
-    def _remaining_seconds(deadline: float | None) -> float | None:
-        if deadline is None:
-            return None
-        return max(0.0, deadline - time.monotonic())
-
-    @staticmethod
-    def _deadline_reached(deadline: float | None) -> bool:
-        return deadline is not None and time.monotonic() >= deadline
 
     def _matrix_cache_key(
         self,
