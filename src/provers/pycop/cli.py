@@ -13,12 +13,14 @@ from connections.syntax.logic import Domain, Logic
 from connections.runs import (
     ProfileConfig,
     RunRow,
+    count_status,
     profile_run_rows,
     row_to_json_line,
     run_corpus,
     select_problem_paths,
     summarize_run_rows,
 )
+from connections.prover.status import SZSStatus
 from connections.prover.prover import (
     ProblemSpec,
     Prover,
@@ -397,7 +399,7 @@ def _print_progress(
         return
     print(
         f"progress={index}/{total} "
-        f"theorem={_count_status(rows, 'Theorem')} "
+        f"theorem={count_status(rows, SZSStatus.THEOREM)} "
         f"errors={sum(row.error_type is not None for row in rows)}",
         file=sys.stderr,
         flush=True,
@@ -407,10 +409,6 @@ def _print_progress(
 def _should_report_progress(index: int, total: int, every: int) -> bool:
     every = max(1, every)
     return index == total or index % every == 0
-
-
-def _count_status(rows: list[RunRow], status: str) -> int:
-    return sum(row.status == status for row in rows)
 
 
 def _summary_output_path(
@@ -440,13 +438,6 @@ def _check_output_dir(path: Path, *, overwrite: bool) -> None:
 
 def _nonnegative_int(value: str) -> int:
     parsed = int(value)
-    if parsed < 0:
-        raise argparse.ArgumentTypeError("value must be non-negative")
-    return parsed
-
-
-def _nonnegative_float(value: str) -> float:
-    parsed = float(value)
     if parsed < 0:
         raise argparse.ArgumentTypeError("value must be non-negative")
     return parsed

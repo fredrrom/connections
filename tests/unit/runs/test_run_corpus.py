@@ -5,7 +5,7 @@ from connections.prover.actions import Action
 from connections.prover.dynamics import Dynamics
 from connections.prover.state import State
 from connections.prover.strategy import MatrixOptions, PolicyOptions, Strategy, StrategySchedule
-from connections.runs import run_corpus, run_corpus_records
+from connections.runs import RunRow, run_corpus, run_corpus_records, summarize_run_rows
 
 
 class _FirstRulePolicy(Policy):
@@ -91,3 +91,36 @@ def _proof_payload(event):
         event.strategy_index,
         event.state.tableau.root.closed,
     )
+
+
+def _row(status: str) -> "RunRow":
+    return RunRow(
+        problem="p",
+        path="p.p",
+        status=status,
+        outcome=None,
+        szs_status=status,
+        steps=1,
+        inference_actions=1,
+        elapsed_seconds=0.1,
+        strategy_count=1,
+        winning_strategy_index=None,
+    )
+
+
+def test_summarize_counts_resource_out_and_memory_out():
+    rows = (
+        _row("Theorem"),
+        _row("ResourceOut"),
+        _row("ResourceOut"),
+        _row("MemoryOut"),
+        _row("Timeout"),
+    )
+
+    summary = summarize_run_rows(rows)
+
+    assert summary["theorem"] == 1
+    assert summary["resource_out"] == 2
+    assert summary["memory_out"] == 1
+    assert summary["timeout"] == 1
+    assert "gave_up" not in summary

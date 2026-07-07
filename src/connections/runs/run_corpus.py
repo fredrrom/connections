@@ -282,13 +282,14 @@ def summarize_run_rows(
         "output": None if output is None else str(output),
         "summary_output": None if summary_output is None else str(summary_output),
         "problems": len(rows),
-        "theorem": _count_status(rows, "Theorem"),
-        "unsatisfiable": _count_status(rows, "Unsatisfiable"),
-        "counter_satisfiable": _count_status(rows, "CounterSatisfiable"),
-        "satisfiable": _count_status(rows, "Satisfiable"),
-        "timeout": _count_status(rows, "Timeout"),
-        "gave_up": _count_status(rows, "GaveUp"),
-        "error": _count_status(rows, "Error"),
+        "theorem": count_status(rows, SZSStatus.THEOREM),
+        "unsatisfiable": count_status(rows, SZSStatus.UNSATISFIABLE),
+        "counter_satisfiable": count_status(rows, SZSStatus.COUNTER_SATISFIABLE),
+        "satisfiable": count_status(rows, SZSStatus.SATISFIABLE),
+        "timeout": count_status(rows, SZSStatus.TIMEOUT),
+        "resource_out": count_status(rows, SZSStatus.RESOURCE_OUT),
+        "memory_out": count_status(rows, SZSStatus.MEMORY_OUT),
+        "error": count_status(rows, SZSStatus.ERROR),
         "steps": sum(row.steps for row in rows),
         "inference_actions": sum(row.inference_actions for row in rows),
     }
@@ -470,7 +471,7 @@ def _outcome_value(outcome: ProverOutcome | None) -> str | None:
     return None if outcome is None else outcome.value
 
 
-def _count_status(rows: Sequence[RunRow], status: str) -> int:
+def count_status(rows: Sequence[RunRow], status: SZSStatus | str) -> int:
     return sum(row.status == status for row in rows)
 
 
@@ -478,6 +479,7 @@ __all__ = [
     "ProblemRunner",
     "RunRecord",
     "RunRow",
+    "count_status",
     "row_from_error",
     "row_from_result",
     "row_to_json",

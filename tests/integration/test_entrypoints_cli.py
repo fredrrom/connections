@@ -272,7 +272,8 @@ def test_pycop_schedule_prints_strategy_status_without_trace(tmp_path):
     )
     assert proc.returncode == 0
     assert "strategy 1:" in proc.stdout
-    assert "GaveUp" in proc.stdout
+    # An exhausted step budget is the prover's own resource: ResourceOut.
+    assert "ResourceOut" in proc.stdout
 
 
 def test_pycop_default_cli_runs_single_strategy(tmp_path):
