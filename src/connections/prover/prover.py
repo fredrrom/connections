@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
+import logging
 import signal
 import time
 from collections.abc import Callable
@@ -75,8 +76,6 @@ class StrategyResult(Generic[StrategyT]):
     steps: int
     inference_actions: int
     elapsed_seconds: float
-    step_limit: int | None = None
-    timeout_seconds: float | None = None
     szs_status: SZSStatus | None = None
 
 
@@ -179,7 +178,11 @@ def _memory_limit(limit_mb: int | None):
         try:
             resource.setrlimit(res, (soft, hard))
         except (ValueError, OSError):
-            pass
+            # A failed restore leaves the process under the lowered cap;
+            # surface it instead of failing silently.
+            logging.getLogger(__name__).warning(
+                "failed to restore RLIMIT_AS to (%d, %d)", soft, hard
+            )
 
 
 class Prover:
@@ -295,8 +298,6 @@ class Prover:
             steps=steps,
             inference_actions=inference_actions,
             elapsed_seconds=time.monotonic() - started_at,
-            step_limit=entry.step_limit,
-            timeout_seconds=entry.timeout_seconds,
             szs_status=szs_status,
         )
         return _StrategyRun(

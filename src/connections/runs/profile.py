@@ -137,13 +137,9 @@ def build_profile_overview(
     rows: Sequence[dict[str, Any]],
     *,
     profile_total_seconds: float,
-    baseline: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     elapsed_values = _numbers(rows, "elapsed_seconds")
-    matrix_values = _numbers(rows, "matrix_seconds")
-    search_values = _numbers(rows, "search_seconds")
     inference_values = _numbers(rows, "inference_actions")
-    compare_rows = _performance_compare_rows(rows)
     status_counts = Counter(str(row.get("status", "UNKNOWN")) for row in rows)
     timeout_rows = [
         row
@@ -162,8 +158,6 @@ def build_profile_overview(
         "profile_total_seconds": profile_total_seconds,
         "status_counts": dict(sorted(status_counts.items())),
         "elapsed_seconds": _profile_quantiles(elapsed_values),
-        "matrix_seconds": _profile_quantiles(matrix_values),
-        "search_seconds": _profile_quantiles(search_values),
         "inference_actions": {
             "total": sum(inference_values) if inference_values else None,
             "mean": sum(inference_values) / len(inference_values)
@@ -179,12 +173,7 @@ def build_profile_overview(
         ),
         "timeout_problems": _problem_rows(timeout_rows[:50]),
         "error_problems": _problem_rows(error_rows[:50]),
-        "time_breakdown": _time_breakdown(rows),
     }
-    if compare_rows:
-        overview["reference"] = _reference_overview(compare_rows)
-    if baseline is not None:
-        overview["baseline"] = baseline
     return overview
 
 
@@ -300,66 +289,6 @@ def _stats_function_list(
     return list(getattr(stats, "fcn_list", None) or sorted(stats_data))
 
 
-def _performance_compare_rows(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
-    compare_rows: list[dict[str, Any]] = []
-    for row in rows:
-        if "reference_status" not in row and "reference_seconds" not in row:
-            continue
-        compare_rows.append(
-            {
-                key: row[key]
-                for key in (
-                    "problem",
-                    "problem_path",
-                    "status",
-                    "raw_status",
-                    "pycop_seconds",
-                    "reference_prover",
-                    "reference_status",
-                    "reference_raw_status",
-                    "reference_seconds",
-                    "status_match",
-                    "pycop_speedup_vs_reference",
-                    "strategy_count",
-                    "reference_strategy_count",
-                    "error",
-                    "reference_error",
-                )
-                if key in row
-            }
-        )
-    return compare_rows
-
-
-def _reference_overview(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
-    pycop_solved = sum(1 for row in rows if row.get("status") == "Theorem")
-    reference_solved = sum(1 for row in rows if row.get("reference_status") == "Theorem")
-    status_matches = sum(1 for row in rows if row.get("status_match") is True)
-    speedups = _numbers(rows, "pycop_speedup_vs_reference")
-    slower_rows = [
-        row
-        for row in rows
-        if isinstance(row.get("pycop_speedup_vs_reference"), int | float)
-        and float(row["pycop_speedup_vs_reference"]) < 1
-    ]
-    return {
-        "schema": "connections.runs_profile_reference_overview.v1",
-        "rows": len(rows),
-        "status_matches": status_matches,
-        "status_match_rate": status_matches / len(rows) if rows else None,
-        "pycop_solved": pycop_solved,
-        "reference_solved": reference_solved,
-        "solved_delta": pycop_solved - reference_solved,
-        "pycop_speedup_vs_reference": _profile_quantiles(speedups),
-        "slowdowns": _problem_rows(
-            sorted(
-                slower_rows,
-                key=lambda row: float(row.get("pycop_speedup_vs_reference") or 0),
-            )[:25]
-        ),
-    }
-
-
 def _numbers(rows: Sequence[dict[str, Any]], key: str) -> list[float]:
     return [
         float(value)
@@ -396,46 +325,10 @@ def _problem_rows(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
         "status",
         "raw_status",
         "elapsed_seconds",
-        "pycop_seconds",
-        "reference_prover",
-        "reference_status",
-        "reference_raw_status",
-        "reference_seconds",
-        "status_match",
-        "pycop_speedup_vs_reference",
-        "matrix_seconds",
-        "search_seconds",
         "inference_actions",
         "error",
-        "reference_error",
     )
     return [{key: row.get(key) for key in fields if key in row} for row in rows]
-
-
-def _time_breakdown(rows: Sequence[dict[str, Any]]) -> dict[str, float]:
-    stage_keys = {
-        "parsing": ("parse_seconds", "parsing_seconds"),
-        "clausification_matrix": (
-            "matrix_seconds",
-            "clausification_seconds",
-            "matrix_construction_seconds",
-        ),
-        "search": ("search_seconds",),
-        "tracing": ("trace_seconds", "tracing_seconds"),
-        "overhead": ("overhead_seconds",),
-    }
-    breakdown: dict[str, float] = {}
-    for stage, keys in stage_keys.items():
-        total = 0.0
-        for row in rows:
-            for key in keys:
-                value = row.get(key)
-                if isinstance(value, int | float):
-                    total += float(value)
-                    break
-        if total:
-            breakdown[stage] = total
-    return breakdown
 
 
 def _write_jsonl(path: Path, rows: Sequence[dict[str, Any]]) -> None:
