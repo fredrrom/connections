@@ -295,15 +295,40 @@ def summarize_run_rows(
     }
 
 
+def glob_anchor(source: str | Path) -> Path:
+    """Longest directory prefix of ``source`` without glob metacharacters.
+
+    Include directives resolve against a corpus's directory tree, not against
+    the glob that selected its problem files; the anchor names that tree.
+    """
+
+    def has_glob(text: str) -> bool:
+        return any(char in "*?[" for char in text)
+
+    anchor = Path(source)
+    while has_glob(str(anchor)):
+        anchor = anchor.parent
+    return anchor
+
+
 def _paths_from_root(root: Path, *, pattern: str, recursive: bool) -> tuple[Path, ...]:
     if root.is_file():
         return (root,)
-    if not root.exists():
-        raise FileNotFoundError(root)
-    if not root.is_dir():
+    if root.is_dir():
+        iterator = root.rglob(pattern) if recursive else root.glob(pattern)
+        return tuple(path for path in iterator if path.is_file())
+    if root.exists():
         raise ValueError(f"problem root is neither a file nor directory: {root}")
-    iterator = root.rglob(pattern) if recursive else root.glob(pattern)
-    return tuple(path for path in iterator if path.is_file())
+    # A missing root may be a glob expression over its anchor directory.
+    anchor = glob_anchor(root)
+    if anchor != root and anchor.is_dir():
+        remainder = root.relative_to(anchor)
+        matches = tuple(
+            path for path in anchor.glob(str(remainder)) if path.is_file()
+        )
+        if matches:
+            return matches
+    raise FileNotFoundError(root)
 
 
 def _scheduled_problem_runner(
@@ -486,6 +511,7 @@ __all__ = [
     "row_to_json_line",
     "run_corpus",
     "run_corpus_records",
+    "glob_anchor",
     "select_problem_paths",
     "summarize_run_rows",
 ]

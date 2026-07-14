@@ -17,6 +17,7 @@ from connections.runs.run_corpus import (
     row_to_json_line,
     run_corpus,
     run_corpus_records,
+    glob_anchor,
     select_problem_paths,
     summarize_run_rows,
 )
@@ -35,6 +36,7 @@ __all__ = [
     "row_to_json_line",
     "run_corpus",
     "run_corpus_records",
+    "glob_anchor",
     "select_problem_paths",
     "summarize_profile",
     "summarize_run_rows",
