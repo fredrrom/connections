@@ -103,7 +103,7 @@ class ProofFound(Generic[StrategyT]):
     state: State
 
 
-class _WallClockExceeded(BaseException):
+class WallClockExceeded(BaseException):
     """Raised by the SIGALRM handler; BaseException so policy code with broad
     `except Exception` handlers cannot swallow it."""
 
@@ -126,10 +126,10 @@ def _wall_clock_alarm(seconds: float | None):
     if seconds <= 0:
         # setitimer(0) would disarm rather than fire; an exhausted budget
         # times out before any work happens.
-        raise _WallClockExceeded
+        raise WallClockExceeded
 
     def _raise(_signum: int, _frame: Any) -> None:
-        raise _WallClockExceeded
+        raise WallClockExceeded
 
     try:
         previous = signal.signal(signal.SIGALRM, _raise)
@@ -230,15 +230,28 @@ class Prover:
                 winning_strategy_index = strategy_index
                 closed_state = strategy_run.proof_state
                 if on_proof_found is not None and closed_state is not None:
-                    proof_payload = on_proof_found(
-                        ProofFound(
-                            problem=problem,
-                            strategy_index=strategy_index,
-                            strategy=entry.strategy,
-                            result=result,
-                            state=closed_state,
-                        )
+                    # The proof callback shares the strategy's wall-clock
+                    # budget: search already consumed elapsed_seconds, and an
+                    # unbounded callback would otherwise turn a proved problem
+                    # into a supervisor-level timeout.
+                    remaining = (
+                        entry.timeout_seconds - result.elapsed_seconds
+                        if entry.timeout_seconds is not None
+                        else None
                     )
+                    try:
+                        with _wall_clock_alarm(remaining):
+                            proof_payload = on_proof_found(
+                                ProofFound(
+                                    problem=problem,
+                                    strategy_index=strategy_index,
+                                    strategy=entry.strategy,
+                                    result=result,
+                                    state=closed_state,
+                                )
+                            )
+                    except WallClockExceeded:
+                        proof_payload = None
                 break
 
         return ProverResult(
@@ -283,7 +296,7 @@ class Prover:
                     policy=policy,
                     step_limit=entry.step_limit,
                 )
-        except _WallClockExceeded:
+        except WallClockExceeded:
             outcome = ProverOutcome.TIMEOUT
         except MemoryError:
             outcome = ProverOutcome.MEMORY_OUT

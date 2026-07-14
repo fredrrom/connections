@@ -430,3 +430,30 @@ def test_prover_wall_alarm_restores_signal_state(tmp_path):
 
     assert signal.getsignal(signal.SIGALRM) is handler_before
     assert signal.getitimer(signal.ITIMER_REAL) == (0.0, 0.0)
+
+
+def test_proof_callback_shares_strategy_wall_clock_budget(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        prover_module, "matrix_from_file", lambda *args, **kwargs: _theorem_matrix()
+    )
+    problem = tmp_path / "theorem.p"
+    problem.write_text(
+        "fof(a1,axiom,p).\nfof(c,conjecture,p).\n",
+        encoding="utf-8",
+    )
+    schedule = StrategySchedule.single(_first_strategy(), timeout_seconds=0.5)
+
+    def slow_callback(event: Any) -> str:
+        time.sleep(5.0)
+        return "labels"
+
+    started = time.monotonic()
+    result = Prover().run(
+        ProblemSpec(problem),
+        schedule=schedule,
+        on_proof_found=slow_callback,
+    )
+
+    assert time.monotonic() - started < 3.0
+    assert result.outcome is ProverOutcome.PROVED
+    assert result.proof_payload is None
