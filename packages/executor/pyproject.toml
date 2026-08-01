@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "executor"
+version = "0.1.0"
+description = "Filesystem-coordinated task execution: claims, atomic commits, drainers"
+requires-python = ">=3.12,<3.14"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["executor*"]
