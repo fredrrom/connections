@@ -18,6 +18,7 @@ from executor.claim import (
     release,
     try_claim,
 )
+from executor.plan import TaskSpec, ready_tasks, run_plan
 from executor.task import Task, is_done
 from executor.worker import DrainStats, drain
 
@@ -25,6 +26,7 @@ __all__ = [
     "CLAIM_STALE_SECONDS",
     "DrainStats",
     "Task",
+    "TaskSpec",
     "attempt_count",
     "commit_dir",
     "commit_file",
@@ -32,6 +34,8 @@ __all__ = [
     "heartbeat",
     "is_done",
     "new_tmp",
+    "ready_tasks",
+    "run_plan",
     "record_attempt",
     "release",
     "try_claim",
