@@ -329,15 +329,25 @@ make_attempt() -> Attempt
 ```
 
 Whatever it loads -- a policy checkpoint, parsed axiom files -- is loaded once
-and inherited by every child through copy-on-write. This is the only way state
-is shared: the parent can give, and nothing comes back except records. An
-attempt cannot learn from the problem before it.
+and inherited by every child through copy-on-write. Forking costs about a
+millisecond against the second a fresh interpreter and its imports would take,
+so a child per problem is nearly free, and each one starts from the same clean
+snapshot rather than inheriting whatever the last problem leaked.
 
-Forking a parent that has already started threads is the hazard here. A policy
-stack that spawns worker threads before the fork leaves the child holding
-mutexes no thread will release, so the parent either keeps the stack
-single-threaded until after the fork, or forks through a server process started
-before any of it is loaded.
+Inheritance runs one way. A child sees what the parent had; what the child then
+changes dies with it. State reaches the next problem only by travelling back in
+a record and being applied by the parent before the next fork -- which is a
+usable channel for an online learner, and makes the learning signal explicit,
+but rules out a child quietly accumulating anything across problems.
+
+Forking a parent that has already started threads is the hazard. After a fork
+the child has only the calling thread, so a mutex another thread held at that
+moment stays locked with nothing left to release it; a policy stack with
+OpenMP or MKL pools running will hang its children on first allocation. Forking
+through a server process started before any of it loads avoids this, but that
+server has no checkpoint loaded and so gives up the sharing the fork was for.
+What remains is to keep the parent single-threaded until after the fork, and to
+run no inference in it, since the pools are usually created on first use.
 
 ### Experiments compose with `needs`
 
@@ -385,7 +395,8 @@ The code lags this document on one surface. These should land together:
   `ResourceOut` whichever of its budgets ran out. A parent forks a child per
   problem, holds it to the total, and owns those two statuses.
 - The policy and any shared axioms are loaded in that parent, so children
-  inherit them rather than each paying the import.
+  inherit them rather than each paying the import. The parent stays
+  single-threaded until after the fork, or its children deadlock.
 - `prover/` splits into `calculus/` and `run/`.
 - `rollout` becomes public, returning the actions it took, the state they led
   to, and why it stopped. Steps and inferences derive from the actions.
