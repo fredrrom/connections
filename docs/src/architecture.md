@@ -105,10 +105,11 @@ different transition systems, not different runs in one.
 **A schedule allocates a total budget across strategies.** `from_weighted`
 takes total steps and seconds and divides them by weight.
 
-**A run turns problems into results.** It builds the matrix for each strategy
-in the schedule, instantiates the policy, rolls out under that strategy's share
-of the budget, and stops at the first success. It owns the caches, and maps
-outcomes to SZS statuses.
+**A run turns problems into results.** It spawns a child that builds the matrix
+for each strategy in the schedule, instantiates the policy, rolls out under
+that strategy's share of the budget, and stops at the first success. The child
+owns the caches; the parent owns the time and memory limits and the SZS
+statuses that come with them.
 
 ```python
 run(problems, schedule=...) -> Iterator[Result]
@@ -173,25 +174,19 @@ that partly measures the cluster, and records carry the host to make a
 **Memory is a ceiling on the process.** It is not spendable and cannot be
 divided across strategies; it holds for the duration of the call.
 
+Each is enforced where it applies. Inside the child, the rollout counts its own
+steps and each strategy's turn is bounded by an alarm:
+
 ```python
-def run(problems, *, schedule, memory_mb=None):
-    with memory_ceiling(memory_mb):                 # process-wide, whole call
-        for problem in problems:
-            for entry in schedule.entries:
-                with wall_clock(entry.timeout_seconds):     # this strategy's share
-                    rollout(state, policy=..., step_limit=entry.step_limit)
+for problem in problems:
+    for entry in schedule.entries:
+        with wall_clock(entry.timeout_seconds):     # this strategy's share
+            rollout(state, policy=..., step_limit=entry.step_limit)
 ```
 
-Each is enforced where it applies, and each failure becomes a status rather
-than a crash. The rollout reports its own step limit and the run turns that
-into `ResourceOut`; the time and memory wrappers report `Timeout` and
-`MemoryOut`, which a run cannot produce for itself.
-
-Enforcement quality differs. Steps are exact. Time is exact but not portable.
-Memory is approximate: `RLIMIT_AS` caps address space rather than resident
-size, which is unreliable when a large virtual mapping such as torch dwarfs
-RSS, and lowering it is a no-op on macOS. An external RSS watchdog is the
-reliable bound.
+Outside it, `run` holds the child to the process demands and reports `Timeout`
+or `MemoryOut` when it exceeds them. The inner limits make an orderly stop
+produce a clean status; the outer ones are what actually bind.
 
 Cores, nodes and concurrency are not budgets. They change how fast the same
 work happens, not what the search does, and belong to orchestration.
@@ -202,36 +197,40 @@ SZS is the output contract. `ResourceOut` covers a resource running out, with
 `Timeout` and `MemoryOut` as the specific cases, and `GaveUp` for a system
 stopping of its own accord.
 
-Each layer reports only what it can observe.
+Three layers, each reporting only what it can observe.
 
 **A rollout** reports why it stopped: it closed the tableau, the policy ran out
 of moves, or the step limit was reached.
 
-**A run** aggregates the rollouts of a schedule into a status for the problem.
-A proof gives `Theorem` or `Unsatisfiable`, depending on whether the problem has
-a conjecture. A completely explored search space gives `CounterSatisfiable` or
-`Satisfiable`. If the schedule finishes with no proof and the steps ran out,
-the result is `ResourceOut` -- the step budget is the resource, and it is the
-only resource a run observes for itself.
-
-**The wrapper around a run** enforces the process demands, so `Timeout` and
-`MemoryOut` come from there rather than from the run. A wall-clock alarm
-becomes `Timeout`; a `MemoryError` from the address-space ceiling becomes
-`MemoryOut`. These are the two statuses a run cannot produce, because the
-conditions they describe are conditions on the process rather than on the
+**A schedule's worth of rollouts** becomes a status for the problem. A proof
+gives `Theorem` or `Unsatisfiable`, depending on whether the problem has a
+conjecture. A completely explored search space gives `CounterSatisfiable` or
+`Satisfiable`. Finishing the schedule with no proof and no steps left gives
+`ResourceOut` -- the step budget is the only resource visible from inside the
 search.
 
-**A supervising process** -- CASC's execution controller, or a fleet worker
-watching a child -- is outside the run's process, so it sees an exit code, a
-signal, elapsed wall time and peak RSS, and nothing about the search. When a
-process dies without saying anything, that is all there is to record. It does
-not guess at `Timeout` or `MemoryOut`, because a killed process cannot say
-which it was.
+**`run`** owns the process the search happens in, and therefore owns `Timeout`
+and `MemoryOut`. Neither can be reported from inside: a process wedged in a C
+loop cannot fire its own alarm, and a process killed for memory reports
+nothing at all.
 
-The difference from the wrappers above is the process boundary, and it cuts
-both ways. A wrapper is inside the run, so it can turn a `MemoryError` or an
-alarm into a status where a supervisor sees only a death. But only a supervisor
-can measure time and memory faithfully:
+The rule running through them: **refine, never overwrite.** A layer speaks only
+when the one below produced nothing. A search that returned `Theorem` before a
+limit fired returned `Theorem`. CASC applies this strictly -- *"the first
+distinguished string output is accepted as the system's result"* -- and a
+system that runs over its limit is not credited rather than assigned a status.
+
+`StepBudget` maps to `ResourceOut` rather than `GaveUp`, which reads correctly
+against CASC where resource-outs are the expected non-success.
+
+## `run` is a supervised subprocess
+
+`run` spawns a child, sends it problems, and reads back records. The search --
+clausification, the schedule, rollouts, and any callback attached to them --
+happens in the child. Only records cross the boundary, and they are already
+flat data.
+
+This is what makes time and memory measurable at all:
 
 - Startup is invisible from inside. Interpreter start, imports and module init
   all precede any in-process timer, and with a policy stack loaded that is
@@ -244,53 +243,28 @@ can measure time and memory faithfully:
 - A process killed for memory reports nothing. `ru_maxrss` is readable only by
   a process that survived.
 
-In-process limits are therefore cooperative: they produce a clean status when
-things go normally. Out-of-process measurement is authoritative: it is the only
-account of time and memory that holds when they do not.
-
-The two clocks measure different things and a record can carry both. Summing
-the time spent in each strategy gives the cost of the search, which is what
-comparing policies wants. A supervisor's wall time gives the cost of the
-process, which includes startup and is what a limit is enforced against.
-
-The rule running through all four: **refine, never overwrite.** A layer speaks
-only when the one below it produced nothing. A run that returned `Theorem`
-before a watchdog fired returned `Theorem`. CASC applies this strictly --
-*"the first distinguished string output is accepted as the system's result"* --
-and a system that runs over its limit is simply not credited rather than
-assigned a status.
-
-`StepBudget` maps to `ResourceOut` rather than `GaveUp`, which reads correctly
-against CASC where resource-outs are the expected non-success.
-
-## Enforcement outside the process
-
-`run` applies its own limits cooperatively, so a limit that fires becomes a
-status rather than a crash. Nothing inside it kills anything, and it does not
-spawn a subprocess to police itself: `on_proof_found` hands the live `State` to
-its callback, and a process boundary would mean serialising a tableau and
-substitution per proof.
-
-Killing belongs to whatever invoked the process. CASC's execution controller
-kills a system that runs over. A fleet worker spawns a child, pipes problems to
-it, and watches its RSS and wall clock from outside. Run directly from a shell,
-nothing supervises it and nothing needs to.
-
-Where a runner does supervise, its limits sit outside the process's and are
-derived from them, so the two cannot drift apart:
+The child still sets its own cooperative limits, so an orderly stop produces a
+clean status rather than a kill. The parent's limits sit outside them, derived
+so the two cannot drift apart:
 
 ```python
 hard_deadline_seconds = 1.5 * timeout_seconds + 60
 ```
 
-The inner limit is semantic: the process notices it and reports a status. The
-outer limit is operational: if it fires, the inner one was not respected, which
-is a hang rather than a slow problem, and is recorded as an error rather than
-a `Timeout`.
+If the outer limit fires, the inner one was not respected: a hang rather than a
+slow problem, recorded as an error rather than a `Timeout`.
 
-A supervised child persists across problems rather than being spawned per
-problem, so the import cost of the policy stack is paid once: one process per
-shard, which is one `run` call.
+One child serves a whole `run` call rather than one problem, so the import cost
+of the policy stack is paid once per call -- and a call is one shard.
+
+Two clocks result, and a record can carry both. Time summed across strategies
+is the cost of the search, which is what comparing policies wants. The parent's
+wall time is the cost of the process, includes startup, and is what the limit
+is enforced against.
+
+Under CASC the harness supervises as well, so the search runs one process
+deeper than it strictly must. That costs a spawn and buys the same numbers
+everywhere, whoever is watching.
 
 ## Records
 
@@ -383,8 +357,9 @@ artefact, and it stays independently installable.
 The code lags this document on one surface. These should land together:
 
 - `class Prover` goes; `run` becomes a module-level function taking one problem
-  or many, always yielding results, with include and policy caches local to the
-  call.
+  or many, always yielding results.
+- `run` spawns a child to hold the search, so time and memory are measured from
+  outside it. The caches live in the child, for the life of the call.
 - `prover/` splits into `calculus/` and `run/`.
 - `rollout` becomes public, returning the actions it took, the state they led
   to, and why it stopped. Steps and inferences derive from the actions.
