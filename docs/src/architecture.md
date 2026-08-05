@@ -4,19 +4,26 @@ This repository is a uv workspace. `connections` is the library of primitives;
 the packages under `packages/` build on it. This note describes the boundaries
 between them.
 
-## The line
+## Two layers
 
-> Everything inside one **process** is `connections`.
-> Everything that spans processes is orchestration.
+`connections` holds the transition system for clausal connection tableaux and
+the means to act in it: states, actions, rollouts, strategies, schedules, and
+the SZS vocabulary for outcomes. It returns values and writes nothing to disk.
 
-To CASC an ATP system is a process: it is invoked with a problem path, a time
-limit and switches, and it prints a status. Everything that process needs is
-below the line. Deciding what several processes each get -- sharding, artifact
-trees, claims, resume, fleets -- is above it.
+The orchestration packages run many such processes over a corpus. They select
+and shard problems, lay out an artifact tree, claim work between competing
+workers, publish results atomically, and resume an interrupted run. They
+persist what `connections` returns.
 
-An equivalent test, often easier to apply: **below the line produces values,
-above the line persists them.** The one exception is a batch mode shipped with
-a prover, which writes records from inside a single process; see *Records*.
+The two are separated by the process boundary. A CASC invocation -- a problem
+path, a time limit, a status on stdout -- uses `connections` and none of the
+orchestration packages; a fleet draining a corpus uses both. New code belongs
+in `connections` if a single invocation needs it, and in orchestration if it
+exists only because several processes are running.
+
+One thing crosses: the `pycop` CLI has a corpus mode that writes JSONL from
+inside a single process, which is why the record format lives in `connections`.
+See *Records*.
 
 ## Primitives, not a prover
 
@@ -107,7 +114,7 @@ specification file and permits training and memorisation across the batch.
 Learning work is LTB-shaped, which is what makes caching across problems
 legitimate in `run_multi`.
 
-Both are one process, so both are below the line. They differ only in how many
+Both are one process, so both are `connections`. They differ only in how many
 problems that process is handed.
 
 ## Cache lifetime
@@ -133,9 +140,9 @@ across the strategies of a schedule.
 
 ## Budgets are semantic; allocation is not
 
-Steps, memory and time change what the search does, so they belong below the
-line. Cores, nodes and concurrency change only how fast the same work happens,
-so they belong to orchestration.
+Steps, memory and time change what the search does, so they belong to
+`connections`. Cores, nodes and concurrency change only how fast the same work
+happens, so they belong to orchestration.
 
 The three budgets differ in kind:
 
@@ -214,7 +221,7 @@ own.
 
 ## Orchestration
 
-Two packages sit above the line. Neither knows what a prover is.
+Two packages sit above `connections`. Neither knows what a prover is.
 
 ### `executor`: running work without a coordinator
 
