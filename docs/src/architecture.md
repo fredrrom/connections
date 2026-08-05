@@ -47,6 +47,35 @@ schedule loop has ever needed it. Learning will want it public: GRPO samples
 several attempts on the same problem with the same strategy, and repeating
 clausification and SZS mapping for each would be waste.
 
+## Vocabulary: rollout, strategy, schedule
+
+Three words, each meaning exactly one thing:
+
+**A rollout is from a state.** A policy acts in a transition system from some
+state until it terminates or exhausts its budget. This is the primitive, and it
+is currently `_run_strategy_loop` -- private, because only the schedule has
+needed it. GRPO samples several rollouts from one state; a restart is a rollout
+after a `Reset`. Both want it public.
+
+**A strategy determines what to roll out in, and with what.** Its matrix
+options fix the matrix, and with it the transition system *P(M)*; its policy
+options fix the policy. Two strategies differing in clausification are
+therefore rollouts in *different transition systems*, not different runs in one.
+
+**A schedule allocates a total budget across strategies.** `from_weighted`
+takes total steps and seconds and divides them by weight, and `run` tries the
+entries in order until one succeeds.
+
+So `run` chooses among strategies under a budget in the same way a policy
+chooses among actions under a budget -- it is a policy one level up, with a
+fixed allocation rather than a learned one. Learning that allocation is the
+natural next thing to want, and is where E's strategy scheduling sits.
+
+Note that "rollout" is used more narrowly here than in the MCTS literature,
+where it means the random simulation phase of a search, and more narrowly than
+in learncop today, where `RolloutRecord` means the result of a whole prover run
+on a problem. The narrow sense is the useful one; the others should move to it.
+
 ## Two invocation shapes, matching CASC
 
 ```python
