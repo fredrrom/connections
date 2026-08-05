@@ -7,29 +7,33 @@ obvious and were settled by argument rather than by taste.
 
 ## The line
 
-> Everything inside one invocation of a prover is `connections`.
-> Everything that exists only because you are running an *experiment* is
-> orchestration.
+> Everything inside one **process** is `connections`.
+> Everything that spans processes is orchestration.
 
-The test is CASC's standard division: one problem, one process, a status on
-stdout. Everything needed for that is below the line. Sharding, artifact trees,
-claims, resume and fleets are not needed for it, and are above.
+To CASC an ATP system *is* a process: it is invoked with a problem path, a time
+limit and switches, and it prints a status. Everything that process needs is
+below the line. Deciding what several processes each get -- sharding, artifact
+trees, claims, resume, fleets -- is above it.
 
 A second test, equivalent and sometimes easier to apply: **below the line
-produces values, above the line persists them.**
+produces values, above the line persists them.** The exception that proves it
+is a batch mode shipped with a prover, which writes records from inside one
+process; see *Records* below.
 
-## `Prover` is the system boundary, not a primitive
+## The system is the process; `Prover` is the top of the library
 
-`Prover` is what CASC calls an ATP system. It clausifies a problem file into an
-initial state, runs a schedule of strategies under budgets, and reports an SZS
-status. It is not the proof procedure -- that is a policy acting in the
-transition system -- and it is not a small composable part.
+The CASC system is `pycop`'s entry point -- argument parsing, schedule
+selection, SZS on stdout, exit code. `Prover` is what runs inside it: it
+clausifies a problem file into an initial state, runs a schedule of strategies
+under budgets, and returns a result.
 
-Reading it as a primitive causes a specific confusion: sharding a corpus
-outside `Prover` feels like a layering violation, when in fact CASC itself
-shards. The standard division *is* "invoke the system once per problem".
+`Prover` is therefore neither the system nor a primitive, and reading it as
+either causes trouble. Read as the system, the CLI's responsibilities get
+pulled into the library. Read as a primitive, sharding a corpus outside it
+feels like a layering violation -- when in fact CASC itself shards, since the
+standard division is "invoke the system once per problem".
 
-The named provers are configurations of it:
+The named provers are thin CLIs over configurations of it:
 
 | | |
 |---|---|
@@ -55,6 +59,9 @@ problem path per invocation, the Large Theory Batch division passes a batch
 specification file and explicitly permits training and memorisation across the
 batch. Learning work is LTB-shaped, which is why `run_multi` matters here and
 why caching across problems is legitimate in it.
+
+Both are one process, so both are below the line. What separates them is only
+how many problems that process is handed.
 
 ## Statelessness and cache lifetime
 
