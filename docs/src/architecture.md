@@ -105,11 +105,10 @@ different transition systems, not different runs in one.
 **A schedule allocates a total budget across strategies.** `from_weighted`
 takes total steps and seconds and divides them by weight.
 
-**A run turns problems into results.** It spawns a child that builds the matrix
-for each strategy in the schedule, instantiates the policy, rolls out under
-that strategy's share of the budget, and stops at the first success. The child
-owns the caches; the parent owns the time and memory limits and the SZS
-statuses that come with them.
+**A run turns problems into results.** It builds the matrix for each strategy in
+the schedule, instantiates the policy, rolls out under that strategy's share of
+the budget, and stops at the first success. It owns the caches and maps
+outcomes to SZS statuses.
 
 ```python
 run(problems, schedule=...) -> Iterator[Result]
@@ -174,19 +173,9 @@ that partly measures the cluster, and records carry the host to make a
 **Memory is a ceiling on the process.** It is not spendable and cannot be
 divided across strategies; it holds for the duration of the call.
 
-Each is enforced where it applies. Inside the child, the rollout counts its own
-steps and each strategy's turn is bounded by an alarm:
-
-```python
-for problem in problems:
-    for entry in schedule.entries:
-        with wall_clock(entry.timeout_seconds):     # this strategy's share
-            rollout(state, policy=..., step_limit=entry.step_limit)
-```
-
-Outside it, `run` holds the child to the process demands and reports `Timeout`
-or `MemoryOut` when it exceeds them. The inner limits make an orderly stop
-produce a clean status; the outer ones are what actually bind.
+Steps are enforced by the rollout that counts them. Time and memory are
+enforced twice, softly inside the search and firmly outside it; see *Where each
+limit is enforced*.
 
 Cores, nodes and concurrency are not budgets. They change how fast the same
 work happens, not what the search does, and belong to orchestration.
@@ -209,10 +198,10 @@ conjecture. A completely explored search space gives `CounterSatisfiable` or
 `ResourceOut` -- the step budget is the only resource visible from inside the
 search.
 
-**`run`** owns the process the search happens in, and therefore owns `Timeout`
-and `MemoryOut`. Neither can be reported from inside: a process wedged in a C
-loop cannot fire its own alarm, and a process killed for memory reports
-nothing at all.
+**Whatever holds the process to its limits** owns `Timeout` and `MemoryOut`. A
+search stopped by its own soft limit reports them itself; a search that was
+killed cannot, since a wedged process cannot fire its own alarm and a process
+killed for memory reports nothing at all.
 
 The rule running through them: **refine, never overwrite.** A layer speaks only
 when the one below produced nothing. A search that returned `Theorem` before a
@@ -223,29 +212,55 @@ system that runs over its limit is not credited rather than assigned a status.
 `StepBudget` maps to `ResourceOut` rather than `GaveUp`, which reads correctly
 against CASC where resource-outs are the expected non-success.
 
-## `run` is a supervised subprocess
+## Limits: what established provers do
 
-`run` spawns a child, sends it problems, and reads back records. The search --
-clausification, the schedule, rollouts, and any callback attached to them --
-happens in the child. Only records cross the boundary, and they are already
-flat data.
+E self-limits in-process with a soft/hard pair. `--soft-cpu-limit` (290s by
+default) stops the saturation phase gracefully, so the prover can post-process
+and print what it has; `--cpu-limit` (300s) terminates "immediately after
+reaching the time limit, regardless of internal state". Memory goes through
+`setrlimit()`, and the manual concedes it "may not work everywhere". E also
+takes the external limit as an input rather than only a constraint: *"if you
+impose a different one externally, it is important to let E know via the
+`--cpu-limit=XXX` option so that it can adjust the schedule."*
 
-This is what makes time and memory measurable at all:
+Vampire forks a child per strategy in portfolio mode, which is what its CASC
+mode runs. The motivation there is parallelism rather than measurement, and the
+cost is explicit: forking "limits options for cooperation between proof
+attempts due to reliance on inter-process communication".
+
+Two things carry over. **The time budget is an input to scheduling**, not just a
+ceiling -- a schedule can only divide a total it knows. And **soft and hard
+limits do different jobs**: the soft one lets a search stop and say what it
+found, the hard one guarantees it stops at all.
+
+## Where each limit is enforced
+
+The soft limits stay in the search, so a limit that fires produces a status
+rather than a corpse:
+
+```python
+for problem in problems:
+    for entry in schedule.entries:
+        with wall_clock(entry.timeout_seconds):     # this strategy's share
+            rollout(state, policy=..., step_limit=entry.step_limit)
+```
+
+The hard limits sit outside it. E can keep both inside because C can guarantee
+termination from a signal handler; Python cannot, since handlers run only
+between bytecodes and a tight loop in a C extension will not yield. The same
+argument applies to measurement:
 
 - Startup is invisible from inside. Interpreter start, imports and module init
   all precede any in-process timer, and with a policy stack loaded that is
   seconds.
-- A wedged process cannot fire its own alarm. Python runs signal handlers
-  between bytecodes, so a tight C loop or an uninterruptible syscall defeats
-  `SIGALRM`.
 - `RLIMIT_AS` bounds address space rather than resident size, and the two
   diverge sharply once large arenas are mapped.
 - A process killed for memory reports nothing. `ru_maxrss` is readable only by
   a process that survived.
 
-The child still sets its own cooperative limits, so an orderly stop produces a
-clean status rather than a kill. The parent's limits sit outside them, derived
-so the two cannot drift apart:
+So `Timeout` and `MemoryOut` are verdicts of whatever holds the process to its
+demands, and the outer limits are derived from the inner ones so the two cannot
+drift apart:
 
 ```python
 hard_deadline_seconds = 1.5 * timeout_seconds + 60
@@ -254,26 +269,10 @@ hard_deadline_seconds = 1.5 * timeout_seconds + 60
 If the outer limit fires, the inner one was not respected: a hang rather than a
 slow problem, recorded as an error rather than a `Timeout`.
 
-One child serves a whole `run` call rather than one problem, so the import cost
-of the policy stack is paid once per call -- and a call is one shard.
-
 Two clocks result, and a record can carry both. Time summed across strategies
-is the cost of the search, which is what comparing policies wants. The parent's
-wall time is the cost of the process, includes startup, and is what the limit
-is enforced against.
-
-Under CASC this nests: the harness runs the CLI, and the CLI's `run` spawns the
-search. The middle process only parses arguments and prints a status, and CASC
-would kill an overrunning system anyway, so the child is not needed for
-enforcement there. It is kept because the alternative -- searching in-process
-when nobody is supervising, spawning when somebody is -- would make
-`elapsed_seconds` include interpreter startup in one mode and not the other,
-and the same problem run two ways would report two different numbers. One spawn
-per call buys records that mean one thing.
-
-The child must not outlive its parent. A killed CLI leaves an orphaned search
-holding a core, so the child belongs to the parent's process group or watches
-for the parent's death itself.
+is the cost of the search, which is what comparing policies wants. Wall time
+measured from outside is the cost of the process, includes startup, and is what
+the limit is enforced against.
 
 ## Records
 
@@ -367,8 +366,9 @@ The code lags this document on one surface. These should land together:
 
 - `class Prover` goes; `run` becomes a module-level function taking one problem
   or many, always yielding results.
-- `run` spawns a child to hold the search, so time and memory are measured from
-  outside it. The caches live in the child, for the life of the call.
+- Time and memory are enforced twice: soft limits inside the search so it can
+  stop and report, hard limits outside it so termination is guaranteed and the
+  numbers are measured faithfully.
 - `prover/` splits into `calculus/` and `run/`.
 - `rollout` becomes public, returning the actions it took, the state they led
   to, and why it stopped. Steps and inferences derive from the actions.
