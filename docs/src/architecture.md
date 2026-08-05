@@ -131,7 +131,7 @@ and stops at the first success.
 
 Running many problems is not a bigger `run`; it is many runs, and arranging
 them is orchestration's job. That separation is what lets a hung problem cost
-one problem: a soft limit is cooperative and a search wedged in a C extension
+one problem: a soft limit is cooperative and a rollout wedged in a C extension
 will ignore it, so the only way to guarantee that every problem is attempted is
 to give each one a process that can be killed.
 
@@ -181,13 +181,13 @@ never reached. Checking the clock there rather than from a signal handler costs
 one read per step and avoids asking what an alarm does in the middle of a
 transition.
 
-They are inside the search because a schedule has to advance -- a strategy that
+They are inside the rollout because a schedule has to advance -- a strategy that
 overran its share of the clock would leave the next strategy no turn. From
 inside, steps and seconds are both an allotment that ran out, which is what
 `ResourceOut` means.
 
 Memory is outside because it drives no control flow: there is no next strategy
-to advance to when memory runs low, and a search cannot measure its own
+to advance to when memory runs low, and a rollout cannot measure its own
 resident size, since `RLIMIT_AS` bounds address space and the two diverge
 sharply once large arenas are mapped. The total time is outside because every
 in-process limit is cooperative -- only a parent that can kill guarantees a
@@ -195,7 +195,7 @@ problem ends, and even that fails against an uninterruptible syscall. Nothing
 here decides in advance whether a step returns; the layers exist so that the
 common failures cost a problem rather than a shard.
 
-`Timeout` is a claim about a process rather than a search, and only a watching
+`Timeout` is a claim about a process rather than a rollout, and only a watching
 process can make it, since its clock includes interpreter startup that no
 in-process timer sees. The split is therefore by vocabulary and the layers
 cannot contradict each other: a run never says `Timeout`, a parent never says
@@ -210,11 +210,11 @@ effort measure to report. The same wall clock is a different budget on
 different hardware, so a corpus run spread across node types yields a coverage
 number that partly measures the cluster. Records carry the host to make a
 `Timeout` interpretable, and both clocks, because they answer different
-questions: time summed across strategies is the cost of the search, the
+questions: time summed across strategies is the cost of the rollouts, the
 parent's wall time is the cost of the process.
 
 Cores, nodes and concurrency are not limits in this sense. They change how fast
-the same work happens, not what the search does.
+the same work happens, not what the rollouts do.
 
 ### Prior art
 
