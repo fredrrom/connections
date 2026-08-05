@@ -73,13 +73,25 @@ Four concepts, from the most basic to the most assembled.
 state until it terminates or exhausts its budget.
 
 ```python
-rollout(state, *, policy, step_limit=None) -> Rollout   # steps, inferences, outcome
+rollout(state, *, policy, step_limit=None) -> Rollout
 ```
 
 It takes no problem, no schedule and no clausification: by the time a rollout
-starts, *P(M)* exists and the state is a point in it. The state is mutated in
-place rather than copied, so a caller can inspect the closed tableau
-afterwards, which is what proof replay reads.
+starts, *P(M)* exists and the state is a point in it.
+
+A `Rollout` records the actions taken, the state they led to, and why it
+stopped. Transitions are deterministic, so the action sequence and the starting
+state reconstruct every intermediate state; nothing else needs storing, and
+proof replay reads exactly this.
+
+    actions      the trajectory, in order
+    final_state  what the actions led to
+    outcome      why it stopped, if it stopped for a reason
+
+Steps and inferences are derived from the actions rather than counted
+alongside them, so they cannot disagree: steps is the number of actions, and
+inferences the number that applied a rule. An undo is a step but not an
+inference.
 
 Because it takes a state and returns one, rollouts compose: several can start
 from the same state to compare what different policies do with it, and one can
@@ -141,37 +153,48 @@ The matrix cache spans the whole call, but a problem is attempted once per
 configuration within a corpus run, so what it actually shares is the strategies
 of one schedule.
 
-## Budgets are semantic; allocation is not
+## Budgets
 
-Steps, memory and time change what the search does, so they belong to
-`connections`. Cores, nodes and concurrency change only how fast the same work
-happens, so they belong to orchestration.
+Three limits, and they are three different kinds of thing.
 
-The three budgets differ in kind:
+**Steps bound a rollout.** A step is one transition, so a step limit is a
+property of the rollout and nothing else -- `rollout` counts them and stops.
+It is the only limit that means the same thing on every machine, which is why
+it is the effort measure to report.
 
-| budget | portable across machines | enforceable in-process |
-|---|---|---|
-| steps | yes | yes |
-| memory | yes | only via `RLIMIT_AS`, which is unreliable when a large virtual mapping (torch) dwarfs RSS, and a no-op on macOS |
-| time | **no** | yes |
+**Time bounds a strategy's turn.** It is spendable and divisible: the schedule
+takes the total the process was given and divides it by weight, so each
+strategy gets a share of the clock alongside its share of the steps. Unlike
+steps it is not portable -- the same limit is a different budget on different
+hardware -- so a corpus run spread across node types yields a coverage number
+that partly measures the cluster, and records carry the host to make a
+`Timeout` interpretable.
 
-Steps is the only one that is both, and is therefore the effort measure to
-report. A wall-clock limit is a different budget on different hardware, so a
-corpus run spread across node types yields a coverage number that partly
-measures the cluster. Records carry the host so a `Timeout` can be interpreted.
-
-### Nested limits
-
-A runner sets its own limits outside the process's, derived from them so the
-two cannot drift apart:
+**Memory is a ceiling on the process.** It is not spendable and cannot be
+divided across strategies; it holds for the duration of the call.
 
 ```python
-hard_deadline_seconds = 1.5 * timeout_seconds + 60
+def run(problems, *, schedule, memory_mb=None):
+    with memory_ceiling(memory_mb):                 # process-wide, whole call
+        for problem in problems:
+            for entry in schedule.entries:
+                with wall_clock(entry.timeout_seconds):     # this strategy's share
+                    rollout(state, policy=..., step_limit=entry.step_limit)
 ```
 
-The inner limit is semantic: the process notices it and reports a status. The
-outer limit is operational: if it fires, the inner one was not respected, which
-is a hang rather than a slow problem, and is recorded as an error.
+Each is enforced where it applies, and each failure becomes a status rather
+than a crash: a step limit is reported by the rollout, a `MemoryError` from the
+`RLIMIT_AS` ceiling becomes `MemoryOut`, and a wall-clock alarm becomes
+`Timeout`.
+
+Enforcement quality differs. Steps are exact. Time is exact but not portable.
+Memory is approximate: `RLIMIT_AS` caps address space rather than resident
+size, which is unreliable when a large virtual mapping such as torch dwarfs
+RSS, and lowering it is a no-op on macOS. An external RSS watchdog is the
+reliable bound.
+
+Cores, nodes and concurrency are not budgets. They change how fast the same
+work happens, not what the search does, and belong to orchestration.
 
 ## SZS: who reports what
 
@@ -197,20 +220,33 @@ status.
 `StepBudget` maps to `ResourceOut` rather than `GaveUp`, which reads correctly
 against CASC where resource-outs are the expected non-success.
 
-## Enforcement
+## Enforcement outside the process
 
-`run` self-limits cooperatively: counting steps, checking a deadline, lowering
-`RLIMIT_AS` where that is meaningful. It does not spawn a subprocess to enforce
-its own budgets, because `on_proof_found` hands the live `State` to its
-callback and a process boundary would mean serialising a tableau and
+`run` applies its own limits cooperatively, so a limit that fires becomes a
+status rather than a crash. Nothing inside it kills anything, and it does not
+spawn a subprocess to police itself: `on_proof_found` hands the live `State` to
+its callback, and a process boundary would mean serialising a tableau and
 substitution per proof.
 
-Hard enforcement belongs to whatever invoked the process: CASC's harness kills
-a system that runs over, a fleet worker supervises a child with an RSS watchdog
-and a hard deadline, and a laptop needs neither. Where a fleet supervises, the
-child persists across problems rather than being spawned per problem, so the
-import cost of the policy stack is paid once: one process per shard, which is
-one `run` call.
+Hard enforcement belongs to whatever invoked the process. CASC's harness kills
+a system that runs over. A fleet worker supervises a child with an RSS watchdog
+and a hard deadline. A laptop needs neither.
+
+Where a runner does supervise, its limits sit outside the process's and are
+derived from them, so the two cannot drift apart:
+
+```python
+hard_deadline_seconds = 1.5 * timeout_seconds + 60
+```
+
+The inner limit is semantic: the process notices it and reports a status. The
+outer limit is operational: if it fires, the inner one was not respected, which
+is a hang rather than a slow problem, and is recorded as an error rather than
+a `Timeout`.
+
+A supervised child persists across problems rather than being spawned per
+problem, so the import cost of the policy stack is paid once: one process per
+shard, which is one `run` call.
 
 ## Records
 
@@ -306,7 +342,8 @@ The code lags this document on one surface. These should land together:
   or many, always yielding results, with include and policy caches local to the
   call.
 - `prover/` splits into `calculus/` and `run/`.
-- `rollout` becomes public.
+- `rollout` becomes public, returning the actions it took, the state they led
+  to, and why it stopped. Steps and inferences derive from the actions.
 - `connections/runs/` dissolves: the problem loop folds into `run`, the
   record format and summaries move to `corpus`, and corpus fetching and
   profiling go with them.
