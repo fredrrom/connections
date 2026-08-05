@@ -185,19 +185,29 @@ cluster, and records carry the host to make a `Timeout` interpretable.
 **Memory is a ceiling on the process.** It is not spendable and cannot be
 divided across strategies.
 
-Steps and time both bound a rollout, and whichever binds first stops it. Both
-are divided by the schedule, and a strategy that overran its share of the clock
-would leave the next strategy no turn -- so a rollout has to notice its own
-deadline, exactly as it notices its own step limit. Stopping on either produces
-a result: what was tried, how far it got, and why it stopped.
+Steps and time both bound a rollout, and whichever binds first stops it. The
+schedule divides both by weight, so each strategy gets a share of each. A
+strategy that overran its share of the clock would leave the next strategy no
+turn, so a rollout has to notice its own deadline exactly as it notices its own
+step limit. Stopping on either produces a result: what was tried, how far it
+got, and why it stopped.
+
+Both are checked between steps, in the same place, because both fail the same
+way. A step that never returns defeats them equally: the loop that would have
+noticed the limit is never reached. Checking the clock there rather than from a
+signal handler costs one read per step and avoids asking what happens when an
+alarm fires in the middle of a transition.
 
 Memory is different. It drives no control flow -- there is no next strategy to
 advance to when memory runs low -- and a search cannot measure its own resident
 size reliably. It belongs entirely to whatever runs the process.
 
-The total time for a problem also belongs outside. A rollout stopping at its
-share is cooperative and can fail; only a parent that can kill guarantees the
-problem ends at all.
+The total time for a problem also belongs outside. Every in-process limit is
+cooperative and can fail, so a parent that can kill is the only guarantee that a
+problem ends -- and even that is bounded, since a process blocked in an
+uninterruptible syscall ignores a kill too. Nothing here decides in advance
+whether a step will return; the layers exist so that the common failures cost a
+problem rather than a shard.
 
 Cores, nodes and concurrency are not budgets. They change how fast the same
 work happens, not what the search does, and belong to orchestration.
@@ -375,7 +385,8 @@ The code lags this document on one surface. These should land together:
 
 - `class Prover` goes; `run` becomes a module-level function over one problem.
 - A rollout stops on its step limit or its deadline, whichever binds first, so
-  a schedule can advance between strategies.
+  a schedule can advance between strategies. Both are checked between steps,
+  which removes the wall-clock alarm and the exception it raised.
 - Memory and the guarantee that a problem ends at all leave `connections`. A
   parent forks a child per problem, holds it to the total, and reports
   `MemoryOut` and the `Timeout` a hung search could not report itself.
