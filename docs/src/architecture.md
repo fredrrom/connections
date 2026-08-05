@@ -140,19 +140,6 @@ boxes, on one problem at a time", with "all command line parameters ... the
 same for all problems in each division", so a competition entry is one `run`
 per invocation and its schedule is internal.
 
-One division did hand a system many problems at once, for a related reason.
-The Large Theory Batch division posed "theorems ... from Large Theories,
-presented in Batches" -- problems of up to twelve thousand axioms, of which
-only a few are needed for any one proof -- so that a system could "load and
-preprocess shared axioms once, then share results across proof searches". It
-provided training problems with solutions, wrote proofs to an output directory
-rather than stdout, and bounded each problem and the batch separately.
-
-Its motivation was amortising axiom loading, which is the same reason to cache
-parsed includes here; the reason to hand a shard many problems is different
-again, and is the policy import. LTB has gone on hiatus, and with it the only
-division that supplied training data for the corpus it scored on.
-
 ## Caches
 
 `run` is a function, not a method on an object. Configuration is passed at the
