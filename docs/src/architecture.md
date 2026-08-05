@@ -140,11 +140,18 @@ boxes, on one problem at a time", with "all command line parameters ... the
 same for all problems in each division", so a competition entry is one `run`
 per invocation and its schedule is internal.
 
-CASC used to have a division shaped like a corpus run. The Large Theory Batch
-division passed a batch specification file and explicitly permitted training
-and memorisation across the batch, which made it the natural home for learned
-provers. It has gone on hiatus, so no current division sanctions learning from
-the competition corpus.
+One division did hand a system many problems at once, for a related reason.
+The Large Theory Batch division posed "theorems ... from Large Theories,
+presented in Batches" -- problems of up to twelve thousand axioms, of which
+only a few are needed for any one proof -- so that a system could "load and
+preprocess shared axioms once, then share results across proof searches". It
+provided training problems with solutions, wrote proofs to an output directory
+rather than stdout, and bounded each problem and the batch separately.
+
+Its motivation was amortising axiom loading, which is the same reason to cache
+parsed includes here; the reason to hand a shard many problems is different
+again, and is the policy import. LTB has gone on hiatus, and with it the only
+division that supplied training data for the corpus it scored on.
 
 ## Caches
 
@@ -362,8 +369,8 @@ The code lags this document on one surface. These should land together:
   search space is masked by a later one that ran out of steps.
 - Whether a learned policy trained on TPTP and evaluated on TPTP satisfies
   CASC's rule that "the precomputation and storage of information about
-  individual TPTP problems or their solutions is not allowed". The LTB division
-  used to permit exactly this and is on hiatus, so there is currently no
-  division that sanctions training on the competition corpus. The evaluation
+  individual TPTP problems or their solutions is not allowed". LTB supplied
+  training problems with solutions and is on hiatus, so no current division
+  provides a sanctioned way to train on the corpus it scores on. The evaluation
   measures first solves made before a problem contributed training data, which
   is the substance of an answer, but it is not framed as a compliance argument.
