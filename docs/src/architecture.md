@@ -65,8 +65,12 @@ how many problems that process is handed.
 
 ## Statelessness and cache lifetime
 
-`Prover` holds no state. Configuration is passed at the call, and every cache
-is a local whose lifetime is the enclosing call:
+`Prover` holds no state -- literally: no method touches an attribute, and every
+`self.` in it is a call to another method. It is a module wearing a class, and
+`run` and `run_multi` should be plain functions.
+
+Configuration is passed at the call, and every cache is a local whose lifetime
+is the enclosing call:
 
 | cache | lives in | shared across |
 |---|---|---|
@@ -140,6 +144,32 @@ The division of labour is forced by *who is alive to speak*:
 Two rules follow. The runner **refines, never overwrites**: a prover that
 returned `Theorem` before a watchdog fired still returned `Theorem`. And a
 hard-deadline kill is an error, not a `Timeout`.
+
+CASC is the strict form of the first rule. *"The first distinguished string
+output is accepted as the system's result"* -- so a system that prints
+`Theorem` and then crashes is credited. And a system that runs over its limit
+is not assigned a status at all: *"this is noticed in the timing data, and the
+system is considered to have not solved that problem."* No verdict is invented
+on the system's behalf.
+
+## Enforcement lives outside, not in `run`
+
+`run` and `run_multi` self-limit cooperatively -- counting steps, checking a
+deadline, lowering `RLIMIT_AS` where that is meaningful. They do not spawn a
+subprocess to enforce their own budgets, and should not: `on_proof_found` hands
+the *live* `State` to its callback, which is how proof paths are extracted, and
+a process boundary would require serialising a tableau and substitution per
+proof.
+
+Hard enforcement therefore belongs to whatever invoked the process, and each
+caller already has it: CASC's harness kills a system that runs over, a fleet
+worker supervises a child with an RSS watchdog and a hard deadline, and on a
+laptop nothing needs to.
+
+Where a fleet does supervise, the child should persist across problems rather
+than being spawned per problem -- a fresh process pays the import cost of the
+policy stack every time. Process per shard, which is exactly `run_multi`'s
+scope.
 
 `StepBudget` maps to `ResourceOut` rather than `GaveUp`. Both readings are
 defensible -- a step budget is self-imposed, which is what `GaveUp` describes --
