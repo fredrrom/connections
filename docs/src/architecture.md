@@ -33,10 +33,10 @@ provers are the CLIs that assemble them:
 | `satcop` | SAT shadow and `Reset` |
 
 A CLI owns argument parsing, schedule selection, SZS on stdout and the exit
-code. It is shaped by CASC: one problem per invocation in the standard
-division, a batch specification in LTB. Running a corpus, writing records and
-summarising them are not part of it -- those belong to orchestration, so a
-prover CLI has no reason to depend on `corpus` or `executor`.
+code. CASC shapes it: one problem per invocation, the same command line for
+every problem in a division. Running a corpus, writing records and summarising
+them are not part of it -- those belong to orchestration, so a prover CLI has
+no reason to depend on `corpus` or `executor`.
 
 ## Calculus and run
 
@@ -122,16 +122,28 @@ A run chooses among strategies under a budget much as a policy chooses among
 actions under a budget -- a policy one level up, with a fixed allocation rather
 than a learned one.
 
-## Two invocation shapes
+## One problem or many
 
-CASC defines two, and one `run` covers both. The standard division passes a
-problem path per invocation; the Large Theory Batch division passes a batch
-specification file and permits training and memorisation across the batch.
-Learning work is LTB-shaped, which is what makes caching across problems
-legitimate.
+```python
+run(problem, schedule=...)    # one problem
+run(problems, schedule=...)   # many, in one process
+```
 
-Both are one process. They differ only in how many problems that process is
-handed, which is the argument to `run`.
+CASC uses only the first shape. Systems there run "as black boxes, on one
+problem at a time", and "all command line parameters have to be the same for
+all problems in each division" -- so a competition entry cannot tune itself per
+problem, and its schedule has to be internal.
+
+The second shape is for experiments. A shard hands one process fifty problems
+so the policy stack is imported once rather than fifty times, and everything
+that follows from that -- caches spanning the call, per-problem limits enforced
+from inside -- is a consequence of the shard, not of any competition rule.
+
+CASC used to have a division shaped this way. The Large Theory Batch division
+passed a batch specification file and explicitly permitted training and
+memorisation across the batch, which made it the natural home for learned
+provers. It has gone on hiatus, so that permission is no longer available and
+learning work has no division that sanctions it.
 
 ## Cache lifetime
 
@@ -253,10 +265,9 @@ attempted. Only the process can make that call: an outside killer would have to
 end the whole shard to end one problem. So a process handling many problems
 must bound each one itself.
 
-The standard division inverts this. One problem, one process, and being killed
-is a perfectly good ending because there is nothing queued behind it. LTB has
-the shard's shape instead -- a batch, a wall-clock limit per problem, and an
-overall limit -- and the per-problem limit is the system's to honour.
+A CASC entry inverts this. One problem, one process, and being killed is a
+perfectly good ending because there is nothing queued behind it. Only a process
+holding a queue has to bound the problem in front of it.
 
 ## Where each limit is enforced
 
@@ -415,6 +426,8 @@ The code lags this document on one surface. These should land together:
   search space is masked by a later one that ran out of steps.
 - Whether a learned policy trained on TPTP and evaluated on TPTP satisfies
   CASC's rule that "the precomputation and storage of information about
-  individual TPTP problems or their solutions is not allowed". The evaluation
+  individual TPTP problems or their solutions is not allowed". The LTB division
+  used to permit exactly this and is on hiatus, so there is currently no
+  division that sanctions training on the competition corpus. The evaluation
   measures first solves made before a problem contributed training data, which
   is the substance of an answer, but it is not framed as a compliance argument.
