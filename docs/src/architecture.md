@@ -238,10 +238,14 @@ A run returns a rich, typed result in memory: outcome, per-strategy results,
 SZS status, and any proof payload a callback attached. `connections` produces
 these and stops there.
 
-The flat per-problem record written to a JSONL line -- problem, status, steps,
-inferences, elapsed, policy, host -- is a persistence format, and belongs to
-`corpus` along with the projection that builds it from a result and the
-aggregation that summarises a set of them.
+`corpus.Record` is the flat per-problem line written to JSONL: an envelope of
+problem, status, steps, inferences, elapsed, policy and host, plus a payload
+whose contents are the attempt's own business. It is a persistence format, so
+it belongs to `corpus` along with the projection that builds it from a result
+and the aggregation that summarises a set of them.
+
+An attempt produces a record. Nothing else in the orchestration layer needs to
+know what either contains.
 
 ## Orchestration
 
@@ -274,35 +278,82 @@ Four properties make the tree portable:
    either a finished artifact or a stray temporary.
 4. Claims expire on a heartbeat timeout, so a dead node's work is reclaimed.
 
-### `corpus`: what to run, and where it lands
+### `corpus`: problems, processes and records
 
 Problem selection is ordered and deduplicated, so two machines resolve the same
 sources to the same list. Sharding is a deterministic partition of that list:
 shard 7 holds the same problems everywhere, which is what lets a killed worker
-be replaced and a run be resumed.
+be replaced and a run be resumed. Shard membership is fixed when a run is
+seeded; how many shards a worker takes concurrently is a property of the
+machine, and is the only part that varies with hardware.
 
-Shard membership is a property of the run, fixed when it is seeded. How many
-shards a worker takes concurrently is a property of the machine. Only the
-second varies with hardware.
+Each problem in a shard gets a process. The parent forks, waits with a
+deadline, reads the record the child sends back, and kills the child if it
+overruns:
 
-### How they compose
+```python
+attempt_each(problems, make_attempt, limits) -> Iterator[Record]
+```
 
-A shard is a task; each problem in it is a process:
+A child that finishes reports its own result. A child that is killed reports
+nothing, so the parent writes the record instead -- `Timeout` or `MemoryOut`,
+with the elapsed time and peak RSS it measured from outside. Records travel
+back over a pipe rather than as files, so a shard is one file rather than
+fifty.
+
+### What varies: the attempt
+
+Everything above is the same for every use of the infrastructure. What differs
+is a single function, which runs in the child:
+
+```python
+Attempt = Callable[[ProblemRef], Record]
+```
+
+| use | what the attempt does |
+|---|---|
+| benchmarking a prover | `connections.run`, and record the result |
+| profiling | the same, wrapped in a profiler, with the stats in the payload |
+| gathering training data | the same, with a callback that reads proof paths off closed tableaux, in the payload |
+
+The envelope of the record -- problem, status, steps, elapsed, host -- is the
+same in all three; only the payload differs. That is what keeps one runner
+serving provers, profiling and experiments rather than three.
+
+### Setup once, fork per problem
+
+An attempt is built by a factory called once in the parent:
+
+```python
+make_attempt() -> Attempt
+```
+
+Whatever it loads -- a policy checkpoint, parsed axiom files -- is loaded once
+and inherited by every child through copy-on-write. This is the only way state
+is shared: the parent can give, and nothing comes back except records. An
+attempt cannot learn from the problem before it.
+
+Forking a parent that has already started threads is the hazard here. A policy
+stack that spawns worker threads before the fork leaves the child holding
+mutexes no thread will release, so the parent either keeps the stack
+single-threaded until after the fork, or forks through a server process started
+before any of it is loaded.
+
+### Experiments compose with `needs`
+
+A corpus run is shard tasks plus a summary that needs them all. An experiment
+is the same tasks with more edges: a dataset that needs its shards, a model
+that needs the dataset, and the next iteration's shards that need the model.
+Nothing declares an order; the edges do.
 
 ```python
 TaskSpec(
     key=f"shard_{i:05d}",
-    target=root / "shards" / f"shard_{i:05d}.jsonl",
-    run=lambda: write_rows(attempt_each(shard.problems, schedule=...)),
+    target=iteration / "shards" / f"shard_{i:05d}.jsonl",
+    needs=(previous_model,) if iteration_index else (),
+    run=lambda: write_rows(attempt_each(shard.problems, make_attempt, limits)),
 )
 ```
-
-`attempt_each` loads the policy once, then forks a child per problem which
-calls `connections.run`. The parent holds each child to the wall clock and
-memory limit, kills it if it exceeds them, and records `Timeout` or
-`MemoryOut`; a child that finishes reports its own result. `corpus` writes the
-rows, `executor` decides who runs the shard and publishes it atomically, and a
-summary task declares the shards as `needs` so it runs once they are present.
 
 The shard is the unit of scheduling and the problem is the unit of isolation. A
 shard that dies costs a shard's work, and only because a worker died; a problem
@@ -342,11 +393,16 @@ The code lags this document on one surface. These should land together:
   record format and summaries move to `corpus`, and corpus fetching and
   profiling go with them.
 - `pycop` loses its corpus mode; benchmarking a corpus is a `corpus` entry
-  point that takes a prover, and benchmark fetching becomes another.
+  point that takes an attempt, and benchmark fetching becomes another.
+- `corpus` gains the per-problem process: fork, deadline, memory ceiling, kill,
+  and the records the parent writes for a child that never reported.
+- `runs/profile.py` becomes an attempt that profiles inside the child, rather
+  than a wrapper around a corpus runner.
 - learncop's `RolloutRecord` is a schedule's worth of work, not a rollout's. It
   becomes a schedule record with an entry per rollout per strategy. Deferred
   until the orchestration packages absorb that code.
-- `corpus.Attempt` absorbs the record fields it lacks: `inference_actions`,
+- `corpus.Attempt` becomes `corpus.Record`, freeing `Attempt` for the callable
+  that produces one, and absorbs the fields it lacks: `inference_actions`,
   `strategy_count`, `winning_strategy_index`, and `host`.
 
 ## Open questions
