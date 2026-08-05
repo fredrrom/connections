@@ -243,11 +243,20 @@ statuses. CASC scores Success statuses; a system that prints `ResourceOut` and
 one that is killed by the harness have both failed to solve the problem. E
 prints it for the reader, not for the scoreboard.
 
-Self-limiting still matters, for control flow rather than reporting. A process
-given many problems -- an LTB batch, or a shard -- must abandon one to start
-the next, and without a soft limit it would spend the whole budget on the first
-hard problem. In the standard division that pressure does not exist: there is
-one problem, and the harness ends the process.
+Self-limiting still matters, for control flow rather than reporting, and it
+follows from how many problems a process is given.
+
+A shard is fifty problems in one process, because starting one costs the import
+of the policy stack and doing that fifty times is waste. If the first problem
+is unsolvable and nothing stops the search, the other forty-nine are never
+attempted. Only the process can make that call: an outside killer would have to
+end the whole shard to end one problem. So a process handling many problems
+must bound each one itself.
+
+The standard division inverts this. One problem, one process, and being killed
+is a perfectly good ending because there is nothing queued behind it. LTB has
+the shard's shape instead -- a batch, a wall-clock limit per problem, and an
+overall limit -- and the per-problem limit is the system's to honour.
 
 ## Where each limit is enforced
 
