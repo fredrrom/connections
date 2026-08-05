@@ -221,10 +221,16 @@ becomes `Timeout`; a `MemoryError` from the address-space ceiling becomes
 conditions they describe are conditions on the process rather than on the
 search.
 
-**An external supervisor** -- a fleet worker, CASC's harness -- sees only that
-a process died without saying anything. It records an error with the evidence:
-signal, elapsed time, peak RSS. It does not guess at `Timeout` or `MemoryOut`,
-because a killed process cannot say which it was.
+**A supervising process** -- CASC's execution controller, or a fleet worker
+watching a child -- is outside the run's process, so it sees an exit code, a
+signal, elapsed wall time and peak RSS, and nothing about the search. When a
+process dies without saying anything, that is all there is to record. It does
+not guess at `Timeout` or `MemoryOut`, because a killed process cannot say
+which it was.
+
+The difference from the wrappers above is the process boundary: a wrapper is
+inside the run and can turn a `MemoryError` or an alarm into a status, while a
+supervisor can only observe a death.
 
 The rule running through all four: **refine, never overwrite.** A layer speaks
 only when the one below it produced nothing. A run that returned `Theorem`
@@ -244,9 +250,10 @@ spawn a subprocess to police itself: `on_proof_found` hands the live `State` to
 its callback, and a process boundary would mean serialising a tableau and
 substitution per proof.
 
-Hard enforcement belongs to whatever invoked the process. CASC's harness kills
-a system that runs over. A fleet worker supervises a child with an RSS watchdog
-and a hard deadline. A laptop needs neither.
+Killing belongs to whatever invoked the process. CASC's execution controller
+kills a system that runs over. A fleet worker spawns a child, pipes problems to
+it, and watches its RSS and wall clock from outside. Run directly from a shell,
+nothing supervises it and nothing needs to.
 
 Where a runner does supervise, its limits sit outside the process's and are
 derived from them, so the two cannot drift apart:
