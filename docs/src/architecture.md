@@ -73,7 +73,7 @@ Four concepts, from the most basic to the most assembled.
 state until it terminates or exhausts its budget.
 
 ```python
-rollout(state, *, policy, step_limit=None) -> Rollout
+rollout(state, *, policy, step_limit=None, deadline=None) -> Rollout
 ```
 
 It takes no problem, no schedule and no clausification: by the time a rollout
@@ -107,7 +107,7 @@ takes total steps and seconds and divides them by weight.
 
 **A run turns one problem into a result.** It builds the matrix for each
 strategy in the schedule, instantiates the policy, rolls out under that
-strategy's share of the steps, and stops at the first success. It owns the
+strategy's share of the steps and the clock, and stops at the first success. It owns the
 caches and maps outcomes to SZS statuses.
 
 ```python
@@ -124,10 +124,10 @@ than a learned one.
 run(problem, *, schedule) -> Result
 ```
 
-One problem, in the calling process, with no notion of time, memory or other
+One problem, in the calling process, with no notion of memory or of other
 problems. It builds the matrix for each strategy in the schedule, instantiates
-the policy, rolls out under that strategy's share of the steps, and stops at
-the first success.
+the policy, rolls out under that strategy's share of the steps and the clock,
+and stops at the first success.
 
 Running many problems is not a bigger `run`; it is many runs, and arranging
 them is orchestration's job. That separation is what lets a hung problem cost
@@ -185,11 +185,19 @@ cluster, and records carry the host to make a `Timeout` interpretable.
 **Memory is a ceiling on the process.** It is not spendable and cannot be
 divided across strategies.
 
-Only steps belong to `connections`. A rollout counts its own and stops, and a
-run turns that into `ResourceOut`. Time and memory are conditions on a process,
-so they are held and reported by whatever runs the process -- orchestration, or
-a CLI. A schedule may still be told a total time so it can divide it, but
-dividing a budget is not the same as enforcing one.
+Steps and time both bound a rollout, and whichever binds first stops it. Both
+are divided by the schedule, and a strategy that overran its share of the clock
+would leave the next strategy no turn -- so a rollout has to notice its own
+deadline, exactly as it notices its own step limit. Stopping on either produces
+a result: what was tried, how far it got, and why it stopped.
+
+Memory is different. It drives no control flow -- there is no next strategy to
+advance to when memory runs low -- and a search cannot measure its own resident
+size reliably. It belongs entirely to whatever runs the process.
+
+The total time for a problem also belongs outside. A rollout stopping at its
+share is cooperative and can fail; only a parent that can kill guarantees the
+problem ends at all.
 
 Cores, nodes and concurrency are not budgets. They change how fast the same
 work happens, not what the search does, and belong to orchestration.
@@ -206,21 +214,19 @@ of moves, or the step limit was reached.
 **A run** turns a schedule's rollouts into a status for the problem. A proof
 gives `Theorem` or `Unsatisfiable`, depending on whether the problem has a
 conjecture. A completely explored search space gives `CounterSatisfiable` or
-`Satisfiable`. Finishing the schedule with no proof and no steps left gives
-`ResourceOut`. These are every status `connections` can produce, because steps
-are the only resource it observes.
+`Satisfiable`. Exhausting the steps gives `ResourceOut`, and exhausting the
+clock gives `Timeout` -- a run observes both, because both bound its rollouts.
 
-**Whatever runs the process** owns `Timeout` and `MemoryOut`. They are
-conditions on a process rather than on a search, and the process that exceeded
-them is the least reliable witness: one wedged in a C loop cannot fire its own
-alarm, and one killed for memory reports nothing at all. A parent watching a
-child measures both faithfully, and also captures interpreter startup, which no
-in-process clock can see.
+**Whatever runs the process** owns `MemoryOut`, and owns `Timeout` in the case
+a run cannot report: the one where it never stopped. A search wedged in a C
+loop cannot fire its own alarm, and a process killed for memory reports nothing
+at all. A parent watching a child also measures both faithfully, including
+interpreter startup, which no in-process clock can see.
 
-These two statuses carry no weight in competition -- CASC scores Success
-statuses, and a printed `Timeout` scores the same as being killed. They exist
-for the experiment records, where telling a hard problem from a slow node is
-the whole point.
+Neither carries weight in competition -- CASC scores Success statuses, and a
+printed `Timeout` scores the same as being killed. They exist for the
+experiment records, where telling a hard problem from a slow node is the whole
+point.
 
 The rule running through them: **refine, never overwrite.** A layer speaks only
 when the one below produced nothing. A search that returned `Theorem` before a
@@ -260,10 +266,12 @@ enforcement inside does not transfer: C can guarantee termination from a signal
 handler, while Python runs handlers only between bytecodes, so a tight loop in
 an extension ignores an alarm indefinitely.
 
-That is the case for one process per problem. A cooperative limit cannot
+That is the case for one process per problem: a cooperative limit cannot
 guarantee that a problem ends, so the guarantee has to come from a parent that
-can kill. Once it does, the search needs no clock of its own: it counts steps,
-and the process that ran it accounts for the time and memory it used.
+can kill. It is not a case for removing the clock from the search. E's soft
+limit exists so the prover can stop and say what it found, and a schedule needs
+the same thing for a different reason -- a strategy that ignores its share of
+the clock leaves the next strategy no turn.
 
 Vampire's cost applies to us as well. Forking per problem rules out sharing
 anything discovered in one attempt with the next, which is exactly what a
@@ -366,8 +374,11 @@ artefact, and it stays independently installable.
 The code lags this document on one surface. These should land together:
 
 - `class Prover` goes; `run` becomes a module-level function over one problem.
-- Time and memory leave `connections` entirely. A parent forks a child per
-  problem, holds it to the limits, and reports `Timeout` and `MemoryOut`.
+- A rollout stops on its step limit or its deadline, whichever binds first, so
+  a schedule can advance between strategies.
+- Memory and the guarantee that a problem ends at all leave `connections`. A
+  parent forks a child per problem, holds it to the total, and reports
+  `MemoryOut` and the `Timeout` a hung search could not report itself.
 - The policy and any shared axioms are loaded in that parent, so children
   inherit them rather than each paying the import.
 - `prover/` splits into `calculus/` and `run/`.
