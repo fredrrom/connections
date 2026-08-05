@@ -20,42 +20,78 @@ produces values, above the line persists them.** The exception that proves it
 is a batch mode shipped with a prover, which writes records from inside one
 process; see *Records* below.
 
-## The system is the process; `Prover` is the top of the library
+## There is no `Prover`; there are primitives
 
 The CASC system is `pycop`'s entry point -- argument parsing, schedule
-selection, SZS on stdout, exit code. `Prover` is what runs inside it: it
-clausifies a problem file into an initial state, runs a schedule of strategies
-under budgets, and returns a result.
-
-`Prover` is therefore neither the system nor a primitive, and reading it as
-either causes trouble. Read as the system, the CLI's responsibilities get
-pulled into the library. Read as a primitive, sharding a corpus outside it
-feels like a layering violation -- when in fact CASC itself shards, since the
-standard division is "invoke the system once per problem".
-
-The named provers are thin CLIs over configurations of it:
+selection, SZS on stdout, exit code. `connections` is not a prover and does not
+contain one. It provides the primitives a prover is assembled from, and the
+named provers are thin CLIs that assemble them:
 
 | | |
 |---|---|
-| `pycop` | `Prover` + leanCoP strategies + a CLI |
-| `ilcop` | `Prover` + intuitionistic configuration |
-| `satcop` | `Prover` + SAT shadow and `Reset` |
+| `pycop` | leanCoP strategies + a CLI |
+| `ilcop` | intuitionistic configuration |
+| `satcop` | SAT shadow and `Reset` |
 
-The composable primitive below `Prover` is one strategy on one problem under
-one budget. It exists as `_StrategyRun` and is private, because only the
-schedule loop has ever needed it. Learning will want it public: GRPO samples
-several attempts on the same problem with the same strategy, and repeating
-clausification and SZS mapping for each would be waste.
+Naming a class `Prover` was the source of several confusions worth recording,
+because each pulls in a different wrong direction. Read as *the system*, the
+CLI's responsibilities migrate into the library. Read as *a primitive*, sharding
+a corpus outside it looks like a layering violation -- when in fact CASC itself
+shards, since the standard division is "invoke the system once per problem".
+And read as an *object*, it invites state that nothing needs.
+
+## Two kinds of primitive: dynamics and run
+
+The primitives divide in two, and today they are mixed together in one
+`prover/` package:
+
+**Dynamics** -- the transition system itself. What a state is, what actions
+exist, which the calculus admits, and what applying one does.
+
+    rules, actions, tableau, state, dynamics
+
+**Run** -- acting in that system. A rollout, the strategies that determine
+which system and which policy, the schedules that allocate budget across them,
+and the SZS vocabulary for reporting outcomes.
+
+    rollout, strategy, status
+
+Nothing in dynamics needs to know that budgets or schedules exist; a rollout is
+the only thing that connects them. Keeping the split visible is the point of
+separating them:
+
+```
+connections/
+    syntax/  parsing/  clausification/  constraints/
+    calculus/   rules, actions, tableau, state, dynamics
+    run/        rollout, strategy, status
+    policy/
+```
+
+(`calculus/` because a formal calculus is what induces the transition system;
+`dynamics/` would do as well, at the cost of a `dynamics/dynamics.py`.)
 
 ## Vocabulary: rollout, strategy, schedule
 
 Three words, each meaning exactly one thing:
 
 **A rollout is from a state.** A policy acts in a transition system from some
-state until it terminates or exhausts its budget. This is the primitive, and it
-is currently `_run_strategy_loop` -- private, because only the schedule has
-needed it. GRPO samples several rollouts from one state; a restart is a rollout
-after a `Reset`. Both want it public.
+state until it terminates or exhausts its budget:
+
+```python
+rollout(state, *, policy, step_limit=None) -> Rollout   # steps, inferences, outcome
+```
+
+This is the primitive. It takes no problem, no schedule and no clausification:
+by the time a rollout starts, *P(M)* exists and the state is a point in it. The
+state is mutated in place rather than copied, which is what lets a caller
+inspect the closed tableau afterwards -- proof replay depends on it.
+
+It exists today as `_run_strategy_loop`, private because only the schedule has
+needed it. Making it public is what GRPO wants -- several rollouts from one
+state -- and what a restart is: a rollout after a `Reset`. It sits one level
+below the code that builds a state from a file; the rollout does no
+clausification, and that is precisely why it composes.
 
 **A strategy determines what to roll out in, and with what.** Its matrix
 options fix the matrix, and with it the transition system *P(M)*; its policy
@@ -79,8 +115,8 @@ on a problem. The narrow sense is the useful one; the others should move to it.
 ## Two invocation shapes, matching CASC
 
 ```python
-Prover().run(problem, schedule=...)        # standard division: one problem
-Prover().run_multi(problems, schedule=...) # LTB: a batch, one process
+run(problem, schedule=...)         # standard division: one problem
+run_multi(problems, schedule=...)  # LTB: a batch, one process
 ```
 
 These are not two designs. CASC defines both: the standard division passes a
@@ -94,9 +130,9 @@ how many problems that process is handed.
 
 ## Statelessness and cache lifetime
 
-`Prover` holds no state -- literally: no method touches an attribute, and every
-`self.` in it is a call to another method. It is a module wearing a class, and
-`run` and `run_multi` should be plain functions.
+`run` and `run_multi` are functions, not methods on an object. The `Prover`
+class they replace held no state -- literally: no method touched an attribute,
+and every `self.` in it was a call to another method.
 
 Configuration is passed at the call, and every cache is a local whose lifetime
 is the enclosing call:
@@ -122,13 +158,13 @@ already does.
 
 ## Budgets are semantic; allocation is not
 
-Steps, memory and time change what the search *does*, so they belong to the
-prover. Cores, nodes and concurrency change only how fast the same work
-happens, so they belong to orchestration.
+Steps, memory and time change what the search *does*, so they belong below the
+line. Cores, nodes and concurrency change only how fast the same work happens,
+so they belong to orchestration.
 
 The three budgets are not equivalent, and each fails a different property:
 
-| budget | portable across machines | prover can enforce it itself |
+| budget | portable across machines | enforceable in-process |
 |---|---|---|
 | steps | yes | yes |
 | memory | yes | only via `RLIMIT_AS`, which is unreliable when a large virtual mapping (torch) dwarfs RSS, and a no-op on macOS |
@@ -207,7 +243,7 @@ resource-outs are the expected non-success.
 
 ## Records
 
-`ProverResult` is what an invocation returns: rich, typed, in memory.
+The result of a `run` is what an invocation returns: rich, typed, in memory.
 `RunRow` is its projection onto scalars for a JSONL line, built by
 `row_from_result`.
 
@@ -233,7 +269,7 @@ cannot be completed by a laptop.
 ## Packages and dependency edges
 
 ```
-connections   calculus, Prover, budgets, SZS, records        -> lark
+connections   calculus, run, budgets, SZS, records            -> lark
 pycop         leanCoP-equivalent prover, parity              -> connections
 satcop        SAT shadow, Reset                              -> connections
 corpus        problem selection, sharding, artifact layout   -> connections, executor
@@ -263,10 +299,20 @@ and all four are load-bearing:
 Given these, heterogeneous fleets need no coordination: point workers at the
 same tree and let them drain.
 
+## Decided, not yet done
+
+The code lags this document in four places, all on the same surface. They
+should land together, so the public API churns once:
+
+- `class Prover` goes; `run` and `run_multi` become module-level functions.
+- `prover/` splits into `calculus/` and `run/`.
+- `rollout` becomes public, extracted from `_run_strategy_loop`.
+- `run_multi` is added, with include and policy caches local to the call.
+- `corpus.Attempt` folds into `RunRow`, which gains `policy`, `payload` and
+  `host`.
+
 ## Open questions
 
-- Whether `_StrategyRun` becomes public. GRPO and within-problem restarts both
-  want it; nothing else does yet.
 - Where `runs/download.py` and `runs/profile.py` belong. Neither is proving and
   neither is orchestration.
 - Whether a learned policy trained on TPTP and evaluated on TPTP satisfies
