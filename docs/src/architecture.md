@@ -166,133 +166,77 @@ axioms once, then forks a child per problem. Each child inherits the loaded
 state through copy-on-write, so the cost is paid once without any problem being
 able to corrupt the next one's.
 
-## Budgets
+## Limits
 
-Three limits, and they are three different kinds of thing.
+| limit | divided by the schedule | enforced | reported as |
+|---|---|---|---|
+| steps | by weight | in the rollout, between steps | `ResourceOut` |
+| time per strategy | by weight | in the rollout, between steps | `ResourceOut` |
+| total time | no | by the parent, which can kill | `Timeout` |
+| memory | no | by the parent | `MemoryOut` |
 
-**Steps bound a rollout.** A step is one transition, so a step limit is a
-property of the rollout and nothing else -- `rollout` counts them and stops.
-It is the only limit that means the same thing on every machine, which is why
-it is the effort measure to report.
+Steps and time are checked at the same point because they fail the same way: a
+step that never returns means the loop that would have noticed either limit is
+never reached. Checking the clock there rather than from a signal handler costs
+one read per step and avoids asking what an alarm does in the middle of a
+transition.
 
-**Time bounds a strategy's turn.** It is spendable and divisible: a schedule
-divides the total it was given by weight, so each strategy gets a share of the
-clock alongside its share of the steps. Unlike steps it is not portable -- the
-same limit is a different budget on different hardware -- so a corpus run
-spread across node types yields a coverage number that partly measures the
-cluster, and records carry the host to make a `Timeout` interpretable.
+They are inside the search because a schedule has to advance -- a strategy that
+overran its share of the clock would leave the next strategy no turn. From
+inside, steps and seconds are both an allotment that ran out, which is what
+`ResourceOut` means.
 
-**Memory is a ceiling on the process.** It is not spendable and cannot be
-divided across strategies.
+Memory is outside because it drives no control flow: there is no next strategy
+to advance to when memory runs low, and a search cannot measure its own
+resident size, since `RLIMIT_AS` bounds address space and the two diverge
+sharply once large arenas are mapped. The total time is outside because every
+in-process limit is cooperative -- only a parent that can kill guarantees a
+problem ends, and even that fails against an uninterruptible syscall. Nothing
+here decides in advance whether a step returns; the layers exist so that the
+common failures cost a problem rather than a shard.
 
-Steps and time both bound a rollout, and whichever binds first stops it. The
-schedule divides both by weight, so each strategy gets a share of each. A
-strategy that overran its share of the clock would leave the next strategy no
-turn, so a rollout has to notice its own deadline exactly as it notices its own
-step limit. Stopping on either produces a result: what was tried, how far it
-got, and why it stopped.
+`Timeout` is a claim about a process rather than a search, and only a watching
+process can make it, since its clock includes interpreter startup that no
+in-process timer sees. The split is therefore by vocabulary and the layers
+cannot contradict each other: a run never says `Timeout`, a parent never says
+`ResourceOut`. Where they could overlap -- a run that finished just as a limit
+expired -- the rule is **refine, never overwrite**, which is also how CASC reads
+output: *"the first distinguished string output is accepted as the system's
+result"*, and a system that runs over is not credited rather than assigned a
+status.
 
-Both are checked between steps, in the same place, because both fail the same
-way. A step that never returns defeats them equally: the loop that would have
-noticed the limit is never reached. Checking the clock there rather than from a
-signal handler costs one read per step and avoids asking what happens when an
-alarm fires in the middle of a transition.
+Steps is the only limit that means the same thing on every machine, and is the
+effort measure to report. The same wall clock is a different budget on
+different hardware, so a corpus run spread across node types yields a coverage
+number that partly measures the cluster. Records carry the host to make a
+`Timeout` interpretable, and both clocks, because they answer different
+questions: time summed across strategies is the cost of the search, the
+parent's wall time is the cost of the process.
 
-Memory is different. It drives no control flow -- there is no next strategy to
-advance to when memory runs low -- and a search cannot measure its own resident
-size reliably. It belongs entirely to whatever runs the process.
+Cores, nodes and concurrency are not limits in this sense. They change how fast
+the same work happens, not what the search does.
 
-The total time for a problem also belongs outside. Every in-process limit is
-cooperative and can fail, so a parent that can kill is the only guarantee that a
-problem ends -- and even that is bounded, since a process blocked in an
-uninterruptible syscall ignores a kill too. Nothing here decides in advance
-whether a step will return; the layers exist so that the common failures cost a
-problem rather than a shard.
+### Prior art
 
-Cores, nodes and concurrency are not budgets. They change how fast the same
-work happens, not what the search does, and belong to orchestration.
+E self-limits with a soft/hard pair, both in-process: `--soft-cpu-limit` stops
+the saturation phase gracefully, `--cpu-limit` terminates "immediately ...
+regardless of internal state". It also treats an external limit as a scheduling
+input -- *"important to let E know ... so that it can adjust the schedule"*. C
+can guarantee termination from a signal handler; Python runs handlers only
+between bytecodes, which is why the hard limit here moves outside instead.
 
-## SZS: who reports what
+Vampire forks a child per strategy in portfolio mode, for parallelism, and
+names the cost: forking "limits options for cooperation between proof attempts
+due to reliance on inter-process communication". Forking per problem pays the
+same cost. A parent can share downward -- loading the policy and parsing shared
+axioms before forking, so children inherit them -- but nothing flows back
+except the record.
 
-SZS is the output contract. `ResourceOut` covers a resource running out, with
-`Timeout` and `MemoryOut` as the specific cases, and `GaveUp` for a system
-stopping of its own accord.
-
-**A rollout** reports why it stopped: it closed the tableau, the policy ran out
-of moves, or the step limit was reached.
-
-**A run** turns a schedule's rollouts into a status for the problem. A proof
-gives `Theorem` or `Unsatisfiable`, depending on whether the problem has a
-conjecture. A completely explored search space gives `CounterSatisfiable` or
-`Satisfiable`. Running out of either budget gives `ResourceOut`: from inside,
-steps and the clock are both just an allotment that ran out, and `ResourceOut`
-is exactly "some resource ran out".
-
-These are every status `connections` produces.
-
-**The parent** owns `Timeout` and `MemoryOut`. Both are claims about a process
-rather than about a search, and only a process watching another can make them:
-its clock includes interpreter startup, which no in-process timer sees, and a
-search wedged in a C loop or killed for memory says nothing at all.
-
-Neither carries weight in competition -- CASC scores Success statuses, and a
-printed `Timeout` scores the same as being killed. They exist for the
-experiment records, where telling a hard problem from a slow node is the whole
-point.
-
-The split is by vocabulary rather than by precedence, so the layers cannot
-contradict each other: a run never says `Timeout`, and a parent never says
-`ResourceOut`. Where they could overlap -- a run that finished normally just as
-a limit expired -- the rule is **refine, never overwrite.** A layer speaks only
-when the one below produced nothing. A search that returned `Theorem` before a
-limit fired returned `Theorem`. CASC applies this strictly -- *"the first
-distinguished string output is accepted as the system's result"* -- and a
-system that runs over its limit is not credited rather than assigned a status.
-
-Exhausting a budget maps to `ResourceOut` rather than `GaveUp`, which reads
-correctly against CASC where resource-outs are the expected non-success.
-
-## Limits: what established provers do
-
-E self-limits in-process with a soft/hard pair. `--soft-cpu-limit` (290s by
-default) stops the saturation phase gracefully, so the prover can post-process
-and print what it has; `--cpu-limit` (300s) terminates "immediately after
-reaching the time limit, regardless of internal state". Memory goes through
-`setrlimit()`, and the manual concedes it "may not work everywhere". E also
-takes the external limit as an input rather than only a constraint: *"if you
-impose a different one externally, it is important to let E know via the
-`--cpu-limit=XXX` option so that it can adjust the schedule."*
-
-Vampire forks a child per strategy in portfolio mode, which is what its CASC
-mode runs. The motivation there is parallelism rather than measurement, and the
-cost is explicit: forking "limits options for cooperation between proof
-attempts due to reliance on inter-process communication".
-
-One thing carries over directly: **a time budget is an input to scheduling**,
-not only a ceiling. A schedule can divide a total only if it is told one, which
-is why a total may be passed in even though nothing in `connections` enforces
-it.
-
-Two things do not. There is no competitive value in a self-reported resource
-status -- CASC scores Success statuses, so a system that prints `ResourceOut`
-and one killed by the harness have both failed to solve the problem, and E
-prints it for the reader rather than the scoreboard. And E's reason for keeping
-enforcement inside does not transfer: C can guarantee termination from a signal
-handler, while Python runs handlers only between bytecodes, so a tight loop in
-an extension ignores an alarm indefinitely.
-
-That is the case for one process per problem: a cooperative limit cannot
-guarantee that a problem ends, so the guarantee has to come from a parent that
-can kill. It is not a case for removing the clock from the search. E's soft
-limit exists so the prover can stop and say what it found, and a schedule needs
-the same thing for a different reason -- a strategy that ignores its share of
-the clock leaves the next strategy no turn.
-
-Vampire's cost applies to us as well. Forking per problem rules out sharing
-anything discovered in one attempt with the next, which is exactly what a
-learned prover would want. The parent can share in one direction -- loading the
-policy and parsing shared axioms before forking, so children inherit them
-through copy-on-write -- but nothing flows back except the record.
+Neither prover gains anything competitive from self-reporting a resource
+status. CASC scores Success statuses, so a printed `ResourceOut` and a harness
+kill are the same result; E prints it for the reader. These statuses earn their
+place in the experiment records, where telling a hard problem from a slow node
+is the point.
 
 ## Records
 
