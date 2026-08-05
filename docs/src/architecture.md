@@ -356,8 +356,6 @@ The code lags this document on one surface. These should land together:
   search space is masked by a later one that ran out of steps.
 - Whether a learned policy trained on TPTP and evaluated on TPTP satisfies
   CASC's rule that "the precomputation and storage of information about
-  individual TPTP problems or their solutions is not allowed". LTB supplied
-  training problems with solutions and is on hiatus, so no current division
-  provides a sanctioned way to train on the corpus it scores on. The evaluation
+  individual TPTP problems or their solutions is not allowed". The evaluation
   measures first solves made before a problem contributed training data, which
   is the substance of an answer, but it is not framed as a compliance argument.
