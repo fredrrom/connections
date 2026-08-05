@@ -23,14 +23,14 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
-from executor.claim import (
+from imitation.claim import (
     CLAIM_STALE_SECONDS,
     heartbeat,
     record_attempt,
     release,
     try_claim,
 )
-from executor.task import Task, is_done
+from imitation.task import Task, is_done
 
 
 @dataclass(frozen=True, slots=True)

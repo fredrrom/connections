@@ -19,14 +19,14 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from executor.worker import DrainStats, drain
+from imitation.worker import DrainStats, drain
 
 
 @dataclass(frozen=True, slots=True)
 class TaskSpec:
     """One unit of work: what it publishes, what it needs, and how to do it.
 
-    ``run`` must publish ``target`` atomically -- see `executor.artifact`. It is
+    ``run`` must publish ``target`` atomically -- see `imitation.artifact`. It is
     passed no arguments; an experiment closes over whatever context it needs.
     """
 

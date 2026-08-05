@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from executor import (
+from imitation import (
     attempt_count,
     commit_dir,
     commit_file,
@@ -27,7 +27,7 @@ from executor import (
     release,
     try_claim,
 )
-from executor import claim as claim_mod
+from imitation import claim as claim_mod
 
 
 class FakeTask:

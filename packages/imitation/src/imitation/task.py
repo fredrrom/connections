@@ -1,9 +1,9 @@
-"""What the executor needs to know about a unit of work: almost nothing.
+"""What the imitation needs to know about a unit of work: almost nothing.
 
 A task is identified by the artifact it publishes and a key naming the kind of
 work. Everything else -- what corpus, which policy, which iteration, what the
 task actually does -- belongs to the experiment that defines it, and the
-executor never learns any of it.
+imitation never learns any of it.
 
 `Task` is a Protocol rather than a base class so an experiment can use its own
 richer type without inheriting from here. A `Chain(corpus, profile, policy)`

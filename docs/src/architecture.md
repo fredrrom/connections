@@ -4,22 +4,21 @@ This repository is a uv workspace. `connections` is the library of primitives;
 the packages under `packages/` build on it. This note describes the boundaries
 between them.
 
-## Two layers
+## What is where
 
-`connections` holds the transition system for clausal connection tableaux and
-the means to act in it: states, actions, rollouts, strategies, schedules, and
-the SZS vocabulary for outcomes. It returns values and writes nothing to disk.
+`connections` holds the transition system for clausal connection tableaux, the
+means to act in it, and the means to run it over a corpus: states, actions,
+rollouts, strategies, schedules, SZS statuses, problem selection, a bounded
+parallel map over problems, and the per-problem record.
 
-The orchestration packages run many such processes over a corpus. They select
-and shard problems, lay out an artifact tree, claim work between competing
-workers, publish results atomically, and resume an interrupted run. They
-persist what `connections` returns.
+The packages under `packages/` are the things built on it. `pycop` and `satcop`
+are provers -- a configuration and a CLI each. `imitation` is the experiment
+layer: iterations, datasets, training, and the artifact tree that lets a
+campaign survive a walltime kill and resume on another machine.
 
-The two are separated by the process boundary. A CASC invocation -- a problem
-path, a time limit, a status on stdout -- uses `connections` and none of the
-orchestration packages; a fleet draining a corpus uses both. New code belongs
-in `connections` if a single invocation needs it, and in orchestration if it
-exists only because several processes are running.
+The split is by audience. Everything in `connections` is needed to prove
+something and report what happened; everything in `imitation` exists only
+because an experiment spans machines and days.
 
 ## Primitives, not a prover
 
@@ -38,30 +37,36 @@ every problem in a division. Running a corpus, writing records and summarising
 them are not part of it -- those belong to orchestration, so a prover CLI has
 no reason to depend on `corpus` or `executor`.
 
-## Calculus and run
+## Calculus, run, corpus
 
-The primitives divide in two.
+The library divides in three, each depending only on the one before it.
 
 **`calculus/`** is the transition system: what a state is, what actions exist,
 which of them the calculus admits, and what applying one does.
 
     rules, actions, tableau, state, dynamics
 
-**`run/`** is acting in that system: a rollout, the strategies that fix which
-system and which policy, the schedules that allocate budget across strategies,
-and the SZS vocabulary for reporting outcomes.
+**`run/`** is acting in that system on one problem: a rollout, the strategies
+that fix which system and which policy, the schedules that allocate budget
+across strategies, and the SZS vocabulary for outcomes.
 
     rollout, strategy, status
 
-The dependency runs one way. `calculus` knows nothing of budgets, schedules or
-statuses; `run` is the only thing that connects a policy to a transition
-system.
+**`corpus/`** is doing that to many problems: choosing them, running them
+across a pool of processes under limits, and recording what happened.
+
+    selection, map_problems, record, summary
+
+`calculus` knows nothing of budgets, schedules or statuses. `run` knows nothing
+of processes or of other problems. Naming this one `corpus` rather than `runs`
+keeps it from reading as a plural of `run`, which is a different idea.
 
 ```
 connections/
     syntax/  parsing/  clausification/  constraints/
     calculus/   rules, actions, tableau, state, dynamics
     run/        rollout, strategy, status
+    corpus/     selection, map_problems, record, summary
     policy/
 ```
 
@@ -247,64 +252,28 @@ and the aggregation that summarises a set of them.
 An attempt produces a record. Nothing else in the orchestration layer needs to
 know what either contains.
 
-## Orchestration
+## Running many problems
 
-Two packages sit above `connections`. Neither knows what a prover is.
-
-### `executor`: running work without a coordinator
-
-The artifact tree is the entire state of a run. A task is done when its target
-exists, work is claimed by creating a directory, and results are published by
-an atomic rename. Nothing else holds authoritative state, so workers can join
-or die at any point.
+`corpus.map_problems` is a bounded parallel map: it forks a pool of children,
+feeds them problems, holds each to its limits, and yields records as they
+finish.
 
 ```python
-TaskSpec(key=..., target=..., needs=(...), run=...)
-run_plan(tasks, worker_id="w0")
+map_problems(problems, make_attempt, *, workers, limits) -> Iterator[Record]
 ```
 
-A task declares the artifact it publishes and the artifacts it needs. Readiness
-follows from the tree -- a task runs once its inputs exist and its own target
-does not -- so nothing declares an order and there are no stage barriers. The
-task set is a callable rather than a list, re-evaluated each pass, so work can
-appear mid-run: iteration *k+1*'s tasks exist once *k*'s model lands.
-
-Four properties make the tree portable:
-
-1. Completion is derivable from the tree alone -- no database, no scheduler
-   state. A run can start on a cluster and finish on a laptop.
-2. No absolute paths inside artifacts.
-3. Publication is a same-directory atomic rename, so a killed worker leaves
-   either a finished artifact or a stray temporary.
-4. Claims expire on a heartbeat timeout, so a dead node's work is reclaimed.
-
-### `corpus`: problems, processes and records
+A child that finishes sends its record back. A child that overruns is killed,
+and the parent writes the record instead -- `Timeout` or `MemoryOut`, with the
+elapsed time and peak RSS it measured from outside.
 
 Problem selection is ordered and deduplicated, so two machines resolve the same
-sources to the same list. Sharding is a deterministic partition of that list:
-shard 7 holds the same problems everywhere, which is what lets a killed worker
-be replaced and a run be resumed. Shard membership is fixed when a run is
-seeded; how many shards a worker takes concurrently is a property of the
-machine, and is the only part that varies with hardware.
-
-Each problem in a shard gets a process. The parent forks, waits with a
-deadline, reads the record the child sends back, and kills the child if it
-overruns:
-
-```python
-attempt_each(problems, make_attempt, limits) -> Iterator[Record]
-```
-
-A child that finishes reports its own result. A child that is killed reports
-nothing, so the parent writes the record instead -- `Timeout` or `MemoryOut`,
-with the elapsed time and peak RSS it measured from outside. Records travel
-back over a pipe rather than as files, so a shard is one file rather than
-fifty.
+sources to the same list. How many children run at once is a property of the
+machine and comes from the caller.
 
 ### What varies: the attempt
 
-Everything above is the same for every use of the infrastructure. What differs
-is a single function, which runs in the child:
+Everything above is the same whoever is calling. What differs is one function,
+which runs in the child:
 
 ```python
 Attempt = Callable[[ProblemRef], Record]
@@ -312,13 +281,13 @@ Attempt = Callable[[ProblemRef], Record]
 
 | use | what the attempt does |
 |---|---|
-| benchmarking a prover | `connections.run`, and record the result |
+| benchmarking a prover | `run`, and record the result |
 | profiling | the same, wrapped in a profiler, with the stats in the payload |
 | gathering training data | the same, with a callback that reads proof paths off closed tableaux, in the payload |
 
-The envelope of the record -- problem, status, steps, elapsed, host -- is the
-same in all three; only the payload differs. That is what keeps one runner
-serving provers, profiling and experiments rather than three.
+The record envelope -- problem, status, steps, elapsed, host -- is the same in
+all three; only the payload differs. That is what keeps one runner serving
+provers, profiling and experiments rather than three.
 
 ### Setup once, fork per problem
 
@@ -331,57 +300,60 @@ make_attempt() -> Attempt
 Whatever it loads -- a policy checkpoint, parsed axiom files -- is loaded once
 and inherited by every child through copy-on-write. Forking costs about a
 millisecond against the second a fresh interpreter and its imports would take,
-so a child per problem is nearly free, and each one starts from the same clean
+so a child per problem is nearly free, and each starts from the same clean
 snapshot rather than inheriting whatever the last problem leaked.
 
 Inheritance runs one way. A child sees what the parent had; what the child then
 changes dies with it. State reaches the next problem only by travelling back in
-a record and being applied by the parent before the next fork -- which is a
-usable channel for an online learner, and makes the learning signal explicit,
-but rules out a child quietly accumulating anything across problems.
+a record and being applied by the parent before the next fork -- a usable
+channel for an online learner, and one that makes the learning signal explicit,
+but not a way for a child to accumulate anything quietly.
 
 Forking a parent that has already started threads is the hazard. After a fork
 the child has only the calling thread, so a mutex another thread held at that
-moment stays locked with nothing left to release it; a policy stack with
-OpenMP or MKL pools running will hang its children on first allocation. Forking
+moment stays locked with nothing left to release it; a policy stack with OpenMP
+or MKL pools running will hang its children on first allocation. Forking
 through a server process started before any of it loads avoids this, but that
 server has no checkpoint loaded and so gives up the sharing the fork was for.
 What remains is to keep the parent single-threaded until after the fork, and to
 run no inference in it, since the pools are usually created on first use.
 
-### Experiments compose with `needs`
+## Experiments
 
-A corpus run is shard tasks plus a summary that needs them all. An experiment
-is the same tasks with more edges: a dataset that needs its shards, a model
-that needs the dataset, and the next iteration's shards that need the model.
-Nothing declares an order; the edges do.
+`imitation` owns everything that exists only because a campaign spans machines
+and days: iterations, datasets, training, and an artifact tree that survives a
+walltime kill.
 
-```python
-TaskSpec(
-    key=f"shard_{i:05d}",
-    target=iteration / "shards" / f"shard_{i:05d}.jsonl",
-    needs=(previous_model,) if iteration_index else (),
-    run=lambda: write_rows(attempt_each(shard.problems, make_attempt, limits)),
-)
-```
+That tree is the campaign's whole state. A task is done when its artifact
+exists, work is claimed by creating a directory, and results are published by
+an atomic rename, so workers can join or die at any point without a coordinator
+noticing. A task declares what it publishes and what it needs, and readiness
+follows from the tree: a dataset once its shards exist, a model once its
+dataset does, the next iteration's rollouts once its model does. Nothing
+declares an order.
 
-The shard is the unit of scheduling and the problem is the unit of isolation. A
-shard that dies costs a shard's work, and only because a worker died; a problem
-that hangs costs one problem.
+Four properties make it portable: completion is derivable from the tree alone,
+no artifact contains an absolute path, publication is a same-directory rename,
+and claims expire on a heartbeat so a dead node's work is reclaimed.
+
+None of this is in `connections`, because nothing else needs it. A prover run
+from a shell or a competition harness has no campaign to resume.
 
 ## Packages and dependency edges
 
 ```
-connections   calculus, run, budgets, SZS                    -> lark
-pycop         leanCoP-equivalent prover, parity, CLI          -> connections
-satcop        SAT shadow, Reset, CLI                          -> connections
-executor      claims, atomic commits, drain, resources        -> (none)
-corpus        selection, sharding, records, benchmark fetch   -> connections, executor
-imitation     policies, graph model, training                 -> connections, corpus
+connections   calculus, run, corpus, SZS                -> lark
+pycop         leanCoP-equivalent prover, parity, CLI    -> connections
+satcop        SAT shadow, Reset, CLI                    -> connections
+imitation     policies, graph model, training, campaigns -> connections, torch
 ```
 
 `connections` never imports from a package built on it. It is the citable
 artefact, and it stays independently installable.
+
+Four distributions, not six. A separate package earns its place when a second
+consumer needs it: `imitation`'s artifact tree would become one if `satcop`
+wanted resumable campaigns, and not before.
 
 ## Decided, not yet done
 
@@ -400,21 +372,18 @@ The code lags this document on one surface. These should land together:
 - `prover/` splits into `calculus/` and `run/`.
 - `rollout` becomes public, returning the actions it took, the state they led
   to, and why it stopped. Steps and inferences derive from the actions.
-- `connections/runs/` dissolves: the problem loop folds into `run`, the
-  record format and summaries move to `corpus`, and corpus fetching and
-  profiling go with them.
-- `pycop` loses its corpus mode; benchmarking a corpus is a `corpus` entry
-  point that takes an attempt, and benchmark fetching becomes another.
-- `corpus` gains the per-problem process: fork, deadline, memory ceiling, kill,
-  and the records the parent writes for a child that never reported.
-- `runs/profile.py` becomes an attempt that profiles inside the child, rather
-  than a wrapper around a corpus runner.
+- `connections/runs/` becomes `connections/corpus/`: `run_corpus`'s pool
+  becomes `map_problems`, taking limits and a worker count; `profile.py` becomes
+  an attempt that profiles inside its own child rather than a wrapper around the
+  runner.
+- The `executor` and `corpus` packages fold away. The bounded map is
+  `connections.corpus`; the artifact tree, claims and task edges belong to
+  `imitation`, which is the only thing with a campaign to resume.
 - learncop's `RolloutRecord` is a schedule's worth of work, not a rollout's. It
   becomes a schedule record with an entry per rollout per strategy. Deferred
   until the orchestration packages absorb that code.
-- `corpus.Attempt` becomes `corpus.Record`, freeing `Attempt` for the callable
-  that produces one, and absorbs the fields it lacks: `inference_actions`,
-  `strategy_count`, `winning_strategy_index`, and `host`.
+- `RunRow` becomes `corpus.Record`, freeing `Attempt` for the callable that
+  produces one, and gains `policy`, `payload` and `host`.
 
 ## Open questions
 

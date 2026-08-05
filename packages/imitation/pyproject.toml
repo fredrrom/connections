@@ -3,9 +3,9 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "executor"
+name = "imitation"
 version = "0.1.0"
-description = "Filesystem-coordinated task execution: claims, atomic commits, drainers"
+description = "Learned policies for connection tableaux: campaigns, datasets, training"
 requires-python = ">=3.12,<3.14"
 dependencies = []
 
@@ -14,4 +14,4 @@ dev = ["pytest"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["executor*"]
+include = ["imitation*"]

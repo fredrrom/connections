@@ -10,8 +10,8 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from executor import commit_file, new_tmp
-from executor.plan import TaskSpec, ready_tasks, run_plan
+from imitation import commit_file, new_tmp
+from imitation.plan import TaskSpec, ready_tasks, run_plan
 
 
 def _publish(target: Path, order: list[str], label: str) -> None:
