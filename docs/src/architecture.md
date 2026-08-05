@@ -105,47 +105,48 @@ different transition systems, not different runs in one.
 **A schedule allocates a total budget across strategies.** `from_weighted`
 takes total steps and seconds and divides them by weight.
 
-**A run turns problems into results.** It builds the matrix for each strategy in
-the schedule, instantiates the policy, rolls out under that strategy's share of
-the budget, and stops at the first success. It owns the caches and maps
-outcomes to SZS statuses.
+**A run turns one problem into a result.** It builds the matrix for each
+strategy in the schedule, instantiates the policy, rolls out under that
+strategy's share of the steps, and stops at the first success. It owns the
+caches and maps outcomes to SZS statuses.
 
 ```python
-run(problems, schedule=...) -> Iterator[Result]
+run(problem, *, schedule) -> Result
 ```
-
-`problems` is one problem or many; the result is always an iterator, so the
-caller's shape does not change with the corpus size. A single-problem
-invocation reads `result, = run(problem, schedule=...)`.
 
 A run chooses among strategies under a budget much as a policy chooses among
 actions under a budget -- a policy one level up, with a fixed allocation rather
 than a learned one.
 
-## One problem or many
+## `run` is one problem
 
 ```python
-run(problem, schedule=...)    # one problem
-run(problems, schedule=...)   # many, in one process
+run(problem, *, schedule) -> Result
 ```
 
-CASC uses only the first shape. Systems there run "as black boxes, on one
-problem at a time", and "all command line parameters have to be the same for
-all problems in each division" -- so a competition entry cannot tune itself per
-problem, and its schedule has to be internal.
+One problem, in the calling process, with no notion of time, memory or other
+problems. It builds the matrix for each strategy in the schedule, instantiates
+the policy, rolls out under that strategy's share of the steps, and stops at
+the first success.
 
-The second shape is for experiments. A shard hands one process fifty problems
-so the policy stack is imported once rather than fifty times, and everything
-that follows from that -- caches spanning the call, per-problem limits enforced
-from inside -- is a consequence of the shard, not of any competition rule.
+Running many problems is not a bigger `run`; it is many runs, and arranging
+them is orchestration's job. That separation is what lets a hung problem cost
+one problem: a soft limit is cooperative and a search wedged in a C extension
+will ignore it, so the only way to guarantee that every problem is attempted is
+to give each one a process that can be killed.
 
-CASC used to have a division shaped this way. The Large Theory Batch division
-passed a batch specification file and explicitly permitted training and
-memorisation across the batch, which made it the natural home for learned
-provers. It has gone on hiatus, so that permission is no longer available and
-learning work has no division that sanctions it.
+CASC needs exactly this shape and nothing more. Systems there run "as black
+boxes, on one problem at a time", with "all command line parameters ... the
+same for all problems in each division", so a competition entry is one `run`
+per invocation and its schedule is internal.
 
-## Cache lifetime
+CASC used to have a division shaped like a corpus run. The Large Theory Batch
+division passed a batch specification file and explicitly permitted training
+and memorisation across the batch, which made it the natural home for learned
+provers. It has gone on hiatus, so no current division sanctions learning from
+the competition corpus.
+
+## Caches
 
 `run` is a function, not a method on an object. Configuration is passed at the
 call, and every cache is a local to it:
@@ -153,17 +154,17 @@ call, and every cache is a local to it:
 | cache | keyed by | shared across |
 |---|---|---|
 | matrix | problem, matrix options | the strategies of one schedule |
-| parsed includes | include path | the problems of one call |
-| loaded policy | policy options | the problems of one call |
+| parsed includes | include path | the strategies of one schedule |
 
 *Cache lifetime equals the call.* Holding configuration as instance state
-instead would save a model reload between calls -- about a second against a
-shard of minutes -- at the cost of thread-safety, a cache invalidation rule for
-a second call with a different schedule, and a lifecycle.
+instead would buy little and cost thread-safety, a cache invalidation rule for a
+second call with a different schedule, and a lifecycle.
 
-The matrix cache spans the whole call, but a problem is attempted once per
-configuration within a corpus run, so what it actually shares is the strategies
-of one schedule.
+Sharing anything across problems is orchestration's business, and it has a
+better mechanism than a cache: a parent that loads the policy and parses shared
+axioms once, then forks a child per problem. Each child inherits the loaded
+state through copy-on-write, so the cost is paid once without any problem being
+able to corrupt the next one's.
 
 ## Budgets
 
@@ -174,20 +175,21 @@ property of the rollout and nothing else -- `rollout` counts them and stops.
 It is the only limit that means the same thing on every machine, which is why
 it is the effort measure to report.
 
-**Time bounds a strategy's turn.** It is spendable and divisible: the schedule
-takes the total the process was given and divides it by weight, so each
-strategy gets a share of the clock alongside its share of the steps. Unlike
-steps it is not portable -- the same limit is a different budget on different
-hardware -- so a corpus run spread across node types yields a coverage number
-that partly measures the cluster, and records carry the host to make a
-`Timeout` interpretable.
+**Time bounds a strategy's turn.** It is spendable and divisible: a schedule
+divides the total it was given by weight, so each strategy gets a share of the
+clock alongside its share of the steps. Unlike steps it is not portable -- the
+same limit is a different budget on different hardware -- so a corpus run
+spread across node types yields a coverage number that partly measures the
+cluster, and records carry the host to make a `Timeout` interpretable.
 
 **Memory is a ceiling on the process.** It is not spendable and cannot be
-divided across strategies; it holds for the duration of the call.
+divided across strategies.
 
-Steps are enforced by the rollout that counts them. Time and memory are
-enforced twice, softly inside the search and firmly outside it; see *Where each
-limit is enforced*.
+Only steps belong to `connections`. A rollout counts its own and stops, and a
+run turns that into `ResourceOut`. Time and memory are conditions on a process,
+so they are held and reported by whatever runs the process -- orchestration, or
+a CLI. A schedule may still be told a total time so it can divide it, but
+dividing a budget is not the same as enforcing one.
 
 Cores, nodes and concurrency are not budgets. They change how fast the same
 work happens, not what the search does, and belong to orchestration.
@@ -198,22 +200,22 @@ SZS is the output contract. `ResourceOut` covers a resource running out, with
 `Timeout` and `MemoryOut` as the specific cases, and `GaveUp` for a system
 stopping of its own accord.
 
-Three layers, each reporting only what it can observe.
-
 **A rollout** reports why it stopped: it closed the tableau, the policy ran out
 of moves, or the step limit was reached.
 
-**A schedule's worth of rollouts** becomes a status for the problem. A proof
+**A run** turns a schedule's rollouts into a status for the problem. A proof
 gives `Theorem` or `Unsatisfiable`, depending on whether the problem has a
 conjecture. A completely explored search space gives `CounterSatisfiable` or
 `Satisfiable`. Finishing the schedule with no proof and no steps left gives
-`ResourceOut` -- the step budget is the only resource visible from inside the
-search.
+`ResourceOut`. These are every status `connections` can produce, because steps
+are the only resource it observes.
 
-**Whatever holds the process to its limits** owns `Timeout` and `MemoryOut`. A
-search that gave up on a problem within its soft limit reports them itself; a
-search that was killed cannot, since a wedged process cannot fire its own alarm
-and a process killed for memory reports nothing at all.
+**Whatever runs the process** owns `Timeout` and `MemoryOut`. They are
+conditions on a process rather than on a search, and the process that exceeded
+them is the least reliable witness: one wedged in a C loop cannot fire its own
+alarm, and one killed for memory reports nothing at all. A parent watching a
+child measures both faithfully, and also captures interpreter startup, which no
+in-process clock can see.
 
 These two statuses carry no weight in competition -- CASC scores Success
 statuses, and a printed `Timeout` scores the same as being killed. They exist
@@ -245,70 +247,29 @@ mode runs. The motivation there is parallelism rather than measurement, and the
 cost is explicit: forking "limits options for cooperation between proof
 attempts due to reliance on inter-process communication".
 
-Two things carry over. **The time budget is an input to scheduling**, not just a
-ceiling -- a schedule can only divide a total it knows. And **soft and hard
-limits do different jobs**: the soft one lets a search abandon what it is doing
-and move on, the hard one guarantees it stops at all.
+One thing carries over directly: **a time budget is an input to scheduling**,
+not only a ceiling. A schedule can divide a total only if it is told one, which
+is why a total may be passed in even though nothing in `connections` enforces
+it.
 
-What does not carry over is any competitive value in self-reported resource
-statuses. CASC scores Success statuses; a system that prints `ResourceOut` and
-one that is killed by the harness have both failed to solve the problem. E
-prints it for the reader, not for the scoreboard.
+Two things do not. There is no competitive value in a self-reported resource
+status -- CASC scores Success statuses, so a system that prints `ResourceOut`
+and one killed by the harness have both failed to solve the problem, and E
+prints it for the reader rather than the scoreboard. And E's reason for keeping
+enforcement inside does not transfer: C can guarantee termination from a signal
+handler, while Python runs handlers only between bytecodes, so a tight loop in
+an extension ignores an alarm indefinitely.
 
-Self-limiting still matters, for control flow rather than reporting, and it
-follows from how many problems a process is given.
+That is the case for one process per problem. A cooperative limit cannot
+guarantee that a problem ends, so the guarantee has to come from a parent that
+can kill. Once it does, the search needs no clock of its own: it counts steps,
+and the process that ran it accounts for the time and memory it used.
 
-A shard is fifty problems in one process, because starting one costs the import
-of the policy stack and doing that fifty times is waste. If the first problem
-is unsolvable and nothing stops the search, the other forty-nine are never
-attempted. Only the process can make that call: an outside killer would have to
-end the whole shard to end one problem. So a process handling many problems
-must bound each one itself.
-
-A CASC entry inverts this. One problem, one process, and being killed is a
-perfectly good ending because there is nothing queued behind it. Only a process
-holding a queue has to bound the problem in front of it.
-
-## Where each limit is enforced
-
-The soft limits stay in the search, because the search is what has to give up
-on one problem and start the next:
-
-```python
-for problem in problems:
-    for entry in schedule.entries:
-        with wall_clock(entry.timeout_seconds):     # this strategy's share
-            rollout(state, policy=..., step_limit=entry.step_limit)
-```
-
-The hard limits sit outside it. E can keep both inside because C can guarantee
-termination from a signal handler; Python cannot, since handlers run only
-between bytecodes and a tight loop in a C extension will not yield. The same
-argument applies to measurement:
-
-- Startup is invisible from inside. Interpreter start, imports and module init
-  all precede any in-process timer, and with a policy stack loaded that is
-  seconds.
-- `RLIMIT_AS` bounds address space rather than resident size, and the two
-  diverge sharply once large arenas are mapped.
-- A process killed for memory reports nothing. `ru_maxrss` is readable only by
-  a process that survived.
-
-So `Timeout` and `MemoryOut` are verdicts of whatever holds the process to its
-demands, and the outer limits are derived from the inner ones so the two cannot
-drift apart:
-
-```python
-hard_deadline_seconds = 1.5 * timeout_seconds + 60
-```
-
-If the outer limit fires, the inner one was not respected: a hang rather than a
-slow problem, recorded as an error rather than a `Timeout`.
-
-Two clocks result, and a record can carry both. Time summed across strategies
-is the cost of the search, which is what comparing policies wants. Wall time
-measured from outside is the cost of the process, includes startup, and is what
-the limit is enforced against.
+Vampire's cost applies to us as well. Forking per problem rules out sharing
+anything discovered in one attempt with the next, which is exactly what a
+learned prover would want. The parent can share in one direction -- loading the
+policy and parsing shared axioms before forking, so children inherit them
+through copy-on-write -- but nothing flows back except the record.
 
 ## Records
 
@@ -365,22 +326,26 @@ second varies with hardware.
 
 ### How they compose
 
-A shard is a task whose body is one `run` call:
+A shard is a task; each problem in it is a process:
 
 ```python
 TaskSpec(
     key=f"shard_{i:05d}",
     target=root / "shards" / f"shard_{i:05d}.jsonl",
-    run=lambda: write_rows(run(shard.problems, schedule=...)),
+    run=lambda: write_rows(attempt_each(shard.problems, schedule=...)),
 )
 ```
 
-`run` yields records, `corpus` writes them, `executor` decides who runs the
-shard and publishes the result atomically. A summary task declares the shards
-as `needs`, so it runs once they are all present.
+`attempt_each` loads the policy once, then forks a child per problem which
+calls `connections.run`. The parent holds each child to the wall clock and
+memory limit, kills it if it exceeds them, and records `Timeout` or
+`MemoryOut`; a child that finishes reports its own result. `corpus` writes the
+rows, `executor` decides who runs the shard and publishes it atomically, and a
+summary task declares the shards as `needs` so it runs once they are present.
 
-This is why `run` yields rather than writes, and why its caches are scoped to
-the call: one call is one shard on one worker.
+The shard is the unit of scheduling and the problem is the unit of isolation. A
+shard that dies costs a shard's work, and only because a worker died; a problem
+that hangs costs one problem.
 
 ## Packages and dependency edges
 
@@ -400,11 +365,11 @@ artefact, and it stays independently installable.
 
 The code lags this document on one surface. These should land together:
 
-- `class Prover` goes; `run` becomes a module-level function taking one problem
-  or many, always yielding results.
-- Time and memory are enforced twice: soft limits inside the search so it can
-  stop and report, hard limits outside it so termination is guaranteed and the
-  numbers are measured faithfully.
+- `class Prover` goes; `run` becomes a module-level function over one problem.
+- Time and memory leave `connections` entirely. A parent forks a child per
+  problem, holds it to the limits, and reports `Timeout` and `MemoryOut`.
+- The policy and any shared axioms are loaded in that parent, so children
+  inherit them rather than each paying the import.
 - `prover/` splits into `calculus/` and `run/`.
 - `rollout` becomes public, returning the actions it took, the state they led
   to, and why it stopped. Steps and inferences derive from the actions.
