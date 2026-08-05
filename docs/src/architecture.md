@@ -1,31 +1,27 @@
-# Architecture: what belongs where
+# Architecture
 
-This repository is a uv workspace. `connections` is the library; the packages
-under `packages/` are built on it. This note records where the boundaries are
-and, more usefully, *why* they are there, because several of them are not
-obvious and were settled by argument rather than by taste.
+This repository is a uv workspace. `connections` is the library of primitives;
+the packages under `packages/` build on it. This note describes the boundaries
+between them.
 
 ## The line
 
 > Everything inside one **process** is `connections`.
 > Everything that spans processes is orchestration.
 
-To CASC an ATP system *is* a process: it is invoked with a problem path, a time
+To CASC an ATP system is a process: it is invoked with a problem path, a time
 limit and switches, and it prints a status. Everything that process needs is
 below the line. Deciding what several processes each get -- sharding, artifact
 trees, claims, resume, fleets -- is above it.
 
-A second test, equivalent and sometimes easier to apply: **below the line
-produces values, above the line persists them.** The exception that proves it
-is a batch mode shipped with a prover, which writes records from inside one
-process; see *Records* below.
+An equivalent test, often easier to apply: **below the line produces values,
+above the line persists them.** The one exception is a batch mode shipped with
+a prover, which writes records from inside a single process; see *Records*.
 
-## There is no `Prover`; there are primitives
+## Primitives, not a prover
 
-The CASC system is `pycop`'s entry point -- argument parsing, schedule
-selection, SZS on stdout, exit code. `connections` is not a prover and does not
-contain one. It provides the primitives a prover is assembled from, and the
-named provers are thin CLIs that assemble them:
+`connections` provides the primitives a prover is assembled from. The named
+provers are the CLIs that assemble them:
 
 | | |
 |---|---|
@@ -33,32 +29,27 @@ named provers are thin CLIs that assemble them:
 | `ilcop` | intuitionistic configuration |
 | `satcop` | SAT shadow and `Reset` |
 
-Naming a class `Prover` was the source of several confusions worth recording,
-because each pulls in a different wrong direction. Read as *the system*, the
-CLI's responsibilities migrate into the library. Read as *a primitive*, sharding
-a corpus outside it looks like a layering violation -- when in fact CASC itself
-shards, since the standard division is "invoke the system once per problem".
-And read as an *object*, it invites state that nothing needs.
+A CLI owns argument parsing, schedule selection, SZS on stdout and the exit
+code. None of that belongs in the library.
 
-## Two kinds of primitive: dynamics and run
+## Calculus and run
 
-The primitives divide in two, and today they are mixed together in one
-`prover/` package:
+The primitives divide in two.
 
-**Dynamics** -- the transition system itself. What a state is, what actions
-exist, which the calculus admits, and what applying one does.
+**`calculus/`** is the transition system: what a state is, what actions exist,
+which of them the calculus admits, and what applying one does.
 
     rules, actions, tableau, state, dynamics
 
-**Run** -- acting in that system. A rollout, the strategies that determine
-which system and which policy, the schedules that allocate budget across them,
+**`run/`** is acting in that system: a rollout, the strategies that fix which
+system and which policy, the schedules that allocate budget across strategies,
 and the SZS vocabulary for reporting outcomes.
 
     rollout, strategy, status
 
-Nothing in dynamics needs to know that budgets or schedules exist; a rollout is
-the only thing that connects them. Keeping the split visible is the point of
-separating them:
+The dependency runs one way. `calculus` knows nothing of budgets, schedules or
+statuses; `run` is the only thing that connects a policy to a transition
+system.
 
 ```
 connections/
@@ -68,74 +59,61 @@ connections/
     policy/
 ```
 
-(`calculus/` because a formal calculus is what induces the transition system;
-`dynamics/` would do as well, at the cost of a `dynamics/dynamics.py`.)
-
-## Vocabulary: rollout, strategy, schedule
-
-Three words, each meaning exactly one thing:
+## Vocabulary
 
 **A rollout is from a state.** A policy acts in a transition system from some
-state until it terminates or exhausts its budget:
+state until it terminates or exhausts its budget.
 
 ```python
 rollout(state, *, policy, step_limit=None) -> Rollout   # steps, inferences, outcome
 ```
 
-This is the primitive. It takes no problem, no schedule and no clausification:
-by the time a rollout starts, *P(M)* exists and the state is a point in it. The
-state is mutated in place rather than copied, which is what lets a caller
-inspect the closed tableau afterwards -- proof replay depends on it.
+It takes no problem, no schedule and no clausification: by the time a rollout
+starts, *P(M)* exists and the state is a point in it. The state is mutated in
+place rather than copied, so a caller can inspect the closed tableau
+afterwards, which is what proof replay reads.
 
-It exists today as `_run_strategy_loop`, private because only the schedule has
-needed it. Making it public is what GRPO wants -- several rollouts from one
-state -- and what a restart is: a rollout after a `Reset`. It sits one level
-below the code that builds a state from a file; the rollout does no
-clausification, and that is precisely why it composes.
+This is the composable unit. GRPO samples several rollouts from one state; a
+restart is a rollout after a `Reset`.
 
-**A strategy determines what to roll out in, and with what.** Its matrix
-options fix the matrix, and with it the transition system *P(M)*; its policy
-options fix the policy. Two strategies differing in clausification are
-therefore rollouts in *different transition systems*, not different runs in one.
+**A strategy fixes what to roll out in, and with what.** Its matrix options fix
+the matrix and therefore the transition system *P(M)*; its policy options fix
+the policy. Two strategies differing in clausification are rollouts in
+different transition systems, not different runs in one.
 
 **A schedule allocates a total budget across strategies.** `from_weighted`
-takes total steps and seconds and divides them by weight, and `run` tries the
+takes total steps and seconds and divides them by weight; `run` tries the
 entries in order until one succeeds.
 
-So `run` chooses among strategies under a budget in the same way a policy
-chooses among actions under a budget -- it is a policy one level up, with a
-fixed allocation rather than a learned one. Learning that allocation is the
-natural next thing to want, and is where E's strategy scheduling sits.
+`run` therefore chooses among strategies under a budget much as a policy
+chooses among actions under a budget -- a policy one level up, with a fixed
+allocation rather than a learned one.
 
-Note that "rollout" is used more narrowly here than in the MCTS literature,
-where it means the random simulation phase of a search, and more narrowly than
-in learncop today, where `RolloutRecord` means the result of a whole prover run
-on a problem. The narrow sense is the useful one; the others should move to it.
+Elsewhere "rollout" is broader: in the MCTS literature it is the random
+simulation phase of a search, and in learncop a `RolloutRecord` is the result
+of a whole prover run on a problem. Here it always means a policy acting from
+a state.
 
-## Two invocation shapes, matching CASC
+## Two invocation shapes
 
 ```python
-run(problem, schedule=...)         # standard division: one problem
-run_multi(problems, schedule=...)  # LTB: a batch, one process
+run(problem, schedule=...)         # one problem
+run_multi(problems, schedule=...)  # a batch, one process
 ```
 
-These are not two designs. CASC defines both: the standard division passes a
-problem path per invocation, the Large Theory Batch division passes a batch
-specification file and explicitly permits training and memorisation across the
-batch. Learning work is LTB-shaped, which is why `run_multi` matters here and
-why caching across problems is legitimate in it.
+These match CASC's two invocation modes. The standard division passes a problem
+path per invocation; the Large Theory Batch division passes a batch
+specification file and permits training and memorisation across the batch.
+Learning work is LTB-shaped, which is what makes caching across problems
+legitimate in `run_multi`.
 
-Both are one process, so both are below the line. What separates them is only
-how many problems that process is handed.
+Both are one process, so both are below the line. They differ only in how many
+problems that process is handed.
 
-## Statelessness and cache lifetime
+## Cache lifetime
 
-`run` and `run_multi` are functions, not methods on an object. The `Prover`
-class they replace held no state -- literally: no method touched an attribute,
-and every `self.` in it was a call to another method.
-
-Configuration is passed at the call, and every cache is a local whose lifetime
-is the enclosing call:
+`run` and `run_multi` are functions. Configuration is passed at the call, and
+every cache is a local whose lifetime is the enclosing call:
 
 | cache | lives in | shared across |
 |---|---|---|
@@ -143,26 +121,23 @@ is the enclosing call:
 | parsed includes | `run_multi` | the problems of one batch |
 | loaded policy | `run_multi` | the problems of one batch |
 
-The rule is uniform: *cache lifetime equals the enclosing call*. It is worth
-stating because the alternative is tempting and worse. Making configuration
-instance state buys only the avoidance of a model reload between shards --
-about a second against a shard of minutes -- and costs thread-safety, a cache
-invalidation question (what happens on a second call with a different
-schedule?), and a lifecycle.
+*Cache lifetime equals the enclosing call.* Holding configuration as instance
+state instead would save a model reload between shards -- about a second
+against a shard of minutes -- at the cost of thread-safety, a cache
+invalidation rule for a second call with a different schedule, and a lifecycle.
 
-The matrix cache is keyed by problem and matrix options, so it *could* be
-lifted across problems. It should not be: within a corpus run each problem is
-attempted once per configuration, so a wider cache would only ever miss. The
-sharing that pays is across the strategies of a schedule, which is what it
-already does.
+The matrix cache is keyed by problem and matrix options, so it could be lifted
+across problems, but within a corpus run each problem is attempted once per
+configuration and a wider cache would only miss. The sharing that pays is
+across the strategies of a schedule.
 
 ## Budgets are semantic; allocation is not
 
-Steps, memory and time change what the search *does*, so they belong below the
+Steps, memory and time change what the search does, so they belong below the
 line. Cores, nodes and concurrency change only how fast the same work happens,
 so they belong to orchestration.
 
-The three budgets are not equivalent, and each fails a different property:
+The three budgets differ in kind:
 
 | budget | portable across machines | enforceable in-process |
 |---|---|---|
@@ -170,143 +145,155 @@ The three budgets are not equivalent, and each fails a different property:
 | memory | yes | only via `RLIMIT_AS`, which is unreliable when a large virtual mapping (torch) dwarfs RSS, and a no-op on macOS |
 | time | **no** | yes |
 
-Only steps is both, which is why it is the effort measure to report. Wall clock
-is not portable: the same limit is a different budget on different hardware,
-so a corpus run spread over two node types has a coverage number that is partly
-a measurement of the cluster. Where a wall-clock limit is used, records must
-carry the host, or a `Timeout` cannot be interpreted afterwards.
+Steps is the only one that is both, and is therefore the effort measure to
+report. A wall-clock limit is a different budget on different hardware, so a
+corpus run spread across node types yields a coverage number that partly
+measures the cluster. Records carry the host so a `Timeout` can be interpreted.
 
 ### Nested limits
 
-A runner should set its own limits *outside* the prover's, derived from them so
-they cannot drift apart:
+A runner sets its own limits outside the process's, derived from them so the
+two cannot drift apart:
 
 ```python
 hard_deadline_seconds = 1.5 * timeout_seconds + 60
 ```
 
-The inner limit is semantic: the prover notices it and reports a status. The
-outer limit is operational: if it fires, the prover failed to respect its own
-limit, which is a hang. That must not be recorded as `Timeout` -- doing so
-buries a bug among legitimately slow problems.
+The inner limit is semantic: the process notices it and reports a status. The
+outer limit is operational: if it fires, the inner one was not respected, which
+is a hang rather than a slow problem, and is recorded as an error.
 
 ## SZS: who reports what
 
-SZS is the boundary's output contract, and its ontology already has the
-distinctions needed. `ResourceOut` covers a resource running out, with
+SZS is the output contract. `ResourceOut` covers a resource running out, with
 `Timeout` and `MemoryOut` as the specific cases, and `GaveUp` for a system
 stopping of its own accord.
 
-The division of labour is forced by *who is alive to speak*:
+Responsibility follows from who is still running:
 
-- The prover reports what it observes: a proof, an exhausted search space, its
+- The process reports what it observes: a proof, an exhausted search space, its
   own step budget (`ResourceOut`), its own wall clock (`Timeout`), its own
   memory cap (`MemoryOut`), internal errors.
-- The runner reports only when the process died without producing a status. It
-  usually cannot know why, so the honest output is an error status plus the
-  evidence -- signal, elapsed time, peak RSS -- rather than a guess.
+- The runner reports only when the process died without producing a status.
+  It usually cannot know why, so it records an error status with the evidence
+  -- signal, elapsed time, peak RSS -- rather than a guess.
 
-Two rules follow. The runner **refines, never overwrites**: a prover that
-returned `Theorem` before a watchdog fired still returned `Theorem`. And a
-hard-deadline kill is an error, not a `Timeout`.
+The runner refines, never overwrites: a process that returned `Theorem` before
+a watchdog fired returned `Theorem`. CASC applies the same rule strictly, since
+*"the first distinguished string output is accepted as the system's result"*,
+and a system that runs over its limit is not credited rather than assigned a
+status.
 
-CASC is the strict form of the first rule. *"The first distinguished string
-output is accepted as the system's result"* -- so a system that prints
-`Theorem` and then crashes is credited. And a system that runs over its limit
-is not assigned a status at all: *"this is noticed in the timing data, and the
-system is considered to have not solved that problem."* No verdict is invented
-on the system's behalf.
+`StepBudget` maps to `ResourceOut` rather than `GaveUp`, which reads correctly
+against CASC where resource-outs are the expected non-success.
 
-## Enforcement lives outside, not in `run`
+## Enforcement
 
-`run` and `run_multi` self-limit cooperatively -- counting steps, checking a
+`run` and `run_multi` self-limit cooperatively: counting steps, checking a
 deadline, lowering `RLIMIT_AS` where that is meaningful. They do not spawn a
-subprocess to enforce their own budgets, and should not: `on_proof_found` hands
-the *live* `State` to its callback, which is how proof paths are extracted, and
-a process boundary would require serialising a tableau and substitution per
-proof.
+subprocess to enforce their own budgets, because `on_proof_found` hands the
+live `State` to its callback and a process boundary would mean serialising a
+tableau and substitution per proof.
 
-Hard enforcement therefore belongs to whatever invoked the process, and each
-caller already has it: CASC's harness kills a system that runs over, a fleet
-worker supervises a child with an RSS watchdog and a hard deadline, and on a
-laptop nothing needs to.
-
-Where a fleet does supervise, the child should persist across problems rather
-than being spawned per problem -- a fresh process pays the import cost of the
-policy stack every time. Process per shard, which is exactly `run_multi`'s
-scope.
-
-`StepBudget` maps to `ResourceOut` rather than `GaveUp`. Both readings are
-defensible -- a step budget is self-imposed, which is what `GaveUp` describes --
-and `ResourceOut` was chosen because it reads correctly against CASC, where
-resource-outs are the expected non-success.
+Hard enforcement belongs to whatever invoked the process: CASC's harness kills
+a system that runs over, a fleet worker supervises a child with an RSS watchdog
+and a hard deadline, and a laptop needs neither. Where a fleet supervises, the
+child persists across problems rather than being spawned per problem, so the
+import cost of the policy stack is paid once. Process per shard, which is
+`run_multi`'s scope.
 
 ## Records
 
-The result of a `run` is what an invocation returns: rich, typed, in memory.
-`RunRow` is its projection onto scalars for a JSONL line, built by
-`row_from_result`.
+A run returns a rich, typed result in memory. `RunRow` is its projection onto
+scalars for a JSONL line, built by `row_from_result`.
 
-Both live in `connections`, despite `RunRow` being a persistence format. The
-reason is concrete rather than principled: the `pycop` CLI has a corpus mode
-(`--pattern`, `--out`) that writes JSONL itself, so the format is needed below
-the line. Orchestration writes the same format rather than defining its own.
+Both live in `connections`, despite `RunRow` being a persistence format,
+because the `pycop` CLI has a corpus mode (`--pattern`, `--out`) that writes
+JSONL itself. Orchestration writes the same format rather than defining its
+own.
 
-## Sharding: partition versus concurrency
+## Orchestration
 
-Two things sound like "sharding" and only one may depend on the machine.
+Two packages sit above the line. Neither knows what a prover is.
 
-| | decided by | when |
-|---|---|---|
-| partition -- which problems are in shard 7 | the run | once, at seed time, stored with the run |
-| concurrency -- how many shards this worker runs at once | the machine | every worker, every time |
+### `executor`: running work without a coordinator
 
-A 48-core node and a laptop take different numbers of shards concurrently, but
-shard 7 holds the same problems on both. Without this, a resumed run sees
-different slices than the run it resumes, and shards published by a cluster
-cannot be completed by a laptop.
+The artifact tree is the entire state of a run. A task is done when its target
+exists, work is claimed by creating a directory, and results are published by
+an atomic rename. Nothing else holds authoritative state, so workers can join
+or die at any point.
+
+```python
+TaskSpec(key=..., target=..., needs=(...), run=...)
+run_plan(tasks, worker_id="w0")
+```
+
+A task declares the artifact it publishes and the artifacts it needs. Readiness
+follows from the tree -- a task runs once its inputs exist and its own target
+does not -- so nothing declares an order and there are no stage barriers. The
+task set is a callable rather than a list, re-evaluated each pass, so work can
+appear mid-run: iteration *k+1*'s tasks exist once *k*'s model lands.
+
+Four properties make the tree portable:
+
+1. Completion is derivable from the tree alone -- no database, no scheduler
+   state. A run can start on a cluster and finish on a laptop.
+2. No absolute paths inside artifacts.
+3. Publication is a same-directory atomic rename, so a killed worker leaves
+   either a finished artifact or a stray temporary.
+4. Claims expire on a heartbeat timeout, so a dead node's work is reclaimed.
+
+### `corpus`: what to run, and where it lands
+
+Problem selection is ordered and deduplicated, so two machines resolve the same
+sources to the same list. Sharding is a deterministic partition of that list:
+shard 7 holds the same problems everywhere, which is what lets a killed worker
+be replaced and a run be resumed.
+
+Shard membership is a property of the run, fixed when it is seeded. How many
+shards a worker takes concurrently is a property of the machine. Only the
+second varies with hardware.
+
+### How they compose
+
+A shard is a task whose body is one `run_multi` call:
+
+```python
+TaskSpec(
+    key=f"shard_{i:05d}",
+    target=root / "shards" / f"shard_{i:05d}.jsonl",
+    run=lambda: write_rows(run_multi(shard.problems, schedule=...)),
+)
+```
+
+`run_multi` yields records, `corpus` writes them, `executor` decides who runs
+the shard and publishes the result atomically. A summary task declares the
+shards as `needs`, so it runs once they are all present.
+
+This is why `run_multi` yields rather than writes, and why its caches are
+call-scoped: one call is one shard on one worker.
 
 ## Packages and dependency edges
 
 ```
 connections   calculus, run, budgets, SZS, records            -> lark
-pycop         leanCoP-equivalent prover, parity              -> connections
-satcop        SAT shadow, Reset                              -> connections
-corpus        problem selection, sharding, artifact layout   -> connections, executor
-executor      claims, atomic commits, drain, resources       -> (none)
-imitation     policies, graph model, training                -> connections, corpus
+pycop         leanCoP-equivalent prover, parity               -> connections
+satcop        SAT shadow, Reset                               -> connections
+corpus        problem selection, sharding, artifact layout    -> connections, executor
+executor      claims, atomic commits, drain, resources        -> (none)
+imitation     policies, graph model, training                 -> connections, corpus
 ```
 
-One rule, and it is worth enforcing in CI: **`connections` never imports from a
-package built on it.** A monorepo fails by letting the shared library
-accumulate consumer-specific hooks until it is no longer independently usable,
-and `connections` is the citable artefact here.
-
-## Orchestration invariants
-
-The artifact tree is the entire state of a run. Four properties make that work,
-and all four are load-bearing:
-
-1. **Completion is derivable from the tree alone** -- no database, no scheduler
-   state. This is what lets a run start on a cluster and finish on a laptop.
-2. **No absolute paths inside artifacts** -- so a tree can move between
-   filesystems.
-3. **Publication is a same-directory atomic rename** -- so a worker killed at
-   any moment leaves either a finished artifact or a stray temporary.
-4. **Claims expire** -- heartbeat plus timeout, so a dead node's work is
-   reclaimed rather than stranded.
-
-Given these, heterogeneous fleets need no coordination: point workers at the
-same tree and let them drain.
+`connections` never imports from a package built on it. It is the citable
+artefact, and it stays independently installable.
 
 ## Decided, not yet done
 
-The code lags this document in four places, all on the same surface. They
-should land together, so the public API churns once:
+The code lags this document on one surface. These should land together:
 
 - `class Prover` goes; `run` and `run_multi` become module-level functions.
 - `prover/` splits into `calculus/` and `run/`.
-- `rollout` becomes public, extracted from `_run_strategy_loop`.
+- `rollout` becomes public.
 - `run_multi` is added, with include and policy caches local to the call.
 - `corpus.Attempt` folds into `RunRow`, which gains `policy`, `payload` and
   `host`.
@@ -318,5 +305,5 @@ should land together, so the public API churns once:
 - Whether a learned policy trained on TPTP and evaluated on TPTP satisfies
   CASC's rule that "the precomputation and storage of information about
   individual TPTP problems or their solutions is not allowed". The evaluation
-  already measures first solves made before a problem contributed training
-  data, so the answer exists; it is not yet framed as a compliance argument.
+  measures first solves made before a problem contributed training data, which
+  is the substance of an answer, but it is not framed as a compliance argument.
