@@ -262,9 +262,18 @@ is the cost of the search, which is what comparing policies wants. The parent's
 wall time is the cost of the process, includes startup, and is what the limit
 is enforced against.
 
-Under CASC the harness supervises as well, so the search runs one process
-deeper than it strictly must. That costs a spawn and buys the same numbers
-everywhere, whoever is watching.
+Under CASC this nests: the harness runs the CLI, and the CLI's `run` spawns the
+search. The middle process only parses arguments and prints a status, and CASC
+would kill an overrunning system anyway, so the child is not needed for
+enforcement there. It is kept because the alternative -- searching in-process
+when nobody is supervising, spawning when somebody is -- would make
+`elapsed_seconds` include interpreter startup in one mode and not the other,
+and the same problem run two ways would report two different numbers. One spawn
+per call buys records that mean one thing.
+
+The child must not outlive its parent. A killed CLI leaves an orphaned search
+holding a core, so the child belongs to the parent's process group or watches
+for the parent's death itself.
 
 ## Records
 
