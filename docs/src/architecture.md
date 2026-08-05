@@ -21,10 +21,6 @@ orchestration packages; a fleet draining a corpus uses both. New code belongs
 in `connections` if a single invocation needs it, and in orchestration if it
 exists only because several processes are running.
 
-One thing crosses: the `pycop` CLI has a corpus mode that writes JSONL from
-inside a single process, which is why the record format lives in `connections`.
-See *Records*.
-
 ## Primitives, not a prover
 
 `connections` provides the primitives a prover is assembled from. The named
@@ -37,7 +33,10 @@ provers are the CLIs that assemble them:
 | `satcop` | SAT shadow and `Reset` |
 
 A CLI owns argument parsing, schedule selection, SZS on stdout and the exit
-code. None of that belongs in the library.
+code. It is shaped by CASC: one problem per invocation in the standard
+division, a batch specification in LTB. Running a corpus, writing records and
+summarising them are not part of it -- those belong to orchestration, so a
+prover CLI has no reason to depend on `corpus` or `executor`.
 
 ## Calculus and run
 
@@ -211,13 +210,14 @@ import cost of the policy stack is paid once. Process per shard, which is
 
 ## Records
 
-A run returns a rich, typed result in memory. `RunRow` is its projection onto
-scalars for a JSONL line, built by `row_from_result`.
+A run returns a rich, typed result in memory: outcome, per-strategy results,
+SZS status, and any proof payload a callback attached. `connections` produces
+these and stops there.
 
-Both live in `connections`, despite `RunRow` being a persistence format,
-because the `pycop` CLI has a corpus mode (`--pattern`, `--out`) that writes
-JSONL itself. Orchestration writes the same format rather than defining its
-own.
+The flat per-problem record written to a JSONL line -- problem, status, steps,
+inferences, elapsed, policy, host -- is a persistence format, and belongs to
+`corpus` along with the projection that builds it from a result and the
+aggregation that summarises a set of them.
 
 ## Orchestration
 
@@ -283,11 +283,11 @@ call-scoped: one call is one shard on one worker.
 ## Packages and dependency edges
 
 ```
-connections   calculus, run, budgets, SZS, records            -> lark
-pycop         leanCoP-equivalent prover, parity               -> connections
-satcop        SAT shadow, Reset                               -> connections
-corpus        problem selection, sharding, artifact layout    -> connections, executor
+connections   calculus, run, budgets, SZS                    -> lark
+pycop         leanCoP-equivalent prover, parity, CLI          -> connections
+satcop        SAT shadow, Reset, CLI                          -> connections
 executor      claims, atomic commits, drain, resources        -> (none)
+corpus        selection, sharding, records, benchmark fetch   -> connections, executor
 imitation     policies, graph model, training                 -> connections, corpus
 ```
 
@@ -302,13 +302,16 @@ The code lags this document on one surface. These should land together:
 - `prover/` splits into `calculus/` and `run/`.
 - `rollout` becomes public.
 - `run_multi` is added, with include and policy caches local to the call.
-- `corpus.Attempt` folds into `RunRow`, which gains `policy`, `payload` and
-  `host`.
+- `connections/runs/` dissolves: the problem loop becomes `run_multi`, the
+  record format and summaries move to `corpus`, and corpus fetching and
+  profiling go with them.
+- `pycop` loses its corpus mode; benchmarking a corpus is a `corpus` entry
+  point that takes a prover.
+- `corpus.Attempt` absorbs the record fields it lacks: `inference_actions`,
+  `strategy_count`, `winning_strategy_index`, and `host`.
 
 ## Open questions
 
-- Where `runs/download.py` and `runs/profile.py` belong. Neither is proving and
-  neither is orchestration.
 - Whether a learned policy trained on TPTP and evaluated on TPTP satisfies
   CASC's rule that "the precomputation and storage of information about
   individual TPTP problems or their solutions is not allowed". The evaluation
