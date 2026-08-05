@@ -65,7 +65,9 @@ connections/
     policy/
 ```
 
-## Vocabulary
+## Run vocabulary
+
+Four concepts, from the most basic to the most assembled.
 
 **A rollout is from a state.** A policy acts in a transition system from some
 state until it terminates or exhausts its budget.
@@ -79,8 +81,9 @@ starts, *P(M)* exists and the state is a point in it. The state is mutated in
 place rather than copied, so a caller can inspect the closed tableau
 afterwards, which is what proof replay reads.
 
-This is the composable unit. GRPO samples several rollouts from one state; a
-restart is a rollout after a `Reset`.
+Because it takes a state and returns one, rollouts compose: several can start
+from the same state to compare what different policies do with it, and one can
+continue from where another stopped.
 
 **A strategy fixes what to roll out in, and with what.** Its matrix options fix
 the matrix and therefore the transition system *P(M)*; its policy options fix
@@ -88,54 +91,55 @@ the policy. Two strategies differing in clausification are rollouts in
 different transition systems, not different runs in one.
 
 **A schedule allocates a total budget across strategies.** `from_weighted`
-takes total steps and seconds and divides them by weight; `run` tries the
-entries in order until one succeeds.
+takes total steps and seconds and divides them by weight.
 
-`run` therefore chooses among strategies under a budget much as a policy
-chooses among actions under a budget -- a policy one level up, with a fixed
-allocation rather than a learned one.
+**A run turns problems into results.** It builds the matrix for each strategy
+in the schedule, instantiates the policy, rolls out under that strategy's share
+of the budget, and stops at the first success. It owns the caches, and maps
+outcomes to SZS statuses.
 
-Elsewhere "rollout" is broader: in the MCTS literature it is the random
-simulation phase of a search, and in learncop a `RolloutRecord` is the result
-of a whole prover run on a problem. Here it always means a policy acting from
-a state.
+```python
+run(problems, schedule=...) -> Iterator[Result]
+```
+
+`problems` is one problem or many; the result is always an iterator, so the
+caller's shape does not change with the corpus size. A single-problem
+invocation reads `result, = run(problem, schedule=...)`.
+
+A run chooses among strategies under a budget much as a policy chooses among
+actions under a budget -- a policy one level up, with a fixed allocation rather
+than a learned one.
 
 ## Two invocation shapes
 
-```python
-run(problem, schedule=...)         # one problem
-run_multi(problems, schedule=...)  # a batch, one process
-```
-
-These match CASC's two invocation modes. The standard division passes a problem
-path per invocation; the Large Theory Batch division passes a batch
+CASC defines two, and one `run` covers both. The standard division passes a
+problem path per invocation; the Large Theory Batch division passes a batch
 specification file and permits training and memorisation across the batch.
 Learning work is LTB-shaped, which is what makes caching across problems
-legitimate in `run_multi`.
+legitimate.
 
-Both are one process, so both are `connections`. They differ only in how many
-problems that process is handed.
+Both are one process. They differ only in how many problems that process is
+handed, which is the argument to `run`.
 
 ## Cache lifetime
 
-`run` and `run_multi` are functions. Configuration is passed at the call, and
-every cache is a local whose lifetime is the enclosing call:
+`run` is a function, not a method on an object. Configuration is passed at the
+call, and every cache is a local to it:
 
-| cache | lives in | shared across |
+| cache | keyed by | shared across |
 |---|---|---|
-| matrix | `run` | the strategies of one schedule |
-| parsed includes | `run_multi` | the problems of one batch |
-| loaded policy | `run_multi` | the problems of one batch |
+| matrix | problem, matrix options | the strategies of one schedule |
+| parsed includes | include path | the problems of one call |
+| loaded policy | policy options | the problems of one call |
 
-*Cache lifetime equals the enclosing call.* Holding configuration as instance
-state instead would save a model reload between shards -- about a second
-against a shard of minutes -- at the cost of thread-safety, a cache
-invalidation rule for a second call with a different schedule, and a lifecycle.
+*Cache lifetime equals the call.* Holding configuration as instance state
+instead would save a model reload between calls -- about a second against a
+shard of minutes -- at the cost of thread-safety, a cache invalidation rule for
+a second call with a different schedule, and a lifecycle.
 
-The matrix cache is keyed by problem and matrix options, so it could be lifted
-across problems, but within a corpus run each problem is attempted once per
-configuration and a wider cache would only miss. The sharing that pays is
-across the strategies of a schedule.
+The matrix cache spans the whole call, but a problem is attempted once per
+configuration within a corpus run, so what it actually shares is the strategies
+of one schedule.
 
 ## Budgets are semantic; allocation is not
 
@@ -195,18 +199,18 @@ against CASC where resource-outs are the expected non-success.
 
 ## Enforcement
 
-`run` and `run_multi` self-limit cooperatively: counting steps, checking a
-deadline, lowering `RLIMIT_AS` where that is meaningful. They do not spawn a
-subprocess to enforce their own budgets, because `on_proof_found` hands the
-live `State` to its callback and a process boundary would mean serialising a
-tableau and substitution per proof.
+`run` self-limits cooperatively: counting steps, checking a deadline, lowering
+`RLIMIT_AS` where that is meaningful. It does not spawn a subprocess to enforce
+its own budgets, because `on_proof_found` hands the live `State` to its
+callback and a process boundary would mean serialising a tableau and
+substitution per proof.
 
 Hard enforcement belongs to whatever invoked the process: CASC's harness kills
 a system that runs over, a fleet worker supervises a child with an RSS watchdog
 and a hard deadline, and a laptop needs neither. Where a fleet supervises, the
 child persists across problems rather than being spawned per problem, so the
-import cost of the policy stack is paid once. Process per shard, which is
-`run_multi`'s scope.
+import cost of the policy stack is paid once: one process per shard, which is
+one `run` call.
 
 ## Records
 
@@ -263,22 +267,22 @@ second varies with hardware.
 
 ### How they compose
 
-A shard is a task whose body is one `run_multi` call:
+A shard is a task whose body is one `run` call:
 
 ```python
 TaskSpec(
     key=f"shard_{i:05d}",
     target=root / "shards" / f"shard_{i:05d}.jsonl",
-    run=lambda: write_rows(run_multi(shard.problems, schedule=...)),
+    run=lambda: write_rows(run(shard.problems, schedule=...)),
 )
 ```
 
-`run_multi` yields records, `corpus` writes them, `executor` decides who runs
-the shard and publishes the result atomically. A summary task declares the
-shards as `needs`, so it runs once they are all present.
+`run` yields records, `corpus` writes them, `executor` decides who runs the
+shard and publishes the result atomically. A summary task declares the shards
+as `needs`, so it runs once they are all present.
 
-This is why `run_multi` yields rather than writes, and why its caches are
-call-scoped: one call is one shard on one worker.
+This is why `run` yields rather than writes, and why its caches are scoped to
+the call: one call is one shard on one worker.
 
 ## Packages and dependency edges
 
@@ -298,15 +302,19 @@ artefact, and it stays independently installable.
 
 The code lags this document on one surface. These should land together:
 
-- `class Prover` goes; `run` and `run_multi` become module-level functions.
+- `class Prover` goes; `run` becomes a module-level function taking one problem
+  or many, always yielding results, with include and policy caches local to the
+  call.
 - `prover/` splits into `calculus/` and `run/`.
 - `rollout` becomes public.
-- `run_multi` is added, with include and policy caches local to the call.
-- `connections/runs/` dissolves: the problem loop becomes `run_multi`, the
+- `connections/runs/` dissolves: the problem loop folds into `run`, the
   record format and summaries move to `corpus`, and corpus fetching and
   profiling go with them.
 - `pycop` loses its corpus mode; benchmarking a corpus is a `corpus` entry
-  point that takes a prover.
+  point that takes a prover, and benchmark fetching becomes another.
+- learncop's `RolloutRecord` is a schedule's worth of work, not a rollout's. It
+  becomes a schedule record with an entry per rollout per strategy. Deferred
+  until the orchestration packages absorb that code.
 - `corpus.Attempt` absorbs the record fields it lacks: `inference_actions`,
   `strategy_count`, `winning_strategy_index`, and `host`.
 
