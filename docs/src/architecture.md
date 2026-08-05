@@ -224,28 +224,33 @@ of moves, or the step limit was reached.
 **A run** turns a schedule's rollouts into a status for the problem. A proof
 gives `Theorem` or `Unsatisfiable`, depending on whether the problem has a
 conjecture. A completely explored search space gives `CounterSatisfiable` or
-`Satisfiable`. Exhausting the steps gives `ResourceOut`, and exhausting the
-clock gives `Timeout` -- a run observes both, because both bound its rollouts.
+`Satisfiable`. Running out of either budget gives `ResourceOut`: from inside,
+steps and the clock are both just an allotment that ran out, and `ResourceOut`
+is exactly "some resource ran out".
 
-**Whatever runs the process** owns `MemoryOut`, and owns `Timeout` in the case
-a run cannot report: the one where it never stopped. A search wedged in a C
-loop cannot fire its own alarm, and a process killed for memory reports nothing
-at all. A parent watching a child also measures both faithfully, including
-interpreter startup, which no in-process clock can see.
+These are every status `connections` produces.
+
+**The parent** owns `Timeout` and `MemoryOut`. Both are claims about a process
+rather than about a search, and only a process watching another can make them:
+its clock includes interpreter startup, which no in-process timer sees, and a
+search wedged in a C loop or killed for memory says nothing at all.
 
 Neither carries weight in competition -- CASC scores Success statuses, and a
 printed `Timeout` scores the same as being killed. They exist for the
 experiment records, where telling a hard problem from a slow node is the whole
 point.
 
-The rule running through them: **refine, never overwrite.** A layer speaks only
+The split is by vocabulary rather than by precedence, so the layers cannot
+contradict each other: a run never says `Timeout`, and a parent never says
+`ResourceOut`. Where they could overlap -- a run that finished normally just as
+a limit expired -- the rule is **refine, never overwrite.** A layer speaks only
 when the one below produced nothing. A search that returned `Theorem` before a
 limit fired returned `Theorem`. CASC applies this strictly -- *"the first
 distinguished string output is accepted as the system's result"* -- and a
 system that runs over its limit is not credited rather than assigned a status.
 
-`StepBudget` maps to `ResourceOut` rather than `GaveUp`, which reads correctly
-against CASC where resource-outs are the expected non-success.
+Exhausting a budget maps to `ResourceOut` rather than `GaveUp`, which reads
+correctly against CASC where resource-outs are the expected non-success.
 
 ## Limits: what established provers do
 
@@ -387,9 +392,9 @@ The code lags this document on one surface. These should land together:
 - A rollout stops on its step limit or its deadline, whichever binds first, so
   a schedule can advance between strategies. Both are checked between steps,
   which removes the wall-clock alarm and the exception it raised.
-- Memory and the guarantee that a problem ends at all leave `connections`. A
-  parent forks a child per problem, holds it to the total, and reports
-  `MemoryOut` and the `Timeout` a hung search could not report itself.
+- `Timeout` and `MemoryOut` leave `connections` entirely; a run reports
+  `ResourceOut` whichever of its budgets ran out. A parent forks a child per
+  problem, holds it to the total, and owns those two statuses.
 - The policy and any shared axioms are loaded in that parent, so children
   inherit them rather than each paying the import.
 - `prover/` splits into `calculus/` and `run/`.
