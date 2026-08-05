@@ -183,9 +183,9 @@ def run(problems, *, schedule, memory_mb=None):
 ```
 
 Each is enforced where it applies, and each failure becomes a status rather
-than a crash: a step limit is reported by the rollout, a `MemoryError` from the
-`RLIMIT_AS` ceiling becomes `MemoryOut`, and a wall-clock alarm becomes
-`Timeout`.
+than a crash. The rollout reports its own step limit and the run turns that
+into `ResourceOut`; the time and memory wrappers report `Timeout` and
+`MemoryOut`, which a run cannot produce for itself.
 
 Enforcement quality differs. Steps are exact. Time is exact but not portable.
 Memory is approximate: `RLIMIT_AS` caps address space rather than resident
@@ -202,20 +202,36 @@ SZS is the output contract. `ResourceOut` covers a resource running out, with
 `Timeout` and `MemoryOut` as the specific cases, and `GaveUp` for a system
 stopping of its own accord.
 
-Responsibility follows from who is still running:
+Each layer reports only what it can observe.
 
-- The process reports what it observes: a proof, an exhausted search space, its
-  own step budget (`ResourceOut`), its own wall clock (`Timeout`), its own
-  memory cap (`MemoryOut`), internal errors.
-- The runner reports only when the process died without producing a status.
-  It usually cannot know why, so it records an error status with the evidence
-  -- signal, elapsed time, peak RSS -- rather than a guess.
+**A rollout** reports why it stopped: it closed the tableau, the policy ran out
+of moves, or the step limit was reached.
 
-The runner refines, never overwrites: a process that returned `Theorem` before
-a watchdog fired returned `Theorem`. CASC applies the same rule strictly, since
-*"the first distinguished string output is accepted as the system's result"*,
-and a system that runs over its limit is not credited rather than assigned a
-status.
+**A run** aggregates the rollouts of a schedule into a status for the problem.
+A proof gives `Theorem` or `Unsatisfiable`, depending on whether the problem has
+a conjecture. A completely explored search space gives `CounterSatisfiable` or
+`Satisfiable`. If the schedule finishes with no proof and the steps ran out,
+the result is `ResourceOut` -- the step budget is the resource, and it is the
+only resource a run observes for itself.
+
+**The wrapper around a run** enforces the process demands, so `Timeout` and
+`MemoryOut` come from there rather than from the run. A wall-clock alarm
+becomes `Timeout`; a `MemoryError` from the address-space ceiling becomes
+`MemoryOut`. These are the two statuses a run cannot produce, because the
+conditions they describe are conditions on the process rather than on the
+search.
+
+**An external supervisor** -- a fleet worker, CASC's harness -- sees only that
+a process died without saying anything. It records an error with the evidence:
+signal, elapsed time, peak RSS. It does not guess at `Timeout` or `MemoryOut`,
+because a killed process cannot say which it was.
+
+The rule running through all four: **refine, never overwrite.** A layer speaks
+only when the one below it produced nothing. A run that returned `Theorem`
+before a watchdog fired returned `Theorem`. CASC applies this strictly --
+*"the first distinguished string output is accepted as the system's result"* --
+and a system that runs over its limit is simply not credited rather than
+assigned a status.
 
 `StepBudget` maps to `ResourceOut` rather than `GaveUp`, which reads correctly
 against CASC where resource-outs are the expected non-success.
@@ -357,6 +373,9 @@ The code lags this document on one surface. These should land together:
 
 ## Open questions
 
+- Which outcome a run should report when strategies in a schedule disagree.
+  The last entry's outcome currently wins, so a strategy that exhausted its
+  search space is masked by a later one that ran out of steps.
 - Whether a learned policy trained on TPTP and evaluated on TPTP satisfies
   CASC's rule that "the precomputation and storage of information about
   individual TPTP problems or their solutions is not allowed". The evaluation
