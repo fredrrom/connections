@@ -199,9 +199,14 @@ conjecture. A completely explored search space gives `CounterSatisfiable` or
 search.
 
 **Whatever holds the process to its limits** owns `Timeout` and `MemoryOut`. A
-search stopped by its own soft limit reports them itself; a search that was
-killed cannot, since a wedged process cannot fire its own alarm and a process
-killed for memory reports nothing at all.
+search that gave up on a problem within its soft limit reports them itself; a
+search that was killed cannot, since a wedged process cannot fire its own alarm
+and a process killed for memory reports nothing at all.
+
+These two statuses carry no weight in competition -- CASC scores Success
+statuses, and a printed `Timeout` scores the same as being killed. They exist
+for the experiment records, where telling a hard problem from a slow node is
+the whole point.
 
 The rule running through them: **refine, never overwrite.** A layer speaks only
 when the one below produced nothing. A search that returned `Theorem` before a
@@ -230,13 +235,24 @@ attempts due to reliance on inter-process communication".
 
 Two things carry over. **The time budget is an input to scheduling**, not just a
 ceiling -- a schedule can only divide a total it knows. And **soft and hard
-limits do different jobs**: the soft one lets a search stop and say what it
-found, the hard one guarantees it stops at all.
+limits do different jobs**: the soft one lets a search abandon what it is doing
+and move on, the hard one guarantees it stops at all.
+
+What does not carry over is any competitive value in self-reported resource
+statuses. CASC scores Success statuses; a system that prints `ResourceOut` and
+one that is killed by the harness have both failed to solve the problem. E
+prints it for the reader, not for the scoreboard.
+
+Self-limiting still matters, for control flow rather than reporting. A process
+given many problems -- an LTB batch, or a shard -- must abandon one to start
+the next, and without a soft limit it would spend the whole budget on the first
+hard problem. In the standard division that pressure does not exist: there is
+one problem, and the harness ends the process.
 
 ## Where each limit is enforced
 
-The soft limits stay in the search, so a limit that fires produces a status
-rather than a corpse:
+The soft limits stay in the search, because the search is what has to give up
+on one problem and start the next:
 
 ```python
 for problem in problems:
