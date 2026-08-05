@@ -228,9 +228,30 @@ process dies without saying anything, that is all there is to record. It does
 not guess at `Timeout` or `MemoryOut`, because a killed process cannot say
 which it was.
 
-The difference from the wrappers above is the process boundary: a wrapper is
-inside the run and can turn a `MemoryError` or an alarm into a status, while a
-supervisor can only observe a death.
+The difference from the wrappers above is the process boundary, and it cuts
+both ways. A wrapper is inside the run, so it can turn a `MemoryError` or an
+alarm into a status where a supervisor sees only a death. But only a supervisor
+can measure time and memory faithfully:
+
+- Startup is invisible from inside. Interpreter start, imports and module init
+  all precede any in-process timer, and with a policy stack loaded that is
+  seconds.
+- A wedged process cannot fire its own alarm. Python runs signal handlers
+  between bytecodes, so a tight C loop or an uninterruptible syscall defeats
+  `SIGALRM`.
+- `RLIMIT_AS` bounds address space rather than resident size, and the two
+  diverge sharply once large arenas are mapped.
+- A process killed for memory reports nothing. `ru_maxrss` is readable only by
+  a process that survived.
+
+In-process limits are therefore cooperative: they produce a clean status when
+things go normally. Out-of-process measurement is authoritative: it is the only
+account of time and memory that holds when they do not.
+
+The two clocks measure different things and a record can carry both. Summing
+the time spent in each strategy gives the cost of the search, which is what
+comparing policies wants. A supervisor's wall time gives the cost of the
+process, which includes startup and is what a limit is enforced against.
 
 The rule running through all four: **refine, never overwrite.** A layer speaks
 only when the one below it produced nothing. A run that returned `Theorem`
