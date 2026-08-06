@@ -11,9 +11,12 @@ A matrix *M* induces a transition system
     P(M) = (S, A, s0, T, S✓)
 
 whose states are annotated partial connection tableaux for *M*, whose actions
-are tableau edits, whose initial state is the empty tableau, and whose accepting
-states are the closed ones. `T` is partial: it is defined exactly on the edits
-the calculus admits at a state.
+are tableau edits, whose initial state is the empty tableau, and whose goal set
+*S✓* is the closed tableaux. `T` is partial: it is defined exactly on the edits
+the calculus admits at a state, and `A(s)` denotes the actions enabled there.
+
+Notation is the inter-conjecture paper's, unchanged. Where this doc and the
+thesis describe the same object they use the same symbols for it.
 
 Everything a proof needs is in the state. Nothing about *how* the tableau was
 built is -- no stack, no depth bound, no record of what has been tried. That

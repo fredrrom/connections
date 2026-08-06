@@ -102,5 +102,15 @@ wanted resumable runs, and not before.
 | [dynamics](dynamics.md) | states, actions, transitions, undo |
 | [running](running.md) | rollout, strategy, schedule, run, limits, hardware |
 
+Nothing yet covers the language group: problem source to matrix to *s0*. That is
+chapter 3's first section in the dissertation and one clause about `build_state`
+here.
+
+Notation follows the inter-conjecture paper, so that these docs and the
+dissertation name the same objects the same way. The division of labour is that
+a claim surviving a rewrite in another language is the thesis's, and a claim
+naming a module, a signature, or a known gap is these docs'. The correspondence
+table is in the dissertation's `docs/thesis-map.md`.
+
 The reference documentation under `docs/src/` describes the code as it stands
 today, which is not yet this. Where they disagree, these notes are the target.

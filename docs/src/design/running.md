@@ -20,9 +20,12 @@ starts, *P(M)* exists and the state is a point in it.
 A `Rollout` records the actions taken, the state they led to, and why it
 stopped. Transitions are deterministic, so the action sequence and the starting
 state reconstruct every intermediate state; nothing else needs storing, and
-proof replay reads exactly this. Steps and inferences are derived from the
-actions rather than counted alongside them, so they cannot disagree: steps is
-the number of actions, inferences the number that applied a rule.
+proof replay reads exactly this. Both step counts are derived from the actions
+rather than counted alongside them, so they cannot disagree: a *transition step*
+is one application of `T`, so the count is the number of actions; an *inference
+step* is a recorded rule application, so the count is the number of actions that
+appended. A prune is one transition step and removes one or more inference
+steps. Budgets and reported step counts are transition steps.
 
 The state is mutated in place. Several rollouts from one state therefore need a
 copy per rollout -- cheap, because the matrix is immutable and shared and only
@@ -195,7 +198,7 @@ recorded and applied, not by being left in memory.
 A policy is one function, `__call__(state)`. Most of the family here factors
 into two independent axes:
 
-| memory -- what `A(s, μ)` exposes | choice -- which exposed action |
+| memory -- what `A(s, μ)` exposes | choice -- among what it exposed |
 |---|---|
 | none (markov) | first |
 | depth-first stack | learned scorer |
@@ -207,7 +210,7 @@ collapse into three memories and a chooser supplied by whoever has one.
 
 ```python
 class Memory(Protocol):
-    def exposed(self, state) -> Sequence[Action]:   # A(s, μ)
+    def exposed(self, state) -> Sequence[Action]:   # A(s, μ) ⊆ A(s)
     def update(self, state, action) -> None:        # U_π
     def exhausted(self) -> ProverOutcome | None     # why nothing is left
     complete: bool                                  # does exhaustion mean anything
