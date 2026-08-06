@@ -20,7 +20,10 @@ theme:
 
 nav:
   - Home: index.md
-  - Architecture: architecture.md
+  - Design:
+    - Architecture: design/architecture.md
+    - Dynamics: design/dynamics.md
+    - Running: design/running.md
   - Prover API: prover-api.md
   - State and Dynamics: state-dynamics.md
   - Unification and Constraints: unification.md
