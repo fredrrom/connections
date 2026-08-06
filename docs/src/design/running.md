@@ -43,7 +43,9 @@ build_state(problem_spec, *, matrix_options) -> State
 run(problem_spec, *, schedule) -> Result
 ```
 
-`build_state` is where a file becomes a state: parse, clausify, wrap. `run`
+`build_state` is where a file becomes a state, and the one place `run` reaches
+down to `parsing` and `clausification`: read the file, clausify it into a
+matrix, wrap it as the initial state of *P(M)*. `run`
 does that for each strategy in the schedule, instantiates the policy, rolls out
 under that strategy's share of the budget, and stops at the first success.
 

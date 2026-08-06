@@ -1,8 +1,8 @@
 # Dynamics
 
-The transition system a policy acts in. This is `calculus/`, and it is the
-bottom of the library: it knows nothing of budgets, schedules, statuses,
-processes or problems-as-files.
+The transition system a policy acts in. This is `calculus/`, sitting on
+`syntax` and `constraints` and knowing nothing above it: no budgets, no
+schedules, no statuses, no processes, and no problems-as-files.
 
 ## The system
 

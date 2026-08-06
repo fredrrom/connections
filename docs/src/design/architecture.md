@@ -7,22 +7,44 @@ running a corpus in [running](running.md).
 
 ## What `connections` is
 
-A library of primitives for clausal connection tableaux, in two layers.
+A library of primitives for clausal connection tableaux, in four groups.
 
-**`calculus/`** is the transition system: what a state is, what actions exist,
-which of them the calculus admits, and what applying one does.
+**The language** -- what a problem is, and how to read one.
 
-    rules, actions, tableau, state, dynamics
+    syntax          terms, literals, clauses, matrices
+    parsing         TPTP text to formulas
+    clausification  formulas to a matrix
 
-**`run/`** is acting in that system on one problem: building a state from a
-problem file, rolling a policy out from it, the strategies that fix which
-system and which policy, the schedules that allocate budget across strategies,
-and the SZS vocabulary for outcomes.
+**Constraints** -- what makes a connection admissible.
 
-    problem, rollout, strategy, schedule, result, status
+    constraints     unification, rigid substitutions, prefixes
 
-`calculus` knows nothing of budgets, schedules or statuses. `run` knows nothing
-of processes or of other problems.
+**The calculus** -- the transition system a policy acts in.
+
+    calculus        state, tableau, actions, rules, dynamics
+
+**Acting in it** -- one problem at a time.
+
+    policy          choosing among admissible actions
+    run             build_state, rollout, strategy, schedule, result, status
+
+Dependencies run upward: `constraints` and `parsing` over `syntax`,
+`clausification` over `parsing`, `calculus` over `syntax` and `constraints`,
+`policy` over `calculus`, and `run` over all of it. Nothing below `run` knows
+about budgets, schedules or statuses; nothing below `policy` knows a policy
+exists.
+
+!!! note "Two cycles today"
+
+    `syntax` reaches into `constraints` from inside `Matrix`, which filters a
+    literal's candidate complements by static unifiability -- a deferred import
+    working around a real cycle. Deciding which literals can connect is a
+    calculus question, so the filter belongs above `syntax`.
+
+    `policy` imports `actions`, `state`, `dynamics`, `rules` and `status` from
+    `prover`, which imports `policy` back. Every one of those is a calculus
+    thing, so splitting `prover` into `calculus` and `run` dissolves this one
+    on its own.
 
 ## What `connections` is not
 
