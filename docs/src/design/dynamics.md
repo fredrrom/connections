@@ -104,7 +104,7 @@ choose to avoid, it is something `T` does not admit.
 admissible. The interface between them is one function:
 
 ```python
-Policy = Callable[[State], Action | ProverOutcome | None]
+Policy = Callable[[State], Action | None]
 ```
 
 Everything a policy wants to remember -- a stack of untried alternatives, a

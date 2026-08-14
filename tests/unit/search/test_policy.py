@@ -254,7 +254,8 @@ def test_dfs_policy_with_scut_only_tries_first_start_clause(monkeypatch):
     first = policy(state)
 
     assert _label(dynamics, first) == "st0"
-    assert policy(state) is ProverOutcome.DFS_EXHAUSTED
+    assert policy(state) is None
+    assert policy.stop_reason() is ProverOutcome.DFS_EXHAUSTED
 
 
 def test_dfs_policy_reads_cut_and_scut_from_constructor_args():
@@ -839,7 +840,8 @@ def test_iterative_deepening_empty_matrix_has_no_start_choicepoint(caplog):
     caplog.set_level(TRACE_LEVEL, logger="connections.trace")
     action = policy(state)
 
-    assert action is ProverOutcome.ID_FIXED_POINT
+    assert action is None
+    assert policy.stop_reason() is ProverOutcome.ID_FIXED_POINT
     assert caplog.messages == [
         "pathlim",
         "pathlim",

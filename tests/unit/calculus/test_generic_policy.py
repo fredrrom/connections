@@ -98,4 +98,5 @@ def test_dfs_policy_returns_non_theorem_after_root_exhaustion() -> None:
 
     assert isinstance(undo, UndoAction)
     Dynamics.transition(state, undo)
-    assert policy(state) is ProverOutcome.DFS_EXHAUSTED
+    assert policy(state) is None
+    assert policy.stop_reason() is ProverOutcome.DFS_EXHAUSTED

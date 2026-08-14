@@ -11,7 +11,7 @@ from connections.calculus.rules import FactorizationMode, Start
 from connections.calculus.state import State
 from connections.trace_logging import trace, trace_logger
 
-DFSPolicyDecision = Action | ProverOutcome | None
+DFSPolicyDecision = Action | None
 
 
 @dataclass(slots=True)
@@ -45,14 +45,26 @@ class DFSPolicy(Policy):
         self.backtrack = backtrack
         self.factorization = factorization
         self._stack: list[Frame] = []
+        self._stop_reason: ProverOutcome | None = None
 
     def __call__(self, state: State) -> DFSPolicyDecision:
+        # _prepare_actions settles closed choicepoints on the way in, so a call
+        # at a final state does this policy's shutdown before yielding nothing.
         actions = self._available_actions(state)
         if not actions:
-            return self._exhausted_outcome()
+            # No actions at a closed tableau means the search succeeded; no
+            # actions anywhere else means its space is exhausted, which is a
+            # claim about the problem and worth reporting.
+            if not state.tableau.root.closed:
+                self._stop_reason = self._exhausted_outcome()
+            return None
+        self._stop_reason = None
         action = self._next_action(state, actions)
         self._after_action(state, actions, action)
         return action
+
+    def stop_reason(self) -> ProverOutcome | None:
+        return self._stop_reason
 
     def _available_actions(self, state: State) -> tuple[Action, ...]:
         actions = self._prepare_actions(state)
@@ -70,9 +82,6 @@ class DFSPolicy(Policy):
     ) -> None:
         _ = state, actions
         self._consume_choicepoint_action(action)
-
-    def on_tableau_closed(self, state: State) -> None:
-        self._on_tableau_closed(state)
 
     def _on_tableau_closed(self, state: State) -> None:
         self._discard_deleted_choicepoints(state)

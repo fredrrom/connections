@@ -23,19 +23,21 @@ def _state():
 
 
 class _Scripted(Policy):
-    """Yields each scripted decision in turn, then nothing."""
+    """Yields each scripted action in turn, then nothing."""
 
-    def __init__(self, decisions=()):
-        self.decisions = list(decisions)
+    def __init__(self, actions=(), stop_reason=None):
+        self.actions = list(actions)
         self.calls = 0
-        self.closed_notifications = 0
+        self.states_seen = []
+        self._stop_reason = stop_reason
 
     def __call__(self, state):
         self.calls += 1
-        return self.decisions.pop(0) if self.decisions else None
+        self.states_seen.append(state)
+        return self.actions.pop(0) if self.actions else None
 
-    def on_tableau_closed(self, state):
-        self.closed_notifications += 1
+    def stop_reason(self):
+        return self._stop_reason
 
 
 def test_a_policy_call_yielding_no_action_is_not_a_step():
@@ -51,13 +53,22 @@ def test_a_policy_call_yielding_no_action_is_not_a_step():
     assert policy.calls == 1, "the policy was still consulted"
 
 
-def test_a_policy_outcome_is_reported_verbatim():
-    policy = _Scripted([ProverOutcome.DFS_EXHAUSTED])
+def test_the_rollout_asks_the_policy_why_it_offered_nothing():
+    """A policy returns actions; why it stopped is a separate question."""
+    policy = _Scripted(stop_reason=ProverOutcome.DFS_EXHAUSTED)
 
     result = rollout(_state(), policy=policy)
 
     assert result.outcome is ProverOutcome.DFS_EXHAUSTED
     assert result.steps == 0
+
+
+def test_a_policy_with_no_claim_leaves_the_outcome_open():
+    policy = _Scripted(stop_reason=None)
+
+    result = rollout(_state(), policy=policy)
+
+    assert result.outcome is None
 
 
 def test_exhausted_step_budget_stops_before_consulting_the_policy():
@@ -130,3 +141,41 @@ def test_both_in_rollout_budgets_are_resource_out_not_timeout():
 
     for outcome in (ProverOutcome.STEP_BUDGET, ProverOutcome.TIME_BUDGET):
         assert to_szs_status(outcome, has_conjecture=True) is SZSStatus.RESOURCE_OUT
+
+
+def test_the_policy_is_consulted_at_the_final_state():
+    """Being called is the notification; there is no separate hook.
+
+    The last call is the policy's chance to settle whatever its memory holds,
+    which is why it happens before the rollout reports success.
+    """
+
+    class _Root:
+        closed = True
+
+    class _Tableau:
+        root = _Root()
+
+    class _Constraints:
+        @staticmethod
+        def satisfiable(*, logic, domain):
+            return True
+
+    class _Problem:
+        logic = "classical"
+        domain = "constant"
+
+    class _AlreadyClosed:
+        tableau = _Tableau()
+        constraints = _Constraints()
+        problem = _Problem()
+
+    state = _AlreadyClosed()
+    policy = _Scripted()
+
+    result = rollout(state, policy=policy)
+
+    assert result.outcome is ProverOutcome.PROVED
+    assert policy.calls == 1, "the policy was given the final state"
+    assert policy.states_seen == [state]
+    assert result.steps == 0

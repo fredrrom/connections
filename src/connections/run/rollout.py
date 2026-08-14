@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import time
-from typing import cast
 
 from connections.calculus.actions import Action, ApplyAction
 from connections.calculus.dynamics import Dynamics
@@ -90,6 +89,11 @@ def rollout(
 
     while True:
         if _closed(state):
+            # The policy is consulted at the final state too. That call is its
+            # chance to settle whatever its memory holds; whatever it returns
+            # has nowhere to go, because reaching an accepting state is the
+            # environment's verdict and not the agent's to override.
+            policy(state)
             outcome = ProverOutcome.PROVED
             break
         if step_limit is not None and len(actions) >= step_limit:
@@ -99,21 +103,17 @@ def rollout(
             outcome = ProverOutcome.TIME_BUDGET
             break
 
-        decision = cast(Action | ProverOutcome | None, policy(state))
-        if isinstance(decision, ProverOutcome):
-            outcome = decision
-            break
-        if decision is None:
+        action = policy(state)
+        if action is None:
+            # No action is not self-explaining: an exhausted search space says
+            # something about the problem, a policy with nothing to offer says
+            # nothing. Only the policy knows which.
+            outcome = policy.stop_reason()
             break
 
-        actions.append(decision)
-        Dynamics.transition(state, decision)
-        trace(trace_logger, decision.trace_event())
-
-        if _closed(state):
-            policy.on_tableau_closed(state)
-            outcome = ProverOutcome.PROVED
-            break
+        actions.append(action)
+        Dynamics.transition(state, action)
+        trace(trace_logger, action.trace_event())
 
     return Rollout(actions=tuple(actions), state=state, outcome=outcome)
 

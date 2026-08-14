@@ -1,11 +1,15 @@
 # Write a policy
 
-A policy is one function. Given a state, choose among the actions the calculus
-admits:
+A policy is an agent. It perceives the current state and returns an action:
 
 ```python
-Policy = Callable[[State], Action | ProverOutcome | None]
+Policy = Callable[[State], Action | None]
 ```
+
+That is the whole interface, and it is deliberately the agent-program shape:
+percept in, action out. A policy returns *actions only*. Whether a state is
+terminal, whether a budget has run out, and what any of it means are the
+environment's to decide -- the rollout's, not the agent's.
 
 Everything it wants to remember -- a stack of untried alternatives, a depth
 bound, a search tree, a learned scorer -- is its own state, invisible to the
@@ -19,13 +23,38 @@ from connections.policy import Policy
 
 class FirstAdmissible(Policy):
     def __call__(self, state):
-        actions = state.admissible_actions()
+        actions = Dynamics.apply_actions(state)
         return actions[0] if actions else None
 ```
 
-Returning `None` means "nothing to offer". Returning a `ProverOutcome` instead
-lets a policy say *why* it has nothing left, which an empty list cannot
-distinguish from a budget running out.
+Returning `None` means "no action from me", and ends the rollout.
+
+## Being told the search is over
+
+A policy is called at **every** state it reaches, including a final one. There
+is no separate notification hook, because being called *is* the notification.
+
+That last call is where a policy settles whatever its memory holds -- choice
+points that only become permanent on success, statistics to flush, a model to
+detach -- after which it returns `None` and the rollout stops. Whatever it
+returns at a final state is ignored: reaching an accepting state is the
+environment's verdict, not something the agent can decline.
+
+## Saying why you stopped
+
+`None` is not self-explaining. A search that has exhausted its space says
+something about the problem; a policy that merely has nothing to offer says
+nothing at all. Only the policy knows which, so the rollout asks:
+
+```python
+    def stop_reason(self):
+        return ProverOutcome.DFS_EXHAUSTED if self._exhausted else None
+```
+
+The default returns `None`, meaning no claim. This is a separate question from
+the action channel on purpose -- an agent returns actions, not verdicts about
+its environment, and the distinction is what keeps an exhausted search from
+being confused with a budget running out.
 
 You cannot make an unsound proof this way. A policy acts only through `T`, so
 every state it reaches is a valid partial tableau and any accepting state is a
@@ -50,7 +79,7 @@ a chooser supplied by whoever has one.
 class Memory(Protocol):
     def exposed(self, state) -> Sequence[Action]:   # A(s, μ) ⊆ A(s)
     def update(self, state, action) -> None:        # U_π
-    def exhausted(self) -> ProverOutcome | None     # why nothing is left
+    def stop_reason(self) -> ProverOutcome | None   # why nothing is left
     complete: bool                                  # does exhaustion mean anything
 
 policy(memory, choose) -> Policy

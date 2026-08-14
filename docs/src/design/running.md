@@ -212,13 +212,13 @@ collapse into three memories and a chooser supplied by whoever has one.
 class Memory(Protocol):
     def exposed(self, state) -> Sequence[Action]:   # A(s, μ) ⊆ A(s)
     def update(self, state, action) -> None:        # U_π
-    def exhausted(self) -> ProverOutcome | None     # why nothing is left
+    def stop_reason(self) -> ProverOutcome | None   # why nothing is left
     complete: bool                                  # does exhaustion mean anything
 
 policy(memory, choose) -> Policy
 ```
 
-`exhausted()` gives a memory somewhere to say *why* it stopped, which an empty
+`stop_reason()` gives a memory somewhere to say *why* it stopped, which an empty
 action list cannot. `complete` is where the soundness gate belongs: restricted
 backtracking sets it false, so nothing downstream can turn its exhaustion into a
 countermodel.
