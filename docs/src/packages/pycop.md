@@ -3,11 +3,17 @@
 A leanCoP-equivalent prover over `connections`: the strategies, the CLI, and the
 parity harness that checks the equivalence claim.
 
-The aim is parity of effective behaviour, not line-by-line reproduction of
-Prolog control. Matrix preprocessing owns translation, conjecture-start
-behaviour, and ordering; the policy owns depth-first continuation, iterative
-deepening, cut and scut, start selection, and open-leaf selection; the calculus
-owns legality, unification, regularity, factorization scope, and undo.
+The claim is **parity of inference step ordering**: on a supported problem,
+pycop takes the same inference steps, in the same order, as the reference
+prover. The trace harness checks exactly that, comparing the two event sequences
+for equality and reporting the first index at which they diverge.
+
+That is a claim about search, not about source. Matrix preprocessing owns
+translation, conjecture-start behaviour, and ordering; the policy owns
+depth-first continuation, iterative deepening, cut and scut, start selection,
+and open-leaf selection; the calculus owns legality, unification, regularity,
+factorization scope, and undo. The Prolog control flow is not reproduced; the
+step sequence it produces is.
 
 ## The command
 

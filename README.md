@@ -8,8 +8,8 @@
 construction primitives for proof-search control. It
 contains a small prover loop, reusable search policies, native
 FOF/CNF/QMF matrix construction, and `pycop`, a reimplementation of leanCoP 2.1,
-iLeanCoP 1.3, and mLeanCoP 1.2 in this same framework tested extensively for
-proof-step parity.
+ileanCoP 1.2, and MleanCoP 1.3 in this same framework, tested extensively for
+parity of inference step ordering.
 
 
 ## Package Layout
