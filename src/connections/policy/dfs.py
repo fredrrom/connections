@@ -3,12 +3,12 @@ from __future__ import annotations
 from abc import abstractmethod
 from dataclasses import dataclass
 
-from connections.prover.status import ProverOutcome
+from connections.calculus.outcome import ProverOutcome
 from connections.policy.base import BacktrackGranularity, Policy
-from connections.prover.actions import Action, ApplyAction
-from connections.prover.dynamics import Dynamics
-from connections.prover.rules import FactorizationMode, Start
-from connections.prover.state import State
+from connections.calculus.actions import Action, ApplyAction
+from connections.calculus.dynamics import Dynamics
+from connections.calculus.rules import FactorizationMode, Start
+from connections.calculus.state import State
 from connections.trace_logging import trace, trace_logger
 
 DFSPolicyDecision = Action | ProverOutcome | None

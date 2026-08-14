@@ -3,8 +3,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Literal, TypeAlias
 
-from connections.prover.actions import Action
-from connections.prover.state import State
+from connections.calculus.actions import Action
+from connections.calculus.state import State
 
 
 PolicyDecision: TypeAlias = Action | None

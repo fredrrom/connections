@@ -44,7 +44,9 @@ nav:
     - parsing: reference/parsing.md
     - clausification: reference/clausification.md
     - constraints: reference/constraints.md
+    - calculus: reference/calculus.md
     - policy: reference/policy.md
+    - run: reference/run.md
 
 plugins:
   - search

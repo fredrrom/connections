@@ -54,8 +54,8 @@ runner adds the rest. See [running](../design/running.md#results).
 Benchmark corpora:
 
 ```bash
-connections-download-benchmarks --list
-connections-download-benchmarks tptp-v6.4.0 iltp qmltp --root benchmarks
+pycop-download-benchmarks --list
+pycop-download-benchmarks tptp-v6.4.0 iltp qmltp --root benchmarks
 ```
 
 ## Profiling
@@ -141,9 +141,3 @@ intuitionistic FOF, and modal QMF slices.
     Do not edit the copied reference provers. SWI-Prolog compatibility adapters
     and other local helpers belong beside them, not inside them.
 
-!!! note "Not yet moved"
-
-    Parity currently lives at `tools/parity/` in the repository root and is
-    invoked as `python tools/parity/run_all.py`. It belongs to `pycop` -- it
-    tests pycop's equivalence claim, not the library's -- and moves under
-    `packages/pycop/` with the rest of the prover.

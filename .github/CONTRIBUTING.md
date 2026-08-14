@@ -24,8 +24,8 @@ uv run --group docs mkdocs build --strict -f docs/mkdocs.yml
 ```
 
 Do not edit the bundled Prolog reference provers under
-`tools/parity/reference_provers/`. Local SWI-Prolog compatibility adapters
-belong under `tools/parity/prolog/`.
+`packages/pycop/src/pycop/parity/reference_provers/`. Local SWI-Prolog
+compatibility adapters belong under `packages/pycop/src/pycop/parity/prolog/`.
 
 ## Release Checklist
 

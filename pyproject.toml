@@ -34,10 +34,6 @@ Documentation = "https://fredrrom.github.io/connections/"
 Repository = "https://github.com/fredrrom/connections"
 Issues = "https://github.com/fredrrom/connections/issues"
 
-[project.scripts]
-pycop = "provers.pycop.cli:main"
-connections-download-benchmarks = "connections.runs.download:main"
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 

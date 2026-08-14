@@ -10,6 +10,8 @@ Run these before sending changes:
 
 ```bash
 uv run pytest tests
+uv run --package pycop pytest packages/pycop/tests
+uv run --package imitation pytest packages/imitation/tests
 uv run ruff check .
 uv run ty check
 uv build

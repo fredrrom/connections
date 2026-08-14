@@ -1,0 +1,31 @@
+[project]
+name = "pycop"
+version = "0.1.0"
+description = "leanCoP-equivalent connection prover over connections, with a parity harness."
+readme = "README.md"
+license = { text = "GPL-3.0-or-later" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Fredrik Rømming", email = "fr409@cam.ac.uk" },
+]
+dependencies = [
+    "connections",
+]
+
+[project.scripts]
+pycop = "pycop.cli:main"
+pycop-download-benchmarks = "pycop.runs.download:main"
+
+[tool.uv.sources]
+connections = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.10.4,<0.11.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "pycop"
+module-root = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

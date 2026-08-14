@@ -14,19 +14,26 @@ proof-step parity.
 
 ## Package Layout
 
-- `connections.prover`: prover loop, state, dynamics, actions, strategies, and
-  result types
-- `connections.runs`: reusable corpus selection, prover-run rows, summaries,
-  and generic corpus execution
-- `connections.policy`: DFS and iterative-deepening policies
-- `provers.pycop`: leanCoP-family pycop strategies, schedules, settings,
-  and CLI
+The library, `src/connections/`, with dependencies running upward:
+
+- `connections.syntax`: terms, literals, clauses, matrices
+- `connections.parsing`: TPTP text to statements and formulas
+- `connections.clausification`: formulas to a matrix
 - `connections.constraints`: term and prefix unification, free-variable
   constraints
-- `connections.clausification`: file-to-matrix construction
-- `tools/`: local leanCoP-family parity diagnostics
+- `connections.calculus`: state, tableau, actions, rules, and dynamics
+- `connections.policy`: DFS and iterative-deepening policies
+- `connections.run`: problems, strategies, schedules, results, SZS status
 
-`tools/` is not part of the public package API.
+The packages built on it, under `packages/`:
+
+- `pycop`: leanCoP-family strategies, schedules, settings, CLI, corpus runs,
+  and the parity harness
+- `imitation`: learned policies, datasets, training, campaigns
+
+The parity diagnostics live in `pycop.parity`. They compare native behaviour
+with bundled leanCoP-family reference provers, need SWI-Prolog, and are
+developer commands rather than part of the normal checks.
 
 ## Install
 
@@ -68,7 +75,7 @@ pycop Problems/SYN --out artifacts/corpus/syn.jsonl --steps 1000 --overwrite
 Download benchmark corpora:
 
 ```bash
-connections-download-benchmarks --list
+pycop-download-benchmarks --list
 ```
 
 Supported logic arguments are `classical`, `intuitionistic`, `D`, `T`, `S4`,
@@ -81,13 +88,13 @@ input, intuitionistic ILTP `fof` input, and modal QMLTP `qmf` input.
 ## API Use
 
 ```python
-from connections.prover import (
+from connections.run import (
     ProblemSpec,
     Prover,
     StrategySchedule,
     WeightedStrategy,
 )
-from provers.pycop import LeancopSettingsCodec
+from pycop import LeancopSettingsCodec
 
 problem = ProblemSpec(
     "Problems/SYN/SYN001+1.p",
@@ -151,7 +158,8 @@ Guides:
 
 This project is licensed under GNU GPL v3 or later. See `LICENSE`.
 
-Third-party reference prover assets under `tools/parity/reference_provers/` are
+Third-party reference prover assets under
+`packages/pycop/src/pycop/parity/reference_provers/` are
 kept for local parity diagnostics and are not part of the public package API.
 
 ## Citation

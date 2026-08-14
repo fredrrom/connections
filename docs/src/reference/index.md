@@ -13,10 +13,7 @@ disagree the notes are the intent.
 | [parsing](parsing.md) | TPTP text to statements and formulas |
 | [clausification](clausification.md) | formulas to a matrix |
 | [constraints](constraints.md) | unification, substitutions, prefixes |
+| [calculus](calculus.md) | state, tableau, actions, rules, dynamics |
 | [policy](policy.md) | the policy interface and shipped policies |
+| [run](run.md) | problems, strategies, schedules, results, SZS |
 
-!!! note "Not yet covered"
-
-    The calculus and run surfaces are mid-restructure -- `prover` splits into
-    `calculus` and `run`. Reference pages for them land after that move, rather
-    than documenting module paths that are about to change.

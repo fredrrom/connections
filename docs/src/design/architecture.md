@@ -34,17 +34,16 @@ Dependencies run upward: `constraints` and `parsing` over `syntax`,
 about budgets, schedules or statuses; nothing below `policy` knows a policy
 exists.
 
-!!! note "Two cycles today"
+!!! note "One cycle today"
 
     `syntax` reaches into `constraints` from inside `Matrix`, which filters a
     literal's candidate complements by static unifiability -- a deferred import
     working around a real cycle. Deciding which literals can connect is a
     calculus question, so the filter belongs above `syntax`.
 
-    `policy` imports `actions`, `state`, `dynamics`, `rules` and `status` from
-    `prover`, which imports `policy` back. Every one of those is a calculus
-    thing, so splitting `prover` into `calculus` and `run` dissolves this one
-    on its own.
+    The `policy`/`prover` cycle is gone. Everything `policy` imported from
+    `prover` was a calculus thing, so splitting `prover` into `calculus` and
+    `run` dissolved it without further work.
 
 ## What `connections` is not
 

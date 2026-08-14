@@ -4,13 +4,13 @@ from dataclasses import dataclass
 from typing import TypeGuard
 
 from connections.syntax.matrix import Clause
-from connections.prover.status import ProverOutcome
+from connections.calculus.outcome import ProverOutcome
 from connections.policy.base import BacktrackGranularity
 from connections.policy.dfs import ChoicepointFrame, DFSPolicy
-from connections.prover.actions import Action, ApplyAction
-from connections.prover.dynamics import Dynamics
-from connections.prover.rules import Extension, FactorizationMode
-from connections.prover.state import State
+from connections.calculus.actions import Action, ApplyAction
+from connections.calculus.dynamics import Dynamics
+from connections.calculus.rules import Extension, FactorizationMode
+from connections.calculus.state import State
 from connections.trace_logging import trace, trace_logger
 
 _MODAL_LOGICS = frozenset({"D", "T", "S4", "S5"})

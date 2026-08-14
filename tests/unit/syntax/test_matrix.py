@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from connections.syntax.formula import Atom, Function, Prefix, Variable
 from connections.syntax.matrix import Clause, Literal, Matrix, SignedPredicateSymbol
-from connections.prover.prover import Problem
+from connections.calculus.problem import Problem
 
 
 def _assert_matrix_indices_consistent(matrix: Matrix) -> None:

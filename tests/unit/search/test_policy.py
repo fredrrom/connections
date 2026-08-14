@@ -8,22 +8,22 @@ import pytest
 from connections.clausification import matrix_from_file
 from connections.syntax.formula import Atom, Variable
 from connections.syntax.matrix import Clause, Literal, Matrix
-from connections.prover.status import ProverOutcome
+from connections.calculus.outcome import ProverOutcome
 import connections.policy.dfs as policy_module
 import connections.policy.id as id_policy_module
 from connections.policy import FirstActionIDPolicy
-from connections.prover.actions import (
+from connections.calculus.actions import (
     Action,
     AnyApplyAction,
     ApplyAction,
     ApplyActions,
     UndoAction,
 )
-from connections.prover.dynamics import Dynamics
-from connections.prover.prover import Problem
-from connections.prover.rules import Extension, Factorization, Reduction, Start
-from connections.prover.state import State
-from connections.prover.tableau import Tableau
+from connections.calculus.dynamics import Dynamics
+from connections.calculus.problem import Problem
+from connections.calculus.rules import Extension, Factorization, Reduction, Start
+from connections.calculus.state import State
+from connections.calculus.tableau import Tableau
 from connections.trace_logging import TRACE_LEVEL
 
 
