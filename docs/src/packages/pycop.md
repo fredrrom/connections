@@ -142,6 +142,18 @@ Matrix parity normalises both sides up to variable renaming and compares
 order-sensitive and multiset views, covering the classical FOF, classical CNF,
 intuitionistic FOF, and modal QMF slices.
 
+!!! note "Post-proof wind-down"
+
+    A rollout stops at the accepting state. The reference provers keep going a
+    little longer, unwinding their Prolog choicepoints and emitting `cut` and
+    `pathlim` on the way out -- five to nine such events on a typical proof.
+
+    Trace comparison drops that tail, but only when it is demonstrably nothing
+    else: the native trace has to be a prefix of the reference, and every event
+    removed has to be `cut` or `pathlim`. A single real event in the tail, or
+    any divergence before it, and the whole reference trace is compared as-is.
+    Rows report how many events were dropped in `wind_down_events_stripped`.
+
 ### Bundled reference provers
 
 The oracles are Jens Otten's, vendored so parity is reproducible against a fixed

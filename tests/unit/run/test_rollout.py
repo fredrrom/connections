@@ -143,11 +143,11 @@ def test_both_in_rollout_budgets_are_resource_out_not_timeout():
         assert to_szs_status(outcome, has_conjecture=True) is SZSStatus.RESOURCE_OUT
 
 
-def test_the_policy_is_consulted_at_the_final_state():
-    """Being called is the notification; there is no separate hook.
+def test_a_final_state_ends_the_rollout_without_consulting_the_policy():
+    """What the policy makes of success is the policy's own business.
 
-    The last call is the policy's chance to settle whatever its memory holds,
-    which is why it happens before the rollout reports success.
+    The rollout stops at an accepting state. It does not run the policy down
+    for one last turn it has nothing to do with.
     """
 
     class _Root:
@@ -170,12 +170,10 @@ def test_the_policy_is_consulted_at_the_final_state():
         constraints = _Constraints()
         problem = _Problem()
 
-    state = _AlreadyClosed()
     policy = _Scripted()
 
-    result = rollout(state, policy=policy)
+    result = rollout(_AlreadyClosed(), policy=policy)
 
     assert result.outcome is ProverOutcome.PROVED
-    assert policy.calls == 1, "the policy was given the final state"
-    assert policy.states_seen == [state]
+    assert policy.calls == 0
     assert result.steps == 0

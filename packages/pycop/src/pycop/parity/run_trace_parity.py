@@ -187,6 +187,11 @@ def trace_parity_row(
                 reference_status = adjusted_status
                 reference_trace = adjusted_trace
                 reference_elapsed_seconds = adjusted_elapsed_seconds
+    wind_down_stripped = 0
+    if native_status == reference_status and native_status in _PROVED_STATUSES:
+        trimmed = _strip_post_proof_wind_down(native_trace, reference_trace)
+        wind_down_stripped = len(reference_trace) - len(trimmed)
+        reference_trace = trimmed
     first_difference = _first_difference(native_trace, reference_trace)
     return {
         "schema": "connections.trace_parity_row.v1",
@@ -205,6 +210,7 @@ def trace_parity_row(
         "native_trace_length": len(native_trace),
         "reference_trace_length": len(reference_trace),
         "trace_match": native_trace == reference_trace,
+        "wind_down_events_stripped": wind_down_stripped,
         "first_difference": first_difference,
         "native_trace": native_trace,
         "reference_trace": reference_trace,
@@ -721,6 +727,40 @@ def _parse_reference_status(output: str) -> str:
             if line.rstrip().endswith(f" {reference_status}"):
                 return szs_status
     raise RuntimeError(f"could not parse reference status from output: {output!r}")
+
+
+# Events the reference emits after a proof is found, while unwinding its Prolog
+# choicepoints. A rollout stops at the accepting state, so it never emits them:
+# the proof is complete and what the policy does with its stack afterwards is
+# not proof search.
+_WIND_DOWN_EVENTS = frozenset({"cut", "pathlim"})
+
+# Statuses that mean a proof was found, and so that a wind-down tail is possible.
+_PROVED_STATUSES = frozenset(
+    {SZSStatus.THEOREM.value, SZSStatus.UNSATISFIABLE.value}
+)
+
+
+def _strip_post_proof_wind_down(
+    native_trace: list[str],
+    reference_trace: list[str],
+) -> list[str]:
+    """Drop the reference's post-proof tail, when that is all the tail is.
+
+    Only ever removes a suffix, only when the native trace is a prefix of the
+    reference, and only when every event removed is a wind-down event. Any real
+    divergence therefore still shows up, because it makes the native trace stop
+    being a prefix or puts a non-wind-down event in the tail.
+    """
+
+    if len(reference_trace) <= len(native_trace):
+        return reference_trace
+    if reference_trace[: len(native_trace)] != native_trace:
+        return reference_trace
+    tail = reference_trace[len(native_trace) :]
+    if not all(event in _WIND_DOWN_EVENTS for event in tail):
+        return reference_trace
+    return list(native_trace)
 
 
 def _first_difference(

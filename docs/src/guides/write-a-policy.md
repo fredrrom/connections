@@ -29,16 +29,16 @@ class FirstAdmissible(Policy):
 
 Returning `None` means "no action from me", and ends the rollout.
 
-## Being told the search is over
+## You are not told the search is over
 
-A policy is called at **every** state it reaches, including a final one. There
-is no separate notification hook, because being called *is* the notification.
+A rollout stops the moment it reaches an accepting state, and does not call the
+policy there. Success is the environment's verdict; what a policy makes of it is
+the policy's own business, and a rollout does not run it down for a turn it has
+nothing to do with.
 
-That last call is where a policy settles whatever its memory holds -- choice
-points that only become permanent on success, statistics to flush, a model to
-detach -- after which it returns `None` and the rollout stops. Whatever it
-returns at a final state is ignored: reaching an accepting state is the
-environment's verdict, not something the agent can decline.
+So do not expect a final call in which to tidy up. Anything that has to survive
+a proof -- statistics, a record of which choices were taken -- must be recorded
+as you go, not settled at the end.
 
 ## Saying why you stopped
 

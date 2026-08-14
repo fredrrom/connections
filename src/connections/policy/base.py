@@ -20,11 +20,9 @@ class Policy(ABC):
     actions only. Whether a state is terminal, whether a budget has run out, and
     what any of it means are the environment's to decide, not the agent's.
 
-    A policy is called at every state it reaches, *including* a final one. That
-    last call is its chance to settle anything its memory holds -- commitments
-    that only become final on success, statistics to flush -- after which it
-    returns ``None`` and the rollout ends. So a policy needs no separate
-    notification hook: being called is the notification.
+    A rollout stops as soon as it reaches an accepting state, so a policy is
+    not called there and should not expect a turn in which to tidy up. Anything
+    it wants to survive a proof has to be recorded as it goes.
 
     Everything a policy remembers -- a stack of untried alternatives, a depth
     bound, a search tree, a learned scorer -- is its own state, invisible to the

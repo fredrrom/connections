@@ -89,11 +89,9 @@ def rollout(
 
     while True:
         if _closed(state):
-            # The policy is consulted at the final state too. That call is its
-            # chance to settle whatever its memory holds; whatever it returns
-            # has nowhere to go, because reaching an accepting state is the
-            # environment's verdict and not the agent's to override.
-            policy(state)
+            # An accepting state ends the rollout. What the policy makes of
+            # that is the policy's own business; a rollout does not run it
+            # down for one last turn it has nothing to do with.
             outcome = ProverOutcome.PROVED
             break
         if step_limit is not None and len(actions) >= step_limit:
