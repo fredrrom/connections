@@ -1,5 +1,9 @@
 %% File: def_mm_intu.pl  -  Version: 1.01  -  Date: 08 April 2022
-%% Local notes:
+%%
+%% Modified 2023-2026 by the connections project for parity
+%% instrumentation. This is NOT the upstream file. Upstream is at
+%% https://www.leancop.de -- see ../NOTICE.md for provenance and terms.
+%% Changes:
 %%  - merged former def_mm_intu_f changes into def_mm_intu.pl
 %%
 %% Purpose: Transform first-order formulae into the intuitionistic

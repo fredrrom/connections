@@ -158,9 +158,13 @@ Guides:
 
 This project is licensed under GNU GPL v3 or later. See `LICENSE`.
 
-Third-party reference prover assets under
-`packages/pycop/src/pycop/parity/reference_provers/` are
-kept for local parity diagnostics and are not part of the public package API.
+The parity harness bundles leanCoP 2.1, ileanCoP 1.2 and MleanCoP 1.3 by
+Jens Otten (<https://www.leancop.de>), all under the GNU General Public
+License, as correctness oracles. They are not part of the `connections` or
+`pycop` API. Four of those files carry local parity instrumentation and are
+marked as modified. See
+[`packages/pycop/src/pycop/parity/reference_provers/NOTICE.md`](packages/pycop/src/pycop/parity/reference_provers/NOTICE.md)
+for provenance, copyright, and the list of changes.
 
 ## Citation
 

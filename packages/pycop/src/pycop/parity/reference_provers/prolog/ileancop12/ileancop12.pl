@@ -1,5 +1,9 @@
 %% File: ileancop12.pl  -  Version: 1.2  -  Date: 07 June 2007
-%% Connections changes:
+%%
+%% Modified 2023-2026 by the connections project for parity
+%% instrumentation. This is NOT the upstream file. Upstream is at
+%% https://www.leancop.de -- see ../NOTICE.md for provenance and terms.
+%% Changes:
 %%  - merged def_mm_intu_f behavior into def_mm_intu.pl
 %%  - added set_trace_mode/1 and trace_choice/1 for parity traces
 %%  - traces start, extension, reduction, lemma, backtrack, regularity,

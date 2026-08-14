@@ -25,7 +25,11 @@ uv run --group docs mkdocs build --strict -f docs/mkdocs.yml
 
 Do not edit the bundled Prolog reference provers under
 `packages/pycop/src/pycop/parity/reference_provers/`. Local SWI-Prolog
-compatibility adapters belong under `packages/pycop/src/pycop/parity/prolog/`.
+compatibility adapters belong under `packages/pycop/src/pycop/parity/prolog/`. The bundled provers are Jens Otten's, under the
+GNU General Public License; their provenance and the four files carrying local
+parity instrumentation are recorded in
+`packages/pycop/src/pycop/parity/reference_provers/NOTICE.md`, which must be
+updated alongside any further change.
 
 ## Release Checklist
 

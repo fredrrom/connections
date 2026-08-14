@@ -136,8 +136,31 @@ Matrix parity normalises both sides up to variable renaming and compares
 order-sensitive and multiset views, covering the classical FOF, classical CNF,
 intuitionistic FOF, and modal QMF slices.
 
+### Bundled reference provers
+
+The oracles are Jens Otten's, vendored so parity is reproducible against a fixed
+reference rather than whatever is installed:
+
+| | | |
+|---|---|---|
+| leanCoP 2.1 | classical | <https://www.leancop.de> |
+| ileanCoP 1.2 | intuitionistic | <https://www.leancop.de/ileancop/> |
+| MleanCoP 1.3 | modal D, T, S4, S5 | <https://www.leancop.de/mleancop/> |
+
+All under the GNU General Public License, which `connections` and `pycop` are
+compatible with as GPL-3.0-or-later.
+
+Four files carry local instrumentation -- trace events and step budgets, so a
+reference run emits the same search events the native prover does, which is what
+makes trace parity checkable. They are marked as modified in their headers.
+Provenance, copyright ranges, the file inventory, and the change list are in
+`reference_provers/NOTICE.md`.
+
 !!! warning "Reference assets are read-only"
 
-    Do not edit the copied reference provers. SWI-Prolog compatibility adapters
-    and other local helpers belong beside them, not inside them.
+    Do not edit the bundled provers further. SWI-Prolog compatibility adapters
+    and other local helpers belong in `pycop/parity/prolog/`, beside
+    `swi_compat.pl` and `matrix_dump.pl`. Any change that does land in a vendored
+    file must be recorded in its header and in `NOTICE.md` -- the GPL requires
+    modified files to say so and to carry a date.
 

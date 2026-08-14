@@ -1,5 +1,9 @@
 %% File: leancop21_swi.pl  -  Version: 2.1  -  Date: 30 Aug 2008
-%% Connections changes:
+%%
+%% Modified 2023-2026 by the connections project for parity
+%% instrumentation. This is NOT the upstream file. Upstream is at
+%% https://www.leancop.de -- see ../NOTICE.md for provenance and terms.
+%% Changes:
 %%  - added set_trace_mode/1 and trace_choice/1 for parity traces
 %%  - traces start, extension, reduction, lemma, backtrack, regularity,
 %%    path-limit, cut, and scut events
