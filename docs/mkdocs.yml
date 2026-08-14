@@ -11,6 +11,8 @@ theme:
   features:
     - navigation.sections
     - navigation.indexes
+    - navigation.top
+    - content.code.copy
     - search.highlight
     - search.suggest
   palette:
@@ -20,21 +22,53 @@ theme:
 
 nav:
   - Home: index.md
+  - Guides:
+    - Install: guides/install.md
+    - Prove a problem: guides/prove-a-problem.md
+    - Write a policy: guides/write-a-policy.md
+    - Development: guides/development.md
   - Design:
     - Architecture: design/architecture.md
+    - Language: design/language.md
+    - Constraints: design/constraints.md
     - Dynamics: design/dynamics.md
     - Running: design/running.md
-  - Prover API: prover-api.md
-  - State and Dynamics: state-dynamics.md
-  - Unification and Constraints: unification.md
-  - TPTP Parser: tptp-parser.md
-  - Corpus and Parity Tools: corpus-and-parity-tools.md
-  - Development Workflow: development.md
+  - Packages:
+    - pycop: packages/pycop.md
+    - satresetcop: packages/satresetcop.md
+    - imitation: packages/imitation.md
+  - API reference:
+    - Overview: reference/index.md
+    - syntax: reference/syntax.md
+    - parsing: reference/parsing.md
+    - clausification: reference/clausification.md
+    - constraints: reference/constraints.md
+    - policy: reference/policy.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [../src]
+          options:
+            show_root_heading: false
+            show_source: true
+            show_submodules: true
+            show_if_no_docstring: true
+            members_order: source
+            docstring_style: google
+            separate_signature: true
+            show_signature_annotations: true
+            filters: ["!^_"]
 
 markdown_extensions:
   - admonition
+  - attr_list
+  - md_in_html
   - toc:
       permalink: true
+  - pymdownx.details
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid

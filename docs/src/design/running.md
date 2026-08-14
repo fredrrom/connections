@@ -28,8 +28,8 @@ appended. A prune is one transition step and removes one or more inference
 steps. Budgets and reported step counts are transition steps.
 
 The state is mutated in place. Several rollouts from one state therefore need a
-copy per rollout -- cheap, because the matrix is immutable and shared and only
-the tableau and constraint store are duplicated.
+copy per rollout -- not too expensive, because the matrix is immutable and shared
+and only the tableau and constraint store are duplicated.
 
 **A strategy fixes what to roll out in, and with what.** Its matrix options fix
 the matrix and therefore *P(M)*; its policy options fix the policy. Two

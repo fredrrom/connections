@@ -48,13 +48,13 @@ exists.
 
 ## What `connections` is not
 
-It is not a prover. The named provers are packages: a configuration and a CLI
+It is not a prover. The named provers are in packages: a configuration and a CLI
 each.
 
 | | |
 |---|---|
 | `pycop` | leanCoP-equivalent strategies, parity harness, CLI |
-| `satcop` | SAT shadow and `Reset`, CLI |
+| `satresetcop` | SAT shadow and `Reset`, CLI |
 | `imitation` | learned policies, training, campaigns |
 
 A CLI owns argument parsing, schedule selection, SZS on stdout, and the exit
@@ -65,26 +65,12 @@ pool, or writes a file. `run` takes one problem and returns a `Result`, and
 `Result` knows how to serialise itself; selecting problems, spending CPUs on
 them, and aggregating what comes back are each package's own business.
 
-## Where the boundary falls
-
-**`connections` stops at one problem.** That is where CASC draws it -- systems
-there run "as black boxes, on one problem at a time" -- so the primitive is the
-shape every other prover already has.
-
-Above it, decisions differ irreconcilably. A laptop, a 400-core queue and a
-mixed Sapphire/Icelake fleet want different answers about how many problems run
-at once, what to do with one that will not stop, and whether a killed campaign
-resumes. An abstraction over all three is how a scheduling layer grows to 888
-lines.
-
-What is genuinely shared is the `Result`, and that is data.
-
 ## Packages and dependency edges
 
 ```
-connections   calculus, run, SZS                        -> lark
-pycop         leanCoP-equivalent prover, parity, CLI    -> connections
-satcop        SAT shadow, Reset, CLI                    -> connections
+connections   calculus, run, SZS                         -> lark
+pycop         leanCoP-equivalent prover, parity, CLI     -> connections
+satresetcop   SAT shadow, Reset, CLI                     -> connections
 imitation     policies, graph model, training, campaigns -> connections, torch
 ```
 
@@ -92,25 +78,22 @@ imitation     policies, graph model, training, campaigns -> connections, torch
 artefact and stays independently installable.
 
 Four distributions. A fifth earns its place when a second consumer needs the
-same thing: `imitation`'s campaign machinery would become one if `satcop`
+same thing: `imitation`'s campaign machinery would become one if `satresetcop`
 wanted resumable runs, and not before.
 
 ## Documents
 
+One note per group, plus this map.
+
 | | |
 |---|---|
+| [language](language.md) | source file to matrix: syntax, parsing, clausification |
+| [constraints](constraints.md) | what makes a connection admissible |
 | [dynamics](dynamics.md) | states, actions, transitions, undo |
-| [running](running.md) | rollout, strategy, schedule, run, limits, hardware |
+| [running](running.md) | rollout, strategy, schedule, run, limits, SZS |
 
-Nothing yet covers the language group: problem source to matrix to *s0*. That is
-chapter 3's first section in the dissertation and one clause about `build_state`
-here.
+These describe the target. The [API reference](../reference/index.md) is
+generated from docstrings and describes the code as it stands, which is not yet
+this; where they disagree, these notes are the intent.
 
-Notation follows the inter-conjecture paper, so that these docs and the
-dissertation name the same objects the same way. The division of labour is that
-a claim surviving a rewrite in another language is the thesis's, and a claim
-naming a module, a signature, or a known gap is these docs'. The correspondence
-table is in the dissertation's `docs/thesis-map.md`.
 
-The reference documentation under `docs/src/` describes the code as it stands
-today, which is not yet this. Where they disagree, these notes are the target.
