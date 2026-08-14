@@ -12,7 +12,7 @@ from connections.calculus.tableau import Tableau
 from connections.policy import Policy
 from connections.run.rollout import Rollout, rollout
 
-from tests.unit.run.test_prover import _non_theorem_matrix
+from tests.unit.run.test_run import _non_theorem_matrix
 
 
 def _state():

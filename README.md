@@ -90,9 +90,9 @@ input, intuitionistic ILTP `fof` input, and modal QMLTP `qmf` input.
 ```python
 from connections.run import (
     ProblemSpec,
-    Prover,
     StrategySchedule,
     WeightedStrategy,
+    run,
 )
 from pycop import LeancopSettingsCodec
 
@@ -109,13 +109,11 @@ schedule = StrategySchedule.from_weighted(
     timeout_seconds=5.0,
 )
 
-result = Prover().run(
-    problem,
-    schedule=schedule,
-)
+result = run(problem, schedule=schedule)
 
 print(result.outcome)
 print(result.szs_status)
+print(result.to_dict())
 ```
 
 Policies are called with the current state and return the next action:
@@ -128,9 +126,13 @@ class MyPolicy(Policy):
         ...
 ```
 
-Plain policies return `Action | None`. Search policies such as DFS and ID may
-return `ProverOutcome` when their search space is exhausted. `Prover` executes
-the selected action. `Dynamics` owns legal action generation.
+A policy returns actions only: `Action | None`. Whether a state is terminal and
+whether a budget ran out are the rollout's to decide, not the policy's. A policy
+that stopped because its search space is exhausted says so through
+`stop_reason()`, which is a separate question from the action channel.
+
+`Dynamics` owns legal action generation, `rollout` applies the chosen actions,
+and `run` drives a schedule of rollouts over one problem.
 
 ## Docs
 

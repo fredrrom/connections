@@ -3,14 +3,14 @@ from __future__ import annotations
 import time
 from typing import Any
 
-import connections.run.prover as prover_module
+import connections.run.run as run_module
 from connections.syntax.formula import Atom
 from connections.syntax.matrix import Clause, Literal, Matrix
 from connections.calculus.outcome import ProverOutcome
 from connections.run.szs import SZSStatus
 from connections.policy import FirstActionIDPolicy, Policy, PolicyDecision
 from connections.calculus.dynamics import Dynamics
-from connections.run.prover import ProblemSpec, Prover
+from connections.run.run import ProblemSpec, run as run_problem
 from connections.calculus.state import State
 from connections.run.strategy import (
     MatrixOptions,
@@ -99,7 +99,7 @@ def test_prover_run_uses_source_file_dirs(tmp_path):
     problem = tmp_path / "theorem.p"
     problem.write_text("include('axioms.ax').\nfof(c,conjecture,p).\n")
 
-    result = Prover().run(
+    result = run_problem(
         ProblemSpec(problem, source_file_dirs=(lib_dir,)),
         schedule=StrategySchedule.single(_first_strategy()),
     )
@@ -110,14 +110,14 @@ def test_prover_run_uses_source_file_dirs(tmp_path):
 
 def test_prover_run_follows_control_loop_to_theorem(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        prover_module, "matrix_from_file", lambda *args, **kwargs: _theorem_matrix()
+        run_module, "matrix_from_file", lambda *args, **kwargs: _theorem_matrix()
     )
     problem = tmp_path / "theorem.p"
     problem.write_text(
         "fof(a1,axiom,p).\nfof(c,conjecture,p).\n",
         encoding="utf-8",
     )
-    run_result = Prover().run(
+    run_result = run_problem(
         ProblemSpec(problem),
         schedule=StrategySchedule.single(_first_strategy()),
     )
@@ -131,7 +131,7 @@ def test_prover_run_follows_control_loop_to_theorem(tmp_path, monkeypatch):
 
 def test_prover_run_accepts_single_strategy(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        prover_module, "matrix_from_file", lambda *args, **kwargs: _theorem_matrix()
+        run_module, "matrix_from_file", lambda *args, **kwargs: _theorem_matrix()
     )
     problem = tmp_path / "theorem.p"
     problem.write_text(
@@ -139,7 +139,7 @@ def test_prover_run_accepts_single_strategy(tmp_path, monkeypatch):
         encoding="utf-8",
     )
 
-    result = Prover().run(
+    result = run_problem(
         ProblemSpec(problem),
         schedule=_first_strategy(),
     )
@@ -150,7 +150,7 @@ def test_prover_run_accepts_single_strategy(tmp_path, monkeypatch):
 
 def test_prover_run_reports_non_theorem_when_no_action(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        prover_module,
+        run_module,
         "matrix_from_file",
         lambda *args, **kwargs: _non_theorem_matrix(),
     )
@@ -159,7 +159,7 @@ def test_prover_run_reports_non_theorem_when_no_action(tmp_path, monkeypatch):
         "fof(a1,axiom,p).\nfof(c,conjecture,q).\n",
         encoding="utf-8",
     )
-    run_result = Prover().run(
+    run_result = run_problem(
         ProblemSpec(problem),
         schedule=StrategySchedule.single(_no_action_strategy()),
     )
@@ -174,7 +174,7 @@ def test_prover_run_reports_non_theorem_when_no_action(tmp_path, monkeypatch):
 
 def test_prover_step_limit_counts_transitions(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        prover_module,
+        run_module,
         "matrix_from_file",
         lambda *args, **kwargs: _non_theorem_matrix(),
     )
@@ -183,7 +183,7 @@ def test_prover_step_limit_counts_transitions(tmp_path, monkeypatch):
         "fof(a1,axiom,p).\nfof(c,conjecture,q).\n",
         encoding="utf-8",
     )
-    run_result = Prover().run(
+    run_result = run_problem(
         ProblemSpec(problem),
         schedule=_single_entry_schedule(_no_action_strategy(), steps=0),
     )
@@ -196,14 +196,14 @@ def test_prover_step_limit_counts_transitions(tmp_path, monkeypatch):
 
 def test_prover_run_requires_schedule(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        prover_module, "matrix_from_file", lambda *args, **kwargs: _theorem_matrix()
+        run_module, "matrix_from_file", lambda *args, **kwargs: _theorem_matrix()
     )
     problem = tmp_path / "theorem.p"
     problem.write_text(
         "fof(a1,axiom,p).\nfof(c,conjecture,p).\n",
         encoding="utf-8",
     )
-    run = Prover().run
+    run = run_problem
     try:
         run(ProblemSpec(problem))  # ty: ignore[missing-argument]
     except TypeError as err:
@@ -214,7 +214,7 @@ def test_prover_run_requires_schedule(tmp_path, monkeypatch):
 
 def test_prover_run_accepts_scheduled_entries(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        prover_module, "matrix_from_file", lambda *args, **kwargs: _theorem_matrix()
+        run_module, "matrix_from_file", lambda *args, **kwargs: _theorem_matrix()
     )
     problem = tmp_path / "theorem.p"
     problem.write_text(
@@ -224,7 +224,7 @@ def test_prover_run_accepts_scheduled_entries(tmp_path, monkeypatch):
     settings = _first_strategy()
     entry = WeightedStrategy(strategy=settings, weight=3)
 
-    result = Prover().run(
+    result = run_problem(
         ProblemSpec(problem),
         schedule=StrategySchedule.from_weighted((entry,)),
     )
@@ -236,7 +236,7 @@ def test_prover_run_accepts_scheduled_entries(tmp_path, monkeypatch):
 
 def test_prover_run_passes_closed_state_to_proof_callback(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        prover_module, "matrix_from_file", lambda *args, **kwargs: _theorem_matrix()
+        run_module, "matrix_from_file", lambda *args, **kwargs: _theorem_matrix()
     )
     problem = tmp_path / "theorem.p"
     problem.write_text(
@@ -247,7 +247,7 @@ def test_prover_run_passes_closed_state_to_proof_callback(tmp_path, monkeypatch)
         [WeightedStrategy(strategy=_first_strategy(), weight=1)]
     )
 
-    result = Prover().run(
+    result = run_problem(
         ProblemSpec(problem),
         schedule=schedule,
         on_proof_found=lambda event: event.state.tableau.root.closed,
@@ -268,7 +268,7 @@ def test_prover_caches_matrices_across_schedule_entries(tmp_path, monkeypatch):
         return _non_theorem_matrix()
 
     monkeypatch.setattr(
-        prover_module, "matrix_from_file", lambda *args, **kwargs: matrix_factory()
+        run_module, "matrix_from_file", lambda *args, **kwargs: matrix_factory()
     )
     problem = tmp_path / "non_theorem.p"
     problem.write_text(
@@ -284,7 +284,7 @@ def test_prover_caches_matrices_across_schedule_entries(tmp_path, monkeypatch):
             ),
         ]
     )
-    result = Prover().run(
+    result = run_problem(
         ProblemSpec(problem),
         schedule=schedule,
     )
@@ -299,7 +299,7 @@ def test_prover_timeout_includes_matrix_construction(tmp_path, monkeypatch):
         return _non_theorem_matrix()
 
     monkeypatch.setattr(
-        prover_module, "matrix_from_file", lambda *args, **kwargs: slow_matrix()
+        run_module, "matrix_from_file", lambda *args, **kwargs: slow_matrix()
     )
     problem = tmp_path / "non_theorem.p"
     problem.write_text(
@@ -308,7 +308,7 @@ def test_prover_timeout_includes_matrix_construction(tmp_path, monkeypatch):
     )
     settings = _no_action_strategy()
 
-    run_result = Prover().run(
+    run_result = run_problem(
         ProblemSpec(problem),
         schedule=_single_entry_schedule(settings, timeout_seconds=0.001),
     )
@@ -327,7 +327,7 @@ def test_prover_reports_expired_timeout_before_state_construction(tmp_path):
     )
     settings = _no_action_strategy()
 
-    run_result = Prover().run(
+    run_result = run_problem(
         ProblemSpec(problem),
         schedule=_single_entry_schedule(settings, timeout_seconds=0.0),
     )
@@ -344,7 +344,7 @@ def test_prover_reports_memory_error_as_memory_out(tmp_path, monkeypatch):
         raise MemoryError
 
     monkeypatch.setattr(
-        prover_module,
+        run_module,
         "matrix_from_file",
         lambda *args, **kwargs: exploding_matrix(**kwargs),
     )
@@ -355,7 +355,7 @@ def test_prover_reports_memory_error_as_memory_out(tmp_path, monkeypatch):
     )
     settings = _no_action_strategy()
 
-    run_result = Prover().run(
+    run_result = run_problem(
         ProblemSpec(problem),
         schedule=_single_entry_schedule(settings, timeout_seconds=1.0),
     )
@@ -366,16 +366,9 @@ def test_prover_reports_memory_error_as_memory_out(tmp_path, monkeypatch):
     assert result.inference_actions == 0
 
 
-def test_pycop_prover_is_direct_base_prover() -> None:
-    prover = Prover()
-
-    assert isinstance(prover, Prover)
-    assert prover.run.__func__ is Prover.run
-
-
 def test_pycop_prover_reinitializes_policy_for_each_run(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        prover_module,
+        run_module,
         "matrix_from_file",
         lambda *args, **kwargs: _non_theorem_matrix(),
     )
@@ -396,13 +389,12 @@ def test_pycop_prover_reinitializes_policy_for_each_run(tmp_path, monkeypatch):
         matrix=MatrixOptions(),
         policy=PolicyOptions(policy_class=TrackingPolicy),
     )
-    prover = Prover()
-
-    first = prover.run(
+    
+    first = run_problem(
         ProblemSpec(problem),
         schedule=StrategySchedule.single(settings),
     ).strategy_results[0]
-    second = prover.run(
+    second = run_problem(
         ProblemSpec(problem),
         schedule=StrategySchedule.single(settings),
     ).strategy_results[0]
@@ -422,7 +414,7 @@ def test_prover_wall_alarm_restores_signal_state(tmp_path):
     problem.write_text("fof(c,conjecture,p|~p).\n", encoding="utf-8")
     handler_before = signal.getsignal(signal.SIGALRM)
 
-    Prover().run(
+    run_problem(
         ProblemSpec(problem),
         schedule=_single_entry_schedule(_first_strategy(), timeout_seconds=30.0),
     )
@@ -433,7 +425,7 @@ def test_prover_wall_alarm_restores_signal_state(tmp_path):
 
 def test_proof_callback_shares_strategy_wall_clock_budget(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        prover_module, "matrix_from_file", lambda *args, **kwargs: _theorem_matrix()
+        run_module, "matrix_from_file", lambda *args, **kwargs: _theorem_matrix()
     )
     problem = tmp_path / "theorem.p"
     problem.write_text(
@@ -447,7 +439,7 @@ def test_proof_callback_shares_strategy_wall_clock_budget(tmp_path, monkeypatch)
         return "labels"
 
     started = time.monotonic()
-    result = Prover().run(
+    result = run_problem(
         ProblemSpec(problem),
         schedule=schedule,
         on_proof_found=slow_callback,

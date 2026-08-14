@@ -61,7 +61,7 @@ code.
 
 It also has no runner. Nothing in `connections` starts a process, manages a
 pool, or writes a file. `run` takes one problem and returns a `Result`, and
-`Result` knows how to serialise itself; selecting problems, spending CPUs on
+`Result.to_dict` serialises it; selecting problems, spending CPUs on
 them, and aggregating what comes back are each package's own business.
 
 ## Packages and dependency edges

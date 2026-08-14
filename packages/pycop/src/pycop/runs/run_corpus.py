@@ -13,10 +13,15 @@ from typing import Any, Generic, TypeVar
 from connections.syntax.logic import Domain, Logic
 from connections.calculus.outcome import ProverOutcome
 from connections.run.szs import SZSStatus
-from connections.run.prover import ProblemSpec, ProofFoundCallback, Prover, ProverResult
+from connections.run.result import Result
+from connections.run.run import (
+    ProblemSpec,
+    ProofFoundCallback,
+    run as run_one_problem,
+)
 from connections.run.strategy import Strategy, StrategySchedule
 
-ProblemRunner = Callable[[Path], ProverResult[Any]]
+ProblemRunner = Callable[[Path], Result[Any]]
 StrategyT = TypeVar("StrategyT", bound=Strategy)
 
 
@@ -48,7 +53,7 @@ class RunRecord(Generic[StrategyT]):
     index: int
     path: Path
     row: RunRow
-    result: ProverResult[StrategyT] | None = None
+    result: Result[StrategyT] | None = None
     proof_payload: Any | None = None
     error: BaseException | None = None
 
@@ -202,7 +207,7 @@ def run_corpus_records(
 
 def row_from_result(
     path: str | Path,
-    result: ProverResult[Any],
+    result: Result[Any],
     *,
     problem: str | None = None,
 ) -> RunRow:
@@ -335,17 +340,16 @@ def _scheduled_problem_runner(
     source_file_dirs: Sequence[str | Path],
     on_proof_found: ProofFoundCallback[Any] | None = None,
 ) -> ProblemRunner:
-    prover = Prover()
     source_dirs = tuple(source_file_dirs)
 
-    def run_problem(problem_path: Path) -> ProverResult[Any]:
+    def run_problem(problem_path: Path) -> Result[Any]:
         problem = ProblemSpec(
             problem_path,
             logic=logic,
             domain=domain,
             source_file_dirs=source_dirs,
         )
-        return prover.run(
+        return run_one_problem(
             problem,
             schedule=schedule,
             on_proof_found=on_proof_found,

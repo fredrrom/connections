@@ -6,11 +6,10 @@ Initial prover-loop release.
 
 ### Added
 
-- Concrete `Prover` loop with direct problem-path arguments and data-oriented
-  strategies.
-- Public action records under `connections.prover.actions`.
-- Reusable `connections.runs` helpers for problem selection, corpus-run rows,
-  summaries, and generic prover execution.
+- `run`, `build_state` and `rollout` as the entry points, over `calculus` for
+  the transition system and `run` for everything above it.
+- Public action records under `connections.calculus.actions`.
+- Corpus selection, run rows, summaries and profiling in `pycop.runs`.
 - DFS and iterative-deepening policy components with first-action default
   selection.
 - Transactional term, prefix, and free-variable constraint stores.
@@ -19,8 +18,8 @@ Initial prover-loop release.
   initial prefix-annotated non-classical slice.
 - `pycop` CLI with settings, schedules, source directories, trace output,
   corpus JSONL output, and budget options.
-- `connections-download-benchmarks` CLI for benchmark setup.
-- Developer tools for leanCoP-family parity checks.
+- `pycop-download-benchmarks` CLI for benchmark setup.
+- `pycop.parity` diagnostics for leanCoP-family parity checks.
 - MkDocs documentation under `docs/`.
 
 ### Public Boundary
@@ -28,17 +27,22 @@ Initial prover-loop release.
 The main API is:
 
 ```python
-from connections.prover import Prover
-from connections.prover import ProblemSpec, StrategySchedule, make_strategy
+from connections.run import ProblemSpec, Result, StrategySchedule, run
 
 problem = ProblemSpec("problem.p")
 schedule = StrategySchedule.single(make_strategy())
 
-result = Prover().run(problem, schedule=schedule)
+result: Result = run(problem, schedule=schedule)
+result.szs_status
+result.to_dict()
 ```
 
-`Prover` constructs a fresh policy from each strategy's policy options.
-Policies choose among legal actions provided by `Dynamics`. Successful results
-expose the final closed state.
+`run` handles one problem and returns a `Result`; `Result.to_dict` is the
+serialisation contract. Below it, `rollout(state, policy=...)` is a policy
+acting in *P(M)* from a state, and `build_state` is where a file becomes one.
+
+A fresh policy is constructed from each strategy's policy options. Policies
+choose among the actions `Dynamics` admits, and a successful result exposes the
+final closed state.
 
 Use this changelog section as the GitHub release body for `0.1.0`.

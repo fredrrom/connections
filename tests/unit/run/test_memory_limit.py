@@ -6,7 +6,7 @@ import types
 
 import pytest
 
-from connections.run.prover import _memory_limit
+from connections.run.limits import _memory_limit
 
 
 class _FakeResource:
@@ -64,7 +64,7 @@ def test_restore_failure_logs_warning(
     fake = _FakeResource(fail_restore=True)
     _install(monkeypatch, fake)
 
-    with caplog.at_level(logging.WARNING, logger="connections.run.prover"):
+    with caplog.at_level(logging.WARNING, logger="connections.run.limits"):
         with _memory_limit(100):
             pass
 

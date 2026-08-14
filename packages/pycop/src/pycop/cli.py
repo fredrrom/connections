@@ -21,7 +21,8 @@ from pycop.runs import (
     summarize_run_rows,
 )
 from connections.run.szs import SZSStatus
-from connections.run.prover import ProblemSpec, Prover, StrategyResult
+from connections.run.result import StrategyResult
+from connections.run.run import ProblemSpec, run as run_problem
 from connections.run.strategy import (
     PolicyOptions,
     ScheduledStrategy,
@@ -223,9 +224,9 @@ def main(argv: list[str] | None = None) -> int:
             domain=domain,
             source_file_dirs=source_file_dirs,
         )
-        prover = Prover()
+
         if not args.schedule:
-            run_result = prover.run(
+            run_result = run_problem(
                 problem,
                 schedule=StrategySchedule(entries=(schedule.entries[0],)),
             )
@@ -235,7 +236,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"METRIC inference_actions={result.inference_actions}")
             return 0
 
-        run_result = prover.run(
+        run_result = run_problem(
             problem,
             schedule=schedule,
         )
