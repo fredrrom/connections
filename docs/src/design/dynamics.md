@@ -114,3 +114,13 @@ planner instances of the same interface rather than variants of the system.
 
 The composition of policies from smaller parts, and why it fits reactive
 policies but not planners, is in [running](running.md).
+
+!!! warning "Known gap"
+
+    Iterative deepening does not respect this boundary today. Trace-parity work
+    against `{i,m}leanCoP` pushed path-limit tracing and extension-candidate
+    bookkeeping into the policy, so legal action generation is no longer
+    entirely `Dynamics`'. The current behaviour is what parity requires and
+    should not be changed to fix the layering; the target is an ID that is again
+    a small search-control layer over DFS, with candidate generation back where
+    it belongs.

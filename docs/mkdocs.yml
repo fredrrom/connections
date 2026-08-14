@@ -37,6 +37,7 @@ nav:
     - pycop: packages/pycop.md
     - satresetcop: packages/satresetcop.md
     - imitation: packages/imitation.md
+  - Changelog: changelog.md
   - API reference:
     - Overview: reference/index.md
     - syntax: reference/syntax.md

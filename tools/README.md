@@ -81,4 +81,4 @@ renaming. Classical `conj` rows also normalize away leanCoP's internal `#`
 conjecture marker because native matrices store that information as clause
 role/start metadata.
 
-See `CONTRIBUTING.md` for the full developer workflow.
+See `.github/CONTRIBUTING.md` for the full developer workflow.

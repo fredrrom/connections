@@ -11,7 +11,7 @@ Use `uv` for local development.
 
 The development workflow, normal checks, documentation commands, parity
 diagnostics, corpus runners, and profiling commands are documented in
-[`docs/src/development.md`](docs/src/development.md).
+[`docs/src/guides/development.md`](../docs/src/guides/development.md).
 
 The fast local checks are:
 
@@ -29,5 +29,5 @@ belong under `tools/parity/prolog/`.
 
 ## Release Checklist
 
-Use the relevant `CHANGELOG.md` section as the GitHub release body. Do not tag
+Use the relevant `docs/src/changelog.md` section as the GitHub release body. Do not tag
 or publish a release until the release checklist has been run and reviewed.

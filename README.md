@@ -34,7 +34,7 @@ proof-step parity.
 pip install git+https://github.com/fredrrom/connections.git
 ```
 
-For development, see [Development Workflow](docs/src/development.md).
+For development, see [Development](docs/src/guides/development.md).
 
 ## pycop CLI
 
@@ -127,14 +127,25 @@ the selected action. `Dynamics` owns legal action generation.
 
 ## Docs
 
-- [Prover API](docs/src/prover-api.md)
-- [State and Dynamics](docs/src/state-dynamics.md)
-- [Unification and Constraints](docs/src/unification.md)
-- [TPTP Parser](docs/src/tptp-parser.md)
-- [Corpus and Parity Tools](docs/src/corpus-and-parity-tools.md)
-- [Development Workflow](docs/src/development.md)
-- [Contributing](CONTRIBUTING.md)
-- [Changelog](CHANGELOG.md)
+Published at <https://fredrrom.github.io/connections/>.
+
+Design notes, which state the target and argue the boundaries:
+
+- [Architecture](docs/src/design/architecture.md) -- what is library, what is package
+- [Language](docs/src/design/language.md) -- source file to matrix
+- [Constraints](docs/src/design/constraints.md) -- what makes a connection admissible
+- [Dynamics](docs/src/design/dynamics.md) -- states, actions, transitions, undo
+- [Running](docs/src/design/running.md) -- rollout, strategy, schedule, run, limits, SZS
+
+Guides:
+
+- [Install](docs/src/guides/install.md)
+- [Prove a problem](docs/src/guides/prove-a-problem.md)
+- [Write a policy](docs/src/guides/write-a-policy.md)
+- [Development](docs/src/guides/development.md)
+
+- [Contributing](.github/CONTRIBUTING.md)
+- [Changelog](docs/src/changelog.md)
 
 ## License
 
