@@ -14,7 +14,7 @@ from connections.syntax.logic import Domain, Logic
 from connections.calculus.outcome import ProverOutcome
 from connections.run.szs import SZSStatus
 from connections.run.result import Result
-from connections.run.run import (
+from connections.run.entry import (
     ProblemSpec,
     ProofFoundCallback,
     run as run_one_problem,

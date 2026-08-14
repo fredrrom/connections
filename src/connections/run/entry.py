@@ -1,5 +1,10 @@
 """One problem, one result.
 
+Named ``entry`` rather than ``run`` because a submodule ``connections.run.run``
+would shadow the ``run`` function: Python binds a submodule as an attribute of
+its package, and that lookup wins before any lazy export in ``__init__``. The
+public name is ``connections.run.run``; this module is where it is defined.
+
 ``run`` is the highest entry point ``connections`` has. It handles a single
 problem, in the calling process, with no notion of other problems and no
 opinion about how many should be in flight. That is where CASC draws the line

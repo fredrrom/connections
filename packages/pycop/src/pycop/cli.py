@@ -22,7 +22,7 @@ from pycop.runs import (
 )
 from connections.run.szs import SZSStatus
 from connections.run.result import StrategyResult
-from connections.run.run import ProblemSpec, run as run_problem
+from connections.run.entry import ProblemSpec, run as run_problem
 from connections.run.strategy import (
     PolicyOptions,
     ScheduledStrategy,

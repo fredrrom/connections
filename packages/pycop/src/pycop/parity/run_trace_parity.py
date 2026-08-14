@@ -14,7 +14,7 @@ from typing import Any, Iterator, Sequence
 
 
 from connections.run.szs import SZSStatus
-from connections.run.run import ProblemSpec, run as run_problem
+from connections.run.entry import ProblemSpec, run as run_problem
 from connections.run.strategy import StrategySchedule
 from pycop.settings_codec import LeancopSettingsCodec
 from connections.trace_logging import trace_event_sink

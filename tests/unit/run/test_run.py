@@ -3,14 +3,14 @@ from __future__ import annotations
 import time
 from typing import Any
 
-import connections.run.run as run_module
+import connections.run.entry as run_module
 from connections.syntax.formula import Atom
 from connections.syntax.matrix import Clause, Literal, Matrix
 from connections.calculus.outcome import ProverOutcome
 from connections.run.szs import SZSStatus
 from connections.policy import FirstActionIDPolicy, Policy, PolicyDecision
 from connections.calculus.dynamics import Dynamics
-from connections.run.run import ProblemSpec, run as run_problem
+from connections.run.entry import ProblemSpec, run as run_problem
 from connections.calculus.state import State
 from connections.run.strategy import (
     MatrixOptions,
@@ -448,3 +448,32 @@ def test_proof_callback_shares_strategy_wall_clock_budget(tmp_path, monkeypatch)
     assert time.monotonic() - started < 3.0
     assert result.outcome is ProverOutcome.PROVED
     assert result.proof_payload is None
+
+
+def test_the_package_exports_the_function_not_a_module():
+    """`from connections.run import run` must give the callable.
+
+    A submodule named `run` inside the package `run` would shadow it: Python
+    binds a submodule as an attribute of its package, and that lookup wins
+    before any lazy export in __init__. The module is called `entry` for
+    exactly this reason, and this test is what notices if it moves back.
+    """
+    import types
+
+    from connections.run import build_state, rollout, run
+
+    for name, obj in (("run", run), ("build_state", build_state), ("rollout", rollout)):
+        assert callable(obj), f"connections.run.{name} is {obj!r}"
+        assert not isinstance(obj, types.ModuleType), f"{name} resolved to a module"
+
+
+def test_importing_a_submodule_does_not_shadow_the_function():
+    """Importing connections.run.rollout must not rebind the package attribute."""
+    import types
+
+    import connections.run
+    import connections.run.rollout  # noqa: F401  -- the adversarial case
+
+    assert callable(connections.run.rollout)
+    assert not isinstance(connections.run.rollout, types.ModuleType)
+    assert callable(connections.run.run)
