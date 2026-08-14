@@ -9,6 +9,7 @@ class ProverOutcome(Enum):
     DFS_EXHAUSTED = "DFSExhausted"
     TIMEOUT = "Timeout"
     STEP_BUDGET = "StepBudget"
+    TIME_BUDGET = "TimeBudget"
     MEMORY_OUT = "MemoryOut"
     ERROR = "Error"
 

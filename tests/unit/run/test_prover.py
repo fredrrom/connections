@@ -166,11 +166,13 @@ def test_prover_run_reports_non_theorem_when_no_action(tmp_path, monkeypatch):
     result = run_result.strategy_results[0]
 
     assert result.outcome is None
-    assert result.steps == 1
+    # A step is an application of T, so a policy call that yields no action is
+    # not a step. The policy was consulted once and offered nothing.
+    assert result.steps == 0
     assert result.inference_actions == 0
 
 
-def test_prover_step_limit_counts_policy_calls(tmp_path, monkeypatch):
+def test_prover_step_limit_counts_transitions(tmp_path, monkeypatch):
     monkeypatch.setattr(
         prover_module,
         "matrix_from_file",

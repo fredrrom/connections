@@ -71,6 +71,9 @@ class DFSPolicy(Policy):
         _ = state, actions
         self._consume_choicepoint_action(action)
 
+    def on_tableau_closed(self, state: State) -> None:
+        self._on_tableau_closed(state)
+
     def _on_tableau_closed(self, state: State) -> None:
         self._discard_deleted_choicepoints(state)
         self._commit_closed_choicepoints(state)

@@ -38,10 +38,12 @@ def to_szs_status(
         return SZSStatus.TIMEOUT
     if outcome is ProverOutcome.MEMORY_OUT:
         return SZSStatus.MEMORY_OUT
-    if outcome is ProverOutcome.STEP_BUDGET:
-        # The step budget is the prover's own resource; exhausting it is a
-        # ResourceOut in SZS terms. Wall-clock and memory verdicts (Timeout,
-        # MemoryOut) belong to whatever supervises the prover process.
+    if outcome in (ProverOutcome.STEP_BUDGET, ProverOutcome.TIME_BUDGET):
+        # Both are the prover's own allotment running out, which is what
+        # ResourceOut means. Timeout and MemoryOut are claims about a process
+        # and belong to whatever supervises it: only a watching process can
+        # make them, since its clock includes interpreter startup no in-process
+        # timer sees, and a search killed for memory says nothing at all.
         return SZSStatus.RESOURCE_OUT
     if outcome is ProverOutcome.ERROR:
         return SZSStatus.ERROR

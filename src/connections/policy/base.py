@@ -12,16 +12,30 @@ BacktrackGranularity: TypeAlias = Literal["step", "maximal"]
 
 
 class Policy(ABC):
-    """Action policy used by ``Prover``.
+    """A choice among the actions the calculus admits at a state.
 
-    The only public policy operation is calling it with the current prover
-    state. Plain policies return an action or ``None``. Search policies such as
-    DFS and ID may also return a prover outcome when their search is exhausted.
+    The only required operation is calling the policy with the current state.
+    Plain policies return an action or ``None``. Policies with memory may also
+    return a prover outcome, which is how they say *why* nothing is left --
+    something an empty action set cannot distinguish from a budget running out.
+
+    Everything a policy remembers -- a stack of untried alternatives, a depth
+    bound, a search tree, a learned scorer -- is its own state, invisible to the
+    transition system.
     """
 
     @abstractmethod
     def __call__(self, state: State) -> object:
         raise NotImplementedError
+
+    def on_tableau_closed(self, state: State) -> None:
+        """Notify the policy that the tableau closed after its last action.
+
+        A rollout calls this before it stops, so a policy whose memory holds
+        commitments that only become final on success can settle them. The
+        default does nothing; policies without such memory need not care.
+        """
+        _ = state
 
 
 __all__ = [

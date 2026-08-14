@@ -7,18 +7,16 @@ import logging
 import signal
 import time
 from collections.abc import Callable
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, Generic, TypeVar
 
 from connections.clausification import matrix_from_file
 from connections.syntax.logic import Domain, Logic
 from connections.syntax.matrix import Matrix
 from connections.calculus.outcome import ProverOutcome
 from connections.run.szs import SZSStatus, to_szs_status
-from connections.policy import DFSPolicy, Policy
-from connections.calculus.actions import Action, ApplyAction
-from connections.calculus.dynamics import Dynamics
 from connections.calculus.problem import Problem
 from connections.calculus.state import State
+from connections.run.rollout import rollout
 from connections.run.strategy import (
     MatrixOptions,
     ScheduledStrategy,
@@ -26,7 +24,6 @@ from connections.run.strategy import (
     StrategySchedule,
 )
 from connections.calculus.tableau import Tableau
-from connections.trace_logging import trace, trace_logger
 
 
 StrategyT = TypeVar("StrategyT", bound=Strategy)
@@ -273,11 +270,19 @@ class Prover:
                     matrix_cache=matrix_cache,
                 )
                 policy = strategy.policy.instantiate()
-                steps, inference_actions, outcome = self._run_strategy_loop(
+                attempt = rollout(
                     state,
                     policy=policy,
                     step_limit=entry.step_limit,
+                    deadline=(
+                        None
+                        if entry.timeout_seconds is None
+                        else started_at + entry.timeout_seconds
+                    ),
                 )
+                outcome = attempt.outcome
+                steps = attempt.steps
+                inference_actions = attempt.inference_steps
         except WallClockExceeded:
             outcome = ProverOutcome.TIMEOUT
         except MemoryError:
@@ -299,55 +304,6 @@ class Prover:
             result=result,
             proof_state=state if outcome is ProverOutcome.PROVED else None,
         )
-
-    def _run_strategy_loop(
-        self,
-        state: State,
-        *,
-        policy: Policy,
-        step_limit: int | None,
-    ) -> tuple[int, int, ProverOutcome | None]:
-        outcome: ProverOutcome | None = None
-        steps = 0
-        inference_actions = 0
-        while outcome is None:
-            if state.tableau.root.closed and state.constraints.satisfiable(
-                logic=state.problem.logic,
-                domain=state.problem.domain,
-            ):
-                outcome = ProverOutcome.PROVED
-                break
-            if step_limit is not None and steps >= step_limit:
-                outcome = ProverOutcome.STEP_BUDGET
-                break
-
-            output = cast(Action | ProverOutcome | None, policy(state))
-            steps += 1
-            if isinstance(output, ProverOutcome):
-                outcome = output
-                break
-            if output is None:
-                break
-            action = output
-
-            if isinstance(action, ApplyAction):
-                inference_actions += 1
-
-            Dynamics.transition(state, action)
-            trace(trace_logger, action.trace_event())
-            if (
-                state.tableau.root.closed
-                and outcome is None
-                and state.constraints.satisfiable(
-                    logic=state.problem.logic,
-                    domain=state.problem.domain,
-                )
-            ):
-                if isinstance(policy, DFSPolicy):
-                    policy._on_tableau_closed(state)
-                outcome = ProverOutcome.PROVED
-
-        return steps, inference_actions, outcome
 
     def _build_state_from_file(
         self,
