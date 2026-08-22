@@ -21,8 +21,8 @@ the unit both consumers share -- the prover runs rollouts to get verdicts, a
 learner runs rollouts to get trajectories.
 
 The prover is the judge around the rollout. It builds the matrix per strategy,
-runs the agent under each entry's share of the budget, verifies claimed
-closure against the state, maps the agent's status to an outcome and SZS, and
+runs the agent under each entry's share of the budget, maps the agent's
+status to an outcome and SZS, and
 aggregates across the schedule by strength of verdict. A strategy pairs a
 formulation with an agent recipe; a schedule is a portfolio over both, first
 proof wins.
@@ -188,15 +188,17 @@ affirmatively.
 **The judge** combines the rollout's observation with the agent's status:
 
 ```
-state verifiably closed              -> PROVED     -> Theorem / Unsatisfiable
-AGENT_DONE, status in the map        -> EXHAUSTED  -> CounterSatisfiable / Satisfiable
+AGENT_DONE, CLOSED                   -> PROVED     -> Theorem / Unsatisfiable
+AGENT_DONE, an exhaustion status     -> EXHAUSTED  -> CounterSatisfiable / Satisfiable
 AGENT_DONE otherwise                 -> GAVE_UP    -> GaveUp
 STEP_BUDGET / TIME_BUDGET            -> RESOURCE_OUT
 ```
 
-Closure is verified first, from the state itself, whatever the agent said: a
-proof found on the last budgeted step is still a proof, and an agent that
-believed it closed when the state disagrees is an error, never a proof.
+The judge believes the agent completely. The agent-environment split is an
+architecture, not a trust boundary: everything on both sides is one program,
+soundness rests on the environment admitting only valid edits, and a CLOSED
+report is an observation of the percept. Anyone who doubts a certificate can
+replay it.
 
 **The warrant.** An exhaustion status is valid only with systematic coverage
 of a complete fragment of the action space. Discipline may ignore rule

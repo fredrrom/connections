@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from connections.agent import Agent
+from connections.agent import Agent, AgentStatus
 from connections.env.actions import Action
 from connections.env.dynamics import Dynamics
 from connections.env.state import State
@@ -15,6 +15,9 @@ from pycop.runs import RunRow, run_corpus, run_corpus_records, summarize_run_row
 
 class _FirstRulePolicy(Agent):
     def __call__(self, state: State) -> Action | None:
+        if state.tableau.root.closed:
+            self.status = AgentStatus.CLOSED
+            return None
         for goal in state.fringe:
             actions = Dynamics.apply_actions(state, goal).ordered()
             if actions:

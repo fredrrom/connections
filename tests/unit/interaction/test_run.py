@@ -50,6 +50,9 @@ def _non_theorem_matrix() -> Matrix:
 
 class _FirstRulePolicy(Agent):
     def __call__(self, state: State) -> Action | None:
+        if state.tableau.root.closed:
+            self.status = AgentStatus.CLOSED
+            return None
         for goal in state.fringe:
             actions = Dynamics.apply_actions(
                 state,

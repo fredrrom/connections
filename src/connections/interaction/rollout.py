@@ -2,7 +2,9 @@
 
 A rollout is the bare agent-environment loop: state, agent, budgets. It knows
 nothing about closure, proofs, or SZS -- every proof-specific semantic lives in
-the judge that reads its result. By the time a rollout starts, ``P(M)`` exists
+the judge that reads its result. The agent-environment split is an
+architecture, not a trust boundary: everything on both sides is one program,
+and soundness rests on the environment admitting only valid edits. By the time a rollout starts, ``P(M)`` exists
 and the state is a point in it.
 """
 
@@ -31,8 +33,8 @@ def rollout(
 
     The state is mutated in place, so several rollouts from one state need a
     copy each. The agent is called at every state it reaches, including a
-    final one: closure is the agent's to observe and report, and the judge's
-    to verify. ``deadline`` is a ``time.monotonic()`` value checked between
+    final one: closure is the agent's to observe and report, and the judge
+    believes it. ``deadline`` is a ``time.monotonic()`` value checked between
     steps at the same point as ``step_limit``, because the two fail the same
     way -- a step that never returns is a supervisor's problem, not a budget's.
     """

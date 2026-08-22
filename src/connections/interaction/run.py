@@ -217,38 +217,22 @@ def _strategy_schedule(
     return StrategySchedule.single(schedule)
 
 
-def _verified_closed(state: State) -> bool:
-    """The judge's own check of S-check membership: trust, then verify."""
-    return state.tableau.root.closed and state.constraints.satisfiable(
-        logic=state.matrix.logic,
-        domain=state.matrix.domain,
-    )
-
-
-# Agent statuses mapped to outcomes. Statuses absent from the map
-# carry no claim and fall through to GAVE_UP.
+# The agent's status, in the prover's vocabulary. The judge believes the agent
+# completely: soundness rests on the environment, which admits only valid
+# edits, so a CLOSED report is an observation of the percept, not a claim to
+# check. Statuses absent from the map carry no claim and fall to GAVE_UP.
 _STATUS_OUTCOME = {
+    AgentStatus.CLOSED: ProverOutcome.PROVED,
     AgentStatus.DFS_EXHAUSTED: ProverOutcome.EXHAUSTED,
     AgentStatus.ID_FIXED_POINT: ProverOutcome.EXHAUSTED,
 }
 
 
-def _judge(attempt, state: State) -> ProverOutcome:
-    """Turn the rollout result and the agent's status into an outcome.
-
-    Closure is checked first, from the state itself, regardless of what the
-    agent reported: a proof found on the last budgeted step is still a proof.
-    The agent's status only decides the negative outcomes, via the map above.
-    """
-    if _verified_closed(state):
-        return ProverOutcome.PROVED
+def _judge(attempt) -> ProverOutcome:
     if attempt.stop is Stop.STEP_BUDGET:
         return ProverOutcome.STEP_BUDGET
     if attempt.stop is Stop.TIME_BUDGET:
         return ProverOutcome.TIME_BUDGET
-    if attempt.status is AgentStatus.CLOSED:
-        # The agent believed it closed; the state says otherwise.
-        return ProverOutcome.ERROR
     return _STATUS_OUTCOME.get(attempt.status, ProverOutcome.GAVE_UP)
 
 
@@ -303,7 +287,7 @@ def run_strategy(
             else started_at + entry.timeout_seconds
         ),
     )
-    outcome = _judge(attempt, state)
+    outcome = _judge(attempt)
     agent_status = attempt.status
     trajectory = attempt.actions
     steps = attempt.steps
