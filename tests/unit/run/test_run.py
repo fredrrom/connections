@@ -8,7 +8,15 @@ from connections.syntax.formula import Atom
 from connections.syntax.matrix import Clause, Literal, Matrix
 from connections.run.outcome import ProverOutcome
 from connections.run.szs import SZSStatus
-from connections.agent import AgentStatus, FirstActionIDPolicy, Agent, AgentDecision
+from connections.agent import (
+    Agent,
+    AgentDecision,
+    AgentStatus,
+    IDMemory,
+    ModelBasedAgent,
+    first,
+    first_action_id_agent,
+)
 from connections.calculus.dynamics import Dynamics
 from connections.run.entry import Problem, run as run_problem
 from connections.calculus.state import State
@@ -79,7 +87,7 @@ def _no_action_strategy() -> Strategy:
 def _leancop_strategy(**policy_args: Any) -> Strategy:
     return Strategy(
         matrix=MatrixOptions(),
-        policy=PolicyOptions(policy_class=FirstActionIDPolicy, args=policy_args),
+        policy=PolicyOptions(policy_class=first_action_id_agent, args=policy_args),
     )
 
 
@@ -388,36 +396,35 @@ def test_pycop_prover_reinitializes_policy_for_each_run(tmp_path, monkeypatch):
         "fof(a1,axiom,p).\nfof(c,conjecture,q).\n",
         encoding="utf-8",
     )
-    class TrackingPolicy(FirstActionIDPolicy):
-        policies: list[Agent] = []
+    created: list[Agent] = []
 
-        def __init__(self) -> None:
-            super().__init__()
-            self.policies.append(self)
+    def tracking_agent(**options):
+        agent = ModelBasedAgent(IDMemory(**options), first)
+        created.append(agent)
+        return agent
 
-    TrackingPolicy.policies = []
     settings = Strategy(
         matrix=MatrixOptions(),
-        policy=PolicyOptions(policy_class=TrackingPolicy),
+        policy=PolicyOptions(policy_class=tracking_agent),
     )
-    
-    first = run_problem(
+
+    first_result = run_problem(
         Problem(problem),
         schedule=StrategySchedule.single(settings),
     ).strategy_results[0]
-    second = run_problem(
+    second_result = run_problem(
         Problem(problem),
         schedule=StrategySchedule.single(settings),
     ).strategy_results[0]
 
-    assert first.outcome is ProverOutcome.EXHAUSTED
-    assert first.agent_status is AgentStatus.ID_FIXED_POINT
-    assert first.szs_status is SZSStatus.COUNTER_SATISFIABLE
-    assert second.outcome is ProverOutcome.EXHAUSTED
-    assert second.agent_status is AgentStatus.ID_FIXED_POINT
-    assert second.szs_status is SZSStatus.COUNTER_SATISFIABLE
-    assert len(TrackingPolicy.policies) == 2
-    assert TrackingPolicy.policies[0] is not TrackingPolicy.policies[1]
+    assert first_result.outcome is ProverOutcome.EXHAUSTED
+    assert first_result.agent_status is AgentStatus.ID_FIXED_POINT
+    assert first_result.szs_status is SZSStatus.COUNTER_SATISFIABLE
+    assert second_result.outcome is ProverOutcome.EXHAUSTED
+    assert second_result.agent_status is AgentStatus.ID_FIXED_POINT
+    assert second_result.szs_status is SZSStatus.COUNTER_SATISFIABLE
+    assert len(created) == 2
+    assert created[0] is not created[1]
 
 
 def test_prover_wall_alarm_restores_signal_state(tmp_path):

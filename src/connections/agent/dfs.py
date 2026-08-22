@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from abc import abstractmethod
 from dataclasses import dataclass
 
 from connections.agent.base import (
-    Agent,
     AgentStatus,
     BacktrackGranularity,
     StartMode,
@@ -16,7 +14,6 @@ from connections.calculus.rules import FactorizationMode, Start
 from connections.calculus.state import State
 from connections.trace_logging import trace, trace_logger
 
-DFSAgentDecision = Action | None
 
 
 @dataclass(slots=True)
@@ -36,7 +33,15 @@ class ChoicepointFrame:
 Frame = WorkFrame | ChoicepointFrame
 
 
-class DFSPolicy(Agent):
+class DFSMemory:
+    """leanCoP's search discipline as a memory: a stack of choicepoints.
+
+    Everything here is the machinery that used to be DFSPolicy, moved rather
+    than rewritten: ``exposed`` is the old action preparation, ``update`` the
+    old post-action bookkeeping. What used to be the abstract _next_action is
+    now a chooser supplied by whoever composes the agent.
+    """
+
     def __init__(
         self,
         *,
@@ -53,10 +58,11 @@ class DFSPolicy(Agent):
         self.start = start
         self._stack: list[Frame] = []
         self._status = AgentStatus.SEARCHING
+        self._exposed_actions: tuple[Action, ...] = ()
 
-    def __call__(self, state: State) -> DFSAgentDecision:
+    def exposed(self, state: State) -> tuple[Action, ...]:
         # _prepare_actions settles closed choicepoints on the way in, so the
-        # call at a final state does this agent's shutdown before yielding
+        # call at a final state does this memory's shutdown before exposing
         # nothing.
         actions = self._available_actions(state)
         if not actions:
@@ -65,11 +71,13 @@ class DFSPolicy(Agent):
                 if state.tableau.root.closed
                 else self._exhaustion_status()
             )
-            return None
+            return ()
         self._status = AgentStatus.SEARCHING
-        action = self._next_action(state, actions)
-        self._after_action(state, actions, action)
-        return action
+        self._exposed_actions = actions
+        return actions
+
+    def update(self, state: State, action: Action) -> None:
+        self._after_action(state, self._exposed_actions, action)
 
     def status(self) -> AgentStatus:
         return self._status
@@ -89,10 +97,6 @@ class DFSPolicy(Agent):
     def _available_actions(self, state: State) -> tuple[Action, ...]:
         actions = self._prepare_actions(state)
         return () if actions is None else actions
-
-    @abstractmethod
-    def _next_action(self, state: State, actions: tuple[Action, ...]) -> Action:
-        raise NotImplementedError
 
     def _after_action(
         self,
@@ -447,7 +451,7 @@ class DFSPolicy(Agent):
 
 __all__ = [
     "ChoicepointFrame",
-    "DFSPolicy",
+    "DFSMemory",
     "Frame",
     "WorkFrame",
 ]

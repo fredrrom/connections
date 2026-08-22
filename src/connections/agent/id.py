@@ -6,7 +6,8 @@ from typing import TypeGuard
 from connections.syntax.matrix import Clause
 from connections.agent.base import BacktrackGranularity
 from connections.agent.base import AgentStatus, StartMode, start_clause_ids
-from connections.agent.dfs import ChoicepointFrame, DFSPolicy
+from connections.agent.memory import ModelBasedAgent, first
+from connections.agent.dfs import ChoicepointFrame, DFSMemory
 from connections.calculus.actions import Action, ApplyAction
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.rules import Extension, FactorizationMode
@@ -23,7 +24,11 @@ class IterativeDeepeningOptions:
     initial_depth: int = 1
 
 
-class IDPolicy(DFSPolicy):
+class IDMemory(DFSMemory):
+    """Iterative deepening over the DFS memory: the depth ladder, comp
+    switching, and the path-limit discipline that decides whether a fixed
+    point may be claimed."""
+
     def __init__(
         self,
         *,
@@ -312,14 +317,13 @@ def _is_extension_action(action: Action) -> TypeGuard[ApplyAction[Extension]]:
     return isinstance(action, ApplyAction) and isinstance(action.rule, Extension)
 
 
-class FirstActionIDPolicy(IDPolicy):
-    def _next_action(self, state: State, actions: tuple[Action, ...]) -> Action:
-        _ = state
-        return actions[0]
+def first_action_id_agent(**options) -> ModelBasedAgent:
+    """leanCoP's agent: iterative-deepening memory, first-choice chooser."""
+    return ModelBasedAgent(IDMemory(**options), first)
 
 
 __all__ = [
-    "FirstActionIDPolicy",
-    "IDPolicy",
+    "IDMemory",
+    "first_action_id_agent",
     "IterativeDeepeningOptions",
 ]

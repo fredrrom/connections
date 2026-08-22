@@ -6,7 +6,7 @@
 
 Agentic primitives, provers, and experiments for classical, intuitionistic, and modal first-order logic based on connection tableau. 
 
-Design notes, guides, and the API reference are published at <https://fredrrom.github.io/connections/>.
+Design notes, guides, and the API reference are in the [Docs](https://fredrrom.github.io/connections/).
 
 ## Package Layout
 
@@ -16,7 +16,7 @@ The packages built on it, under `packages/`:
 
 - `pycop`: The pyCoP prover tested extensively for inference step order parity with leanCoP 2.0, ileanCoP 1.2, and MleanCoP 1.3.
 
-- `imitation`: imitation learning experiments and infrastructure.
+- `imitation`: Imitation learning experiments and infrastructure.
 
 ## Install
 

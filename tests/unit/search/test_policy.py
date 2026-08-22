@@ -10,8 +10,9 @@ from connections.syntax.formula import Atom, Variable
 from connections.syntax.matrix import Clause, Literal, Matrix
 from connections.agent import AgentStatus
 import connections.agent.dfs as policy_module
+from connections.agent.memory import ModelBasedAgent as _MBA, first as _first
 import connections.agent.id as id_policy_module
-from connections.agent import FirstActionIDPolicy
+from connections.agent import first_action_id_agent as FirstActionIDPolicy
 from connections.calculus.actions import (
     Action,
     AnyApplyAction,
@@ -33,10 +34,8 @@ def _lit(label: str) -> Literal:
 _DUMMY_PROBLEM = Matrix((Clause((_lit("dummy"),)),))
 
 
-class _ChooseFirstDFSPolicy(policy_module.DFSPolicy):
-    def _next_action(self, state, actions):
-        _ = state
-        return actions[0]
+def _ChooseFirstDFSPolicy(**options):
+    return _MBA(policy_module.DFSMemory(**options), _first)
 
 
 def _apply(kind: str, token: int, goal_id: int) -> AnyApplyAction:
@@ -259,8 +258,8 @@ def test_dfs_policy_with_scut_only_tries_first_start_clause(monkeypatch):
 def test_dfs_policy_reads_cut_and_scut_from_constructor_args():
     policy = _ChooseFirstDFSPolicy(cut=True, scut=True)
 
-    assert policy.cut_enabled is True
-    assert policy.scut_enabled is True
+    assert policy.memory.cut_enabled is True
+    assert policy.memory.scut_enabled is True
 
 
 def test_dfs_policy_tries_remaining_actions_then_backtracks_ancestor_step(monkeypatch):
@@ -627,7 +626,7 @@ def test_iterative_deepening_policy_at_depth_limit_prefers_factorization_and_red
     )
     _patch_dynamics(monkeypatch, dynamics)
     policy = FirstActionIDPolicy()
-    policy.depth_limit = 1
+    policy.memory.depth_limit = 1
 
     first = policy(state)
     second = policy(state)
@@ -657,7 +656,7 @@ def test_iterative_deepening_logs_path_limit_before_ground_extension(
     )
     _patch_dynamics(monkeypatch, dynamics)
     policy = FirstActionIDPolicy()
-    policy.depth_limit = 0
+    policy.memory.depth_limit = 0
 
     caplog.set_level(TRACE_LEVEL, logger="connections.trace")
     first = policy(state)
@@ -689,7 +688,7 @@ def test_iterative_deepening_does_not_log_path_limit_after_chosen_extension(
     )
     _patch_dynamics(monkeypatch, dynamics)
     policy = FirstActionIDPolicy()
-    policy.depth_limit = 0
+    policy.memory.depth_limit = 0
 
     caplog.set_level(TRACE_LEVEL, logger="connections.trace")
     first = policy(state)
@@ -707,9 +706,9 @@ def test_iterative_deepening_increments_depth_when_frame_stack_is_empty(monkeypa
     _patch_dynamics(monkeypatch, dynamics)
     policy = FirstActionIDPolicy()
 
-    assert policy.depth_limit == 0
+    assert policy.memory.depth_limit == 0
     assert _label(dynamics, policy(state)) == "ex0"
-    assert policy.depth_limit == 1
+    assert policy.memory.depth_limit == 1
 
 
 def test_iterative_deepening_uses_configured_initial_depth(monkeypatch):
@@ -729,7 +728,7 @@ def test_iterative_deepening_uses_configured_initial_depth(monkeypatch):
     policy = FirstActionIDPolicy(initial_depth=3)
 
     assert _selected_action(policy(state)) == nonground_extension
-    assert policy.depth_limit == 3
+    assert policy.memory.depth_limit == 3
 
 
 def test_iterative_deepening_rejects_nonpositive_initial_depth():
@@ -757,7 +756,7 @@ def test_iterative_deepening_counts_root_child_as_path_length_one(monkeypatch, c
     first = policy(state)
 
     assert _selected_action(first) == nonground_extension
-    assert policy.depth_limit == 2
+    assert policy.memory.depth_limit == 2
     assert caplog.messages == [
         "pathlim_hit",
         "pathlim",
@@ -812,10 +811,10 @@ def test_iterative_deepening_continues_after_comp_with_plain_settings(
     first = policy(state)
 
     assert _selected_action(first) == nonground_extension
-    assert policy.depth_limit == 2
-    assert policy.comp is None
-    assert policy.cut_enabled is False
-    assert policy.scut_enabled is False
+    assert policy.memory.depth_limit == 2
+    assert policy.memory.comp is None
+    assert policy.memory.cut_enabled is False
+    assert policy.memory.scut_enabled is False
     assert caplog.messages == [
         "pathlim_hit",
         "pathlim_hit",
