@@ -1,22 +1,29 @@
-"""Depth-first search read off the state itself.
+"""Depth-first search over the derivation.
 
-The state already is the search stack: ``fringe[0]`` is the current goal,
-and the newest live rule application is the step that chronological
-backtracking undoes. The agent's memory is one dict, the untried
-alternatives per goal, generated when the goal first becomes current and
-deleted when the search abandons it. Deletion is what keeps the dict
-honest: alternatives are only valid under the constraints they were
-generated under, and chronological undo restores exactly those constraints
-whenever a goal is resumed, while a goal revisited after abandonment is
-generated afresh. This is Prolog's backtracking, which is why leanCoP is
-this agent's iterative-deepening subclass with a first-action chooser.
+The derivation fixes everything positional, so the search needs no stack of
+its own: ``fringe[0]`` is the current goal, and the newest live rule
+application is the step chronological backtracking undoes. What the
+derivation cannot know is what was already tried, and that is the agent's
+whole memory: the untried alternatives per goal, generated when the goal
+first becomes current and deleted when the search abandons it. Deletion is
+what keeps the dict honest: alternatives are only valid under the
+constraints they were generated under, chronological undo restores exactly
+those constraints whenever a goal is resumed, and a goal revisited after
+abandonment is generated afresh. This is Prolog's backtracking, which is
+why leanCoP is this agent's iterative-deepening subclass with a
+first-action chooser.
 
-The agent emits leanCoP's ``cut`` and ``scut`` trace events at leanCoP's
-positions, the same way the rollout emits one event per action: the trace
-logger decides whether anyone is listening.
+The agent emits leanCoP's trace events at leanCoP's positions, the same way
+the rollout emits one event per action: the trace logger decides whether
+anyone is listening. Deferred events ride in the alternatives themselves as
+``TraceToken`` entries, emitted when they surface at the head of what
+remains -- which is exactly when leanCoP's candidate iteration would reach
+them.
 """
 
 from __future__ import annotations
+
+from dataclasses import dataclass
 
 from connections.agent.base import Agent, AgentOptions, AgentStatus, Chooser
 from connections.env.actions import Action, ApplyAction, UndoAction
@@ -24,6 +31,13 @@ from connections.env.dynamics import Dynamics
 from connections.env.rules import Start
 from connections.env.state import State
 from connections.trace_logging import trace, trace_logger
+
+
+@dataclass(frozen=True, slots=True)
+class TraceToken:
+    """A deferred trace event queued between alternatives."""
+
+    event: str
 
 
 class OnlineDFSAgent(Agent):
@@ -34,7 +48,7 @@ class OnlineDFSAgent(Agent):
     ) -> None:
         super().__init__(options)
         self.choose = choose
-        self._alternatives: dict[int, list[Action]] = {}
+        self._alternatives: dict[int, list[Action | TraceToken]] = {}
         self._committed: set[int] = set()
         self._scut_goal_id: int | None = None
         self._episode: State | None = None
@@ -55,7 +69,8 @@ class OnlineDFSAgent(Agent):
             return None
         self.status = AgentStatus.SEARCHING
         action = self.choose(state, actions)
-        self._consume(action)
+        if isinstance(action, ApplyAction):
+            self._alternatives[action.goal_id].remove(action)
         return action
 
     def _on_new_episode(self) -> None:
@@ -63,12 +78,6 @@ class OnlineDFSAgent(Agent):
         self._committed.clear()
         self._scut_goal_id = None
         self.status = AgentStatus.SEARCHING
-
-    def _consume(self, action: Action) -> None:
-        if not isinstance(action, ApplyAction):
-            return
-        self._before_action(action)
-        self._alternatives[action.goal_id].remove(action)
 
     def _exhaustion_status(self) -> AgentStatus:
         """What running out of actions means, given the options.
@@ -97,12 +106,22 @@ class OnlineDFSAgent(Agent):
             alternatives = list(self._actions_for_goal(state, goal_id))
             self._apply_scut(state, goal_id, alternatives)
             self._alternatives[goal_id] = alternatives
-        if alternatives:
-            return tuple(alternatives)
-        self._abandon(goal_id)
+        while alternatives and isinstance(head := alternatives[0], TraceToken):
+            del alternatives[0]
+            trace(trace_logger, head.event)
+        exposed = tuple(
+            action
+            for action in alternatives
+            if not isinstance(action, TraceToken)
+        )
+        if exposed:
+            return exposed
+        self._forget(goal_id)
         return self._backtrack(state)
 
-    def _actions_for_goal(self, state: State, goal_id: int) -> tuple[Action, ...]:
+    def _actions_for_goal(
+        self, state: State, goal_id: int
+    ) -> tuple[Action | TraceToken, ...]:
         return Dynamics.apply_actions(
             state,
             state.tableau.goals[goal_id],
@@ -154,15 +173,9 @@ class OnlineDFSAgent(Agent):
             if child_app_id is not None:
                 self._forget_subtree(state, child_app_id)
 
-    def _abandon(self, goal_id: int) -> None:
-        self._forget(goal_id)
-
     def _forget(self, goal_id: int) -> None:
         self._alternatives.pop(goal_id, None)
         self._committed.discard(goal_id)
-
-    def _before_action(self, action: ApplyAction) -> None:
-        _ = action
 
     # -- cut and scut -------------------------------------------------------
 
@@ -180,7 +193,7 @@ class OnlineDFSAgent(Agent):
                 trace(trace_logger, "cut")
 
     def _apply_scut(
-        self, state: State, goal_id: int, alternatives: list[Action]
+        self, state: State, goal_id: int, alternatives: list[Action | TraceToken]
     ) -> None:
         if not self.options.scut or goal_id != state.tableau.root_goal_id:
             return
@@ -195,4 +208,5 @@ class OnlineDFSAgent(Agent):
 __all__ = [
     "Chooser",
     "OnlineDFSAgent",
+    "TraceToken",
 ]
