@@ -16,7 +16,7 @@ Common flags:
 
 | | |
 |---|---|
-| `--settings` | space-separated tokens or leanCoP list syntax: `--settings cut 'comp(7)'` or `--settings '[cut,comp(7)]'` |
+| `--settings` | space-separated tokens or leanCoP list syntax: `--settings cut comp=7`, `--settings cut 'comp(7)'`, or `--settings '[cut,comp(7)]'` |
 | `--schedule` | a named strategy schedule instead of single settings |
 | `--steps` | transition-step budget |
 | `--timeout` | wall-clock budget in seconds |

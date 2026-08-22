@@ -96,7 +96,7 @@ class LeancopSettingsCodec:
                 conjecture = True
                 continue
 
-            match = re.fullmatch(r"reo\((\d+)\)", token)
+            match = re.fullmatch(r"reo[(=](\d+)\)?", token)
             if match:
                 reorder = int(match.group(1))
                 continue
@@ -108,7 +108,7 @@ class LeancopSettingsCodec:
                 scut = True
                 continue
 
-            match = re.fullmatch(r"comp\((\d+)\)", token)
+            match = re.fullmatch(r"comp[(=](\d+)\)?", token)
             if match:
                 comp = int(match.group(1))
 

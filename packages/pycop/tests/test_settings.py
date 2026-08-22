@@ -105,3 +105,12 @@ def test_split_token_list_handles_leancop_syntax():
     ]
     assert split("cut") == ["cut"]
     assert split("[]") == []
+
+
+def test_numeric_settings_accept_equals_spelling():
+    strategy = LeancopSettingsCodec.from_tokens(["reo=2", "cut", "comp=7"])
+    args = _args(strategy)
+
+    assert strategy.matrix.reorder == 2
+    assert args["comp"] == 7
+    assert args["cut"] is True
