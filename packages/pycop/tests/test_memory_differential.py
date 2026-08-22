@@ -26,7 +26,7 @@ PROBLEMS = [
     "l1_enumset1", "l5_orders_2", "l13_ordinal1", "l111_zfmisc_1",
     "t3_xboole_0", "t7_xboole_1", "l143_zfmisc_1", "t2_tarski",
 ]
-DISCIPLINES = [
+OPTION_SETS = [
     dict(factorization="equal"),
     dict(cut=True, factorization="equal"),
     dict(cut=True, scut=True, factorization="equal"),
@@ -41,7 +41,7 @@ def _rollout(problem: Path, agent):
 
 @pytest.mark.parametrize("name", PROBLEMS)
 @pytest.mark.parametrize(
-    "options", DISCIPLINES, ids=["plain", "cut", "scut", "comp"]
+    "options", OPTION_SETS, ids=["plain", "cut", "scut", "comp"]
 )
 def test_clean_and_traced_memories_act_identically(name, options, request):
     problem = M2K / f"{name}.p"
