@@ -57,8 +57,7 @@ The R&N learning-agent architecture maps onto the layers directly:
 
 ## What `connections` is not
 
-It is not a prover. The named provers are in packages: a configuration and a CLI
-each.
+It is not a prover. The named provers are in packages: a configuration and a CLI each.
 
 | | |
 |---|---|
@@ -81,11 +80,7 @@ pycop         leanCoP-equivalent prover, parity, CLI     -> connections
 imitation     policies, graph model, training, campaigns -> connections, torch
 ```
 
-`connections` never imports from a package built on it. It is the citable
-artefact and stays independently installable.
-
-Three distributions. Another earns its place when a second consumer needs the
-same thing, and not before.
+`connections` never imports from a package built on it. 
 
 ## Documents
 
@@ -99,7 +94,6 @@ One note per group, plus this map.
 | [running](running.md) | rollout, strategy, schedule, run, limits, SZS |
 
 These describe the target. The [API reference](../reference/index.md) is
-generated from docstrings and describes the code as it stands, which is not yet
-this; where they disagree, these notes are the intent.
+generated from docstrings and describes the code as it stands, which is not yet this; where they disagree, these notes are the intent.
 
 

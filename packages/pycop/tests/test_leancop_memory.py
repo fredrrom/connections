@@ -9,10 +9,10 @@ from connections.clausification import matrix_from_file
 from connections.syntax.formula import Atom, Variable
 from connections.syntax.matrix import Clause, Literal, Matrix
 from connections.agent import AgentStatus
-import connections.agent.dfs as policy_module
-from connections.agent.memory import ModelBasedAgent as _MBA, first as _first
-import connections.agent.id as id_policy_module
-from connections.agent import first_action_id_agent as FirstActionIDPolicy
+import pycop.leancop_memory as policy_module
+from connections.agent.memory import ModelBasedAgent as _MBA, first as _first  # noqa: E501
+import pycop.leancop_memory as id_policy_module
+from pycop.leancop_memory import traced_leancop_agent as FirstActionIDPolicy
 from connections.calculus.actions import (
     Action,
     AnyApplyAction,
@@ -35,7 +35,7 @@ _DUMMY_PROBLEM = Matrix((Clause((_lit("dummy"),)),))
 
 
 def _ChooseFirstDFSPolicy(**options):
-    return _MBA(policy_module.DFSMemory(**options), _first)
+    return _MBA(policy_module.TracedDFSMemory(**options), _first)
 
 
 def _apply(kind: str, token: int, goal_id: int) -> AnyApplyAction:

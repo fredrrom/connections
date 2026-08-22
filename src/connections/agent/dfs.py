@@ -1,3 +1,17 @@
+"""Depth-first search memory over the fringe-mirroring invariant.
+
+The state is the source of truth, and this memory adds only what the state
+cannot know: which alternatives remain untried per goal. One frame per goal,
+the stack mirroring the ordered fringe -- the current goal is ``fringe[0]``,
+and any disagreement between stack and state resolves to a single undo.
+
+Two invariants keep this small. The memory is the sole actor: the rollout
+applies exactly the action it returns, so after ``update`` the stack can track
+the derivation with certainty, and no liveness re-derivation is needed. And
+the memory emits no trace events: leanCoP's event choreography is pycop's
+parity claim, carried by the traced memories there.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -8,39 +22,20 @@ from connections.agent.base import (
     StartMode,
     start_clause_ids,
 )
-from connections.calculus.actions import Action, ApplyAction
+from connections.calculus.actions import Action, ApplyAction, UndoAction
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.rules import FactorizationMode, Start
 from connections.calculus.state import State
-from connections.trace_logging import trace, trace_logger
-
-
-
-@dataclass(slots=True)
-class WorkFrame:
-    goal_ids: list[int]
 
 
 @dataclass(slots=True)
-class ChoicepointFrame:
+class Frame:
     goal_id: int
     actions: list[Action]
-    child_work_started: bool = False
-    committed: bool = False
-    trace_cut_on_close: bool = True
-
-
-Frame = WorkFrame | ChoicepointFrame
 
 
 class DFSMemory:
-    """leanCoP's search discipline as a memory: a stack of choicepoints.
-
-    Everything here is the machinery that used to be DFSPolicy, moved rather
-    than rewritten: ``exposed`` is the old action preparation, ``update`` the
-    old post-action bookkeeping. What used to be the abstract _next_action is
-    now a chooser supplied by whoever composes the agent.
-    """
+    """leanCoP's search discipline as a memory: alternatives per goal."""
 
     def __init__(
         self,
@@ -58,12 +53,10 @@ class DFSMemory:
         self.start = start
         self._stack: list[Frame] = []
         self._status = AgentStatus.SEARCHING
-        self._exposed_actions: tuple[Action, ...] = ()
+
+    # -- the Memory protocol ------------------------------------------------
 
     def exposed(self, state: State) -> tuple[Action, ...]:
-        # _prepare_actions settles closed choicepoints on the way in, so the
-        # call at a final state does this memory's shutdown before exposing
-        # nothing.
         actions = self._available_actions(state)
         if not actions:
             self._status = (
@@ -73,11 +66,16 @@ class DFSMemory:
             )
             return ()
         self._status = AgentStatus.SEARCHING
-        self._exposed_actions = actions
         return actions
 
     def update(self, state: State, action: Action) -> None:
-        self._after_action(state, self._exposed_actions, action)
+        _ = state
+        if not isinstance(action, ApplyAction):
+            return
+        frame = self._stack[-1]
+        if frame.goal_id != action.goal_id:
+            raise RuntimeError("selected action does not belong to the active frame")
+        frame.actions.remove(action)
 
     def status(self) -> AgentStatus:
         return self._status
@@ -87,249 +85,60 @@ class DFSMemory:
 
         Cut and scut prune non-redundant parts of the space; conjecture start
         is incomplete when the axioms alone are contradictory. Any of them
-        forfeits the exhaustion claim: the search ran dry, but says nothing
-        about the problem.
+        forfeits the exhaustion claim.
         """
         if self.cut_enabled or self.scut_enabled or self.start != "positive":
             return AgentStatus.GAVE_UP
         return AgentStatus.DFS_EXHAUSTED
 
+    # -- the discipline -----------------------------------------------------
+
     def _available_actions(self, state: State) -> tuple[Action, ...]:
-        actions = self._prepare_actions(state)
-        return () if actions is None else actions
-
-    def _after_action(
-        self,
-        state: State,
-        actions: tuple[Action, ...],
-        action: Action,
-    ) -> None:
-        _ = state, actions
-        self._consume_choicepoint_action(action)
-
-    def _on_tableau_closed(self, state: State) -> None:
-        self._discard_deleted_choicepoints(state)
-        self._commit_closed_choicepoints(state)
-
-    def _choose_goal_id(self, state: State, goal_ids: tuple[int, ...]) -> int:
-        _ = state
-        return goal_ids[0]
-
-    def _prepare_actions(self, state: State) -> tuple[Action, ...] | None:
         while True:
-            self._discard_deleted_choicepoints(state)
-            self._commit_closed_choicepoints(state)
             if state.tableau.root.closed:
-                return None
+                # The final call. The old prover never consulted the policy at
+                # a closed state; the rollout does, and backtracking here would
+                # undo the proof.
+                return ()
+            if self.cut_enabled:
+                self._discard_closed_frames(state)
+
+            current_goal_id = None if not state.fringe else state.fringe[0].goal_id
+            if current_goal_id is None:
+                undo = self._backtrack_action(state)
+                return () if undo is None else (undo,)
+
             if not self._stack:
-                self._stack.append(WorkFrame(self._initial_goal_ids(state)))
-
-            if self._push_pending_work_from_choicepoint(state):
+                self._push_frame(state, current_goal_id)
                 continue
 
-            work_frame_index = self._active_work_frame_index(state)
-            if work_frame_index is not None:
-                if self._activate_next_work_goal(state, work_frame_index):
+            frame = self._stack[-1]
+            if frame.goal_id != current_goal_id:
+                if current_goal_id not in {old.goal_id for old in self._stack}:
+                    self._push_frame(state, current_goal_id)
                     continue
-                backtrack = self._backtrack_or_retry(state)
-                return backtrack
+                undo = self._backtrack_action(state)
+                return () if undo is None else (undo,)
 
-            retry = self._retry_actions(state)
-            if retry is not None:
-                return retry
-
-            if (
-                self.backtrack == "step"
-                and not self._has_exhausted_open_choicepoint(state)
-            ):
-                undo = self._applied_choicepoint_undo(state)
-                if undo is not None:
-                    return undo
-
-            backtrack = self._backtrack_or_retry(state)
-            return backtrack
-
-    def _active_work_frame_index(self, state: State) -> int | None:
-        for index in range(len(self._stack) - 1, -1, -1):
-            frame = self._stack[index]
-            if isinstance(frame, WorkFrame):
-                return index
-            if self._choicepoint_is_live(state, frame):
-                return None
-        return None
-
-    def _activate_next_work_goal(self, state: State, index: int) -> bool:
-        frame = self._stack[index]
-        if not isinstance(frame, WorkFrame):
-            raise TypeError("active work frame index did not point to a work frame")
-        open_goal_ids = self._open_goal_ids(state, frame.goal_ids)
-        if not open_goal_ids:
-            self._pop_frame(index)
-            return True
-
-        goal_id = self._choose_goal_id(state, open_goal_ids)
-        if goal_id not in open_goal_ids:
-            raise ValueError("chosen goal id is outside available goal ids")
-
-        actions = list(self._actions_for_goal(state, goal_id))
-        scut_applied = self._apply_scut(state, goal_id, actions)
-        frame.goal_ids = [candidate for candidate in open_goal_ids if candidate != goal_id]
-        choicepoint = ChoicepointFrame(
-            goal_id=goal_id,
-            actions=actions,
-            trace_cut_on_close=not scut_applied,
-        )
-        self._stack.append(choicepoint)
-        self._after_choicepoint_created(choicepoint)
-        return True
-
-    def _push_pending_work_from_choicepoint(self, state: State) -> bool:
-        for index in range(len(self._stack) - 1, -1, -1):
-            choicepoint = self._stack[index]
-            if not isinstance(choicepoint, ChoicepointFrame):
-                continue
-            goal = state.tableau.goals.get(choicepoint.goal_id)
+            goal = state.tableau.goals.get(frame.goal_id)
             if goal is None:
+                self._pop_frame()
                 continue
             if goal.closed:
-                self._commit_if_cut(choicepoint)
-                continue
-
-            app_id = goal.applied_rule_application_id
-            if (
-                app_id is None
-                or choicepoint.child_work_started
-                or self._has_live_frame_above(state, index)
-            ):
-                continue
-            choicepoint.child_work_started = True
-            child_goal_ids = state.tableau.rule_applications[app_id].child_goal_ids
-            if child_goal_ids:
-                self._stack.append(WorkFrame(list(child_goal_ids)))
-                return True
-        return False
-
-    def _retry_actions(self, state: State) -> tuple[Action, ...] | None:
-        choicepoint = self._newest_open_choicepoint(state)
-        if choicepoint is None or not choicepoint.actions:
-            return None
-        return tuple(choicepoint.actions)
-
-    def _applied_choicepoint_undo(self, state: State) -> tuple[Action, ...] | None:
-        for choicepoint in reversed(self._stack):
-            if not isinstance(choicepoint, ChoicepointFrame):
-                continue
-            goal = state.tableau.goals.get(choicepoint.goal_id)
-            if (
-                goal is not None
-                and not goal.closed
-                and goal.applied_rule_application_id is not None
-            ):
-                undo = Dynamics.get_undo(state, goal)
-                return None if undo is None else (undo,)
-        return None
-
-    def _has_exhausted_open_choicepoint(self, state: State) -> bool:
-        for choicepoint in reversed(self._stack):
-            if not isinstance(choicepoint, ChoicepointFrame):
-                continue
-            goal = state.tableau.goals.get(choicepoint.goal_id)
-            if (
-                goal is not None
-                and not goal.closed
-                and goal.applied_rule_application_id is None
-                and not choicepoint.actions
-            ):
-                return True
-        return False
-
-    def _backtrack_or_retry(self, state: State) -> tuple[Action, ...] | None:
-        while any(isinstance(frame, ChoicepointFrame) for frame in self._stack):
-            index = self._backtrack_choicepoint_index(state)
-            if index is None:
-                return None
-            while len(self._stack) > index + 1:
-                self._pop_frame()
-            choicepoint = self._stack[index]
-            if not isinstance(choicepoint, ChoicepointFrame):
-                raise TypeError("backtrack index did not point to a choicepoint")
-            goal = state.tableau.goals.get(choicepoint.goal_id)
-            if goal is None:
-                self._pop_frame(index)
-                continue
-            if choicepoint.committed:
-                self._pop_frame(index)
-                continue
+                if self.cut_enabled:
+                    self._discard_closed_frames(state)
+                    continue
+                undo = self._backtrack_action(state)
+                return () if undo is None else (undo,)
             if goal.applied_rule_application_id is not None:
-                self._reset_choicepoint_attempt(choicepoint)
-                undo = Dynamics.get_undo(state, goal)
-                return None if undo is None else (undo,)
-            if choicepoint.actions:
-                self._reset_choicepoint_attempt(choicepoint)
-                return tuple(choicepoint.actions)
-            self._before_choicepoint_exhausted(choicepoint)
-            self._pop_frame(index)
-        return None
+                undo = self._undo_frame(state, len(self._stack) - 1)
+                return () if undo is None else (undo,)
+            if not frame.actions:
+                undo = self._backtrack_action(state)
+                return () if undo is None else (undo,)
+            return tuple(frame.actions)
 
-    def _backtrack_choicepoint_index(self, state: State) -> int | None:
-        if self.backtrack == "maximal":
-            for index, choicepoint in enumerate(self._stack):
-                if not isinstance(choicepoint, ChoicepointFrame):
-                    continue
-                if choicepoint.committed:
-                    continue
-                if choicepoint.goal_id not in state.tableau.goals:
-                    continue
-                if choicepoint.actions:
-                    return index
-        for index in range(len(self._stack) - 1, -1, -1):
-            choicepoint = self._stack[index]
-            if not isinstance(choicepoint, ChoicepointFrame):
-                continue
-            if choicepoint.goal_id in state.tableau.goals:
-                return index
-        return None
-
-    def _consume_choicepoint_action(self, action: Action) -> None:
-        if not isinstance(action, ApplyAction):
-            return
-        choicepoint = self._newest_choicepoint_for_goal(action.goal_id)
-        if choicepoint is None:
-            raise RuntimeError("selected action has no active choicepoint")
-        if action not in choicepoint.actions:
-            raise RuntimeError("selected action does not belong to the active choicepoint")
-        self._before_choicepoint_action(choicepoint, action)
-        choicepoint.actions.remove(action)
-        self._reset_choicepoint_attempt(choicepoint)
-
-    def _newest_open_choicepoint(self, state: State) -> ChoicepointFrame | None:
-        for choicepoint in reversed(self._stack):
-            if not isinstance(choicepoint, ChoicepointFrame):
-                continue
-            goal = state.tableau.goals.get(choicepoint.goal_id)
-            if goal is None or goal.closed:
-                continue
-            if goal.applied_rule_application_id is None:
-                return choicepoint
-        return None
-
-    def _newest_choicepoint_for_goal(self, goal_id: int) -> ChoicepointFrame | None:
-        for choicepoint in reversed(self._stack):
-            if not isinstance(choicepoint, ChoicepointFrame):
-                continue
-            if choicepoint.goal_id == goal_id:
-                return choicepoint
-        return None
-
-    def _reset_choicepoint_attempt(self, choicepoint: ChoicepointFrame) -> None:
-        choicepoint.child_work_started = False
-        choicepoint.committed = False
-
-    def _actions_for_goal(
-        self,
-        state: State,
-        goal_id: int,
-    ) -> tuple[Action, ...]:
+    def _actions_for_goal(self, state: State, goal_id: int) -> tuple[Action, ...]:
         return Dynamics.apply_actions(
             state,
             state.tableau.goals[goal_id],
@@ -337,121 +146,60 @@ class DFSMemory:
             start_ids=start_clause_ids(state.matrix, self.start),
         ).ordered()
 
-    def _after_choicepoint_created(self, choicepoint: ChoicepointFrame) -> None:
-        _ = choicepoint
-
-    def _before_choicepoint_action(
-        self,
-        choicepoint: ChoicepointFrame,
-        action: Action,
-    ) -> None:
-        _ = choicepoint, action
-
-    def _before_choicepoint_exhausted(self, choicepoint: ChoicepointFrame) -> None:
-        _ = choicepoint
-
-    def _before_choicepoint_removed(self, choicepoint: ChoicepointFrame) -> None:
-        _ = choicepoint
-
-    def _pop_frame(self, index: int = -1) -> Frame:
-        frame = self._stack.pop(index)
-        if isinstance(frame, ChoicepointFrame):
-            self._before_choicepoint_removed(frame)
+    def _push_frame(self, state: State, goal_id: int) -> Frame | None:
+        if goal_id not in state.tableau.goals:
+            return None
+        frame = Frame(
+            goal_id=goal_id, actions=list(self._actions_for_goal(state, goal_id))
+        )
+        self._apply_scut(state, frame)
+        self._stack.append(frame)
         return frame
 
-    def _discard_deleted_choicepoints(self, state: State) -> None:
-        index = 0
-        while index < len(self._stack):
-            frame = self._stack[index]
-            if not isinstance(frame, ChoicepointFrame):
-                index += 1
-                continue
-            if frame.goal_id in state.tableau.goals:
-                index += 1
-                continue
-            self._pop_frame(index)
-
-    def _commit_closed_choicepoints(self, state: State) -> None:
-        for choicepoint in reversed(self._stack):
-            if not isinstance(choicepoint, ChoicepointFrame):
-                continue
-            goal = state.tableau.goals.get(choicepoint.goal_id)
-            if goal is not None and goal.closed:
-                self._commit_if_cut(choicepoint)
-
-    def _commit_if_cut(self, choicepoint: ChoicepointFrame) -> None:
-        if not self.cut_enabled or choicepoint.committed:
+    def _apply_scut(self, state: State, frame: Frame) -> None:
+        if not self.scut_enabled or frame.goal_id != self._root_goal_id(state):
             return
-        if choicepoint.trace_cut_on_close:
-            trace(trace_logger, "cut")
-        choicepoint.actions.clear()
-        choicepoint.committed = True
-
-    def _apply_scut(
-        self,
-        state: State,
-        goal_id: int,
-        actions: list[Action],
-    ) -> bool:
-        if not self.scut_enabled or goal_id != self._root_goal_id(state):
-            return False
-        for action in actions:
+        for action in frame.actions:
             if isinstance(action, ApplyAction) and isinstance(action.rule, Start):
-                actions[:] = [action]
-                trace(trace_logger, "scut")
-                return True
-        return False
+                frame.actions = [action]
+                return
 
-    def _open_goal_ids(self, state: State, goal_ids: list[int]) -> tuple[int, ...]:
-        return tuple(
-            goal_id
-            for goal_id in goal_ids
-            if self._is_open_unapplied_goal(state.tableau.goals.get(goal_id))
-        )
+    def _backtrack_action(self, state: State) -> UndoAction | None:
+        if self._stack:
+            self._pop_frame()
+        if not self._stack:
+            return None
 
-    @staticmethod
-    def _is_open_unapplied_goal(goal: object | None) -> bool:
-        return (
-            goal is not None
-            and not getattr(goal, "closed")
-            and getattr(goal, "applied_rule_application_id") is None
-        )
+        if self.backtrack == "maximal":
+            while len(self._stack) > 1 and not self._stack[-1].actions:
+                self._pop_frame()
+
+        return self._undo_frame(state, len(self._stack) - 1)
+
+    def _undo_frame(self, state: State, frame_index: int) -> UndoAction | None:
+        del self._stack[frame_index + 1 :]
+        goal = state.tableau.goals.get(self._stack[-1].goal_id)
+        if goal is None:
+            return None
+        return Dynamics.get_undo(state, goal)
+
+    def _discard_closed_frames(self, state: State) -> None:
+        while self._stack:
+            frame = self._stack[-1]
+            goal = state.tableau.goals.get(frame.goal_id)
+            if goal is not None and not goal.closed:
+                return
+            self._pop_frame()
 
     @staticmethod
     def _root_goal_id(state: State) -> int:
-        return getattr(state.tableau, "root_goal_id", state.tableau.root.goal_id)
+        return state.tableau.root_goal_id
 
-    def _initial_goal_ids(self, state: State) -> list[int]:
-        root_goal_id = self._root_goal_id(state)
-        if root_goal_id in state.tableau.goals:
-            return [root_goal_id]
-        return [goal.goal_id for goal in state.fringe if not goal.closed]
-
-    def _reset_search(self) -> None:
-        self._stack.clear()
-
-    def _stack_empty(self) -> bool:
-        return not self._stack
-
-    def _has_live_frame_above(self, state: State, index: int) -> bool:
-        return any(
-            isinstance(frame, WorkFrame)
-            or (
-                isinstance(frame, ChoicepointFrame)
-                and self._choicepoint_is_live(state, frame)
-            )
-            for frame in self._stack[index + 1 :]
-        )
-
-    @staticmethod
-    def _choicepoint_is_live(state: State, choicepoint: ChoicepointFrame) -> bool:
-        goal = state.tableau.goals.get(choicepoint.goal_id)
-        return goal is not None and not goal.closed
+    def _pop_frame(self) -> Frame:
+        return self._stack.pop()
 
 
 __all__ = [
-    "ChoicepointFrame",
     "DFSMemory",
     "Frame",
-    "WorkFrame",
 ]

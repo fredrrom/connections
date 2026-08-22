@@ -1,41 +1,42 @@
+"""Iterative deepening over the DFS memory.
+
+The depth ladder, comp switching, and the path-limit discipline that decides
+whether a fixed point may be claimed. The path-limit flag is semantic and set
+at detection time: a candidate blocked at the depth gate whose connection
+unifies means deeper iterations could differ, so exhaustion without one is a
+fixed point. The deferred hit bookkeeping that emits leanCoP's pathlim_hit
+events at leanCoP's positions is trace choreography and lives with pycop's
+traced memories.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TypeGuard
 
-from connections.syntax.matrix import Clause
-from connections.agent.base import BacktrackGranularity
 from connections.agent.base import AgentStatus, StartMode, start_clause_ids
+from connections.agent.dfs import DFSMemory
 from connections.agent.memory import ModelBasedAgent, first
-from connections.agent.dfs import ChoicepointFrame, DFSMemory
 from connections.calculus.actions import Action, ApplyAction
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.rules import Extension, FactorizationMode
 from connections.calculus.state import State
-from connections.trace_logging import trace, trace_logger
-
-_MODAL_LOGICS = frozenset({"D", "T", "S4", "S5"})
-ExtensionKey = tuple[int | None, int]
 
 
 @dataclass(frozen=True, slots=True)
 class IterativeDeepeningOptions:
-    comp: int | None = None
     initial_depth: int = 1
+    comp: int | None = None
 
 
 class IDMemory(DFSMemory):
-    """Iterative deepening over the DFS memory: the depth ladder, comp
-    switching, and the path-limit discipline that decides whether a fixed
-    point may be claimed."""
-
     def __init__(
         self,
         *,
         cut: bool = False,
         scut: bool = False,
         comp: int | None = None,
-        backtrack: BacktrackGranularity = "step",
+        backtrack: str = "step",
         factorization: FactorizationMode = "unify",
         start: StartMode = "positive",
         initial_depth: int = 1,
@@ -52,240 +53,96 @@ class IDMemory(DFSMemory):
         self.comp = comp
         self.depth_limit = initial_depth - 1
         self._path_limit_hit = False
-        self._pending_path_limit_plan: tuple[int, dict[int, int], int] | None = None
-        self._path_limit_hits_before_action: dict[int, dict[int, int]] = {}
-        self._terminal_path_limit_hits: dict[int, int] = {}
 
-    def _actions_for_goal(
-        self,
-        state: State,
-        goal_id: int,
-    ) -> tuple[Action, ...]:
+    def _actions_for_goal(self, state: State, goal_id: int) -> tuple[Action, ...]:
         goal = state.tableau.goals[goal_id]
         if goal.closed:
-            self._pending_path_limit_plan = (goal_id, {}, 0)
             return ()
         if Dynamics.regularity_violation(state, goal) is not None:
-            trace(trace_logger, "regularity")
-            self._pending_path_limit_plan = (goal_id, {}, 0)
             return ()
-        root_goal_id = getattr(state.tableau, "root_goal_id", state.tableau.root.goal_id)
-        if goal.goal_id == root_goal_id:
-            self._pending_path_limit_plan = (goal_id, {}, 0)
+        if goal.goal_id == self._root_goal_id(state):
             return tuple(
                 ApplyAction(goal_id, rule)
                 for rule in Dynamics.start_rules_for(
                     state, start_clause_ids(state.matrix, self.start)
                 )
             )
-        if (
-            getattr(goal, "clause_idx", None) is None
-            or getattr(goal, "literal_index", None) is None
-        ):
-            return self._actions_from_apply_actions(state, goal_id)
+        if goal.clause_idx is None or goal.literal_index is None:
+            return self._gated_apply_actions(state, goal_id)
 
         kept: list[Action] = [
             ApplyAction(goal_id, rule)
             for rule in Dynamics.factorization_rules_for(
-                state,
-                goal_id,
-                mode=self.factorization,
+                state, goal_id, mode=self.factorization
             )
         ]
         kept.extend(
             ApplyAction(goal_id, rule)
             for rule in Dynamics.reduction_rules_for(state, goal_id)
         )
-        hits_before_action: dict[int, int] = {}
-        pending_hits = 0
-        if goal.clause_idx is not None and goal.literal_index is not None:
-            for clause_idx, lit_idx in state.matrix.complements(
-                goal.clause_idx,
-                goal.literal_index,
-            ):
-                instance_id = state.fresh_instance_id()
-                clause = state.matrix.clauses[clause_idx]
-                if goal.depth + 1 >= self.depth_limit and not clause.is_ground:
-                    if Dynamics.extension_terms_unify_for_position(
-                        state,
-                        goal_id,
-                        clause_idx,
-                        lit_idx,
-                        instance_id=instance_id,
-                    ):
-                        self._path_limit_hit = True
-                        pending_hits += 1
-                    continue
-                action = Dynamics.extension_action_for_position(
-                    state,
-                    goal_id,
-                    clause_idx,
-                    lit_idx,
-                    instance_id=instance_id,
-                )
-                if action is None:
-                    continue
-                if pending_hits:
-                    hits_before_action[id(action)] = pending_hits
-                    pending_hits = 0
+        for clause_idx, lit_idx in state.matrix.complements(
+            goal.clause_idx, goal.literal_index
+        ):
+            instance_id = state.fresh_instance_id()
+            clause = state.matrix.clauses[clause_idx]
+            if goal.depth + 1 >= self.depth_limit and not clause.is_ground:
+                if Dynamics.extension_terms_unify_for_position(
+                    state, goal_id, clause_idx, lit_idx, instance_id=instance_id
+                ):
+                    self._path_limit_hit = True
+                continue
+            action = Dynamics.extension_action_for_position(
+                state, goal_id, clause_idx, lit_idx, instance_id=instance_id
+            )
+            if action is not None:
                 kept.append(action)
-        self._pending_path_limit_plan = (
-            goal_id,
-            hits_before_action,
-            pending_hits,
-        )
         return tuple(kept)
 
-    def _actions_from_apply_actions(
-        self,
-        state: State,
-        goal_id: int,
-    ) -> tuple[Action, ...]:
+    def _gated_apply_actions(self, state: State, goal_id: int) -> tuple[Action, ...]:
         goal = state.tableau.goals[goal_id]
         actions = super()._actions_for_goal(state, goal_id)
-        kept = [action for action in actions if not _is_extension_action(action)]
-        extension_actions = [
-            action for action in actions if _is_extension_action(action)
-        ]
-        hits_before_action: dict[int, int] = {}
-        pending_hits = 0
-        for action, clause in self._extension_candidates(
-            state,
-            goal_id,
-            extension_actions,
-        ):
-            if goal.depth + 1 >= self.depth_limit and not clause.is_ground:
-                self._path_limit_hit = True
-                pending_hits += 1
-                continue
-            if action is None:
-                continue
-            if pending_hits:
-                hits_before_action[id(action)] = pending_hits
-                pending_hits = 0
+        kept = []
+        for action in actions:
+            if _is_extension_action(action):
+                clause = self._extension_clause(state, action)
+                if (
+                    clause is not None
+                    and goal.depth + 1 >= self.depth_limit
+                    and not clause.is_ground
+                ):
+                    self._path_limit_hit = True
+                    continue
             kept.append(action)
-        self._pending_path_limit_plan = (
-            goal_id,
-            hits_before_action,
-            pending_hits,
-        )
         return tuple(kept)
 
-    def _extension_candidates(
-        self,
-        state: State,
-        goal_id: int,
-        extension_actions: list[ApplyAction[Extension]],
-    ) -> tuple[tuple[ApplyAction[Extension] | None, Clause], ...]:
-        if state.matrix.logic not in _MODAL_LOGICS:
-            return tuple((action, action.rule.clause) for action in extension_actions)
-
-        goal = state.tableau.goals[goal_id]
-        if Dynamics.regularity_violation(state, goal) is not None:
-            return ()
-
-        extension_actions_by_key = {
-            (action.rule.clause_idx, action.rule.lit_idx): action
-            for action in extension_actions
-        }
-        candidates: list[tuple[ApplyAction[Extension] | None, Clause]] = []
-        for key in Dynamics.extension_term_candidate_positions_for(state, goal_id):
-            action = extension_actions_by_key.get(key)
-            candidates.append((action, self._extension_clause(state, key, action)))
-        return tuple(candidates)
-
     @staticmethod
-    def _extension_clause(
-        state: State,
-        key: ExtensionKey,
-        action: ApplyAction[Extension] | None,
-    ) -> Clause:
-        if action is not None:
-            return action.rule.clause
-        clause_idx = key[0]
+    def _extension_clause(state: State, action: ApplyAction[Extension]):
+        clause_idx = getattr(action.rule, "clause_idx", None)
         if clause_idx is None:
-            raise RuntimeError("source-less extension action has no matrix clause")
+            return None
         return state.matrix.clauses[clause_idx]
-
-    def _after_choicepoint_created(self, choicepoint: ChoicepointFrame) -> None:
-        if self._pending_path_limit_plan is None:
-            return
-        pending_goal_id, hits_before_action, terminal_hits = self._pending_path_limit_plan
-        self._pending_path_limit_plan = None
-        if pending_goal_id != choicepoint.goal_id:
-            return
-        key = id(choicepoint)
-        if hits_before_action:
-            self._path_limit_hits_before_action[key] = hits_before_action
-        if terminal_hits:
-            self._terminal_path_limit_hits[key] = terminal_hits
-
-    def _before_choicepoint_action(
-        self,
-        choicepoint: ChoicepointFrame,
-        action: Action,
-    ) -> None:
-        if not isinstance(action, ApplyAction):
-            return
-        hits_by_action = self._path_limit_hits_before_action.get(
-            id(choicepoint)
-        )
-        if hits_by_action is not None:
-            self._record_path_limit_hits(hits_by_action.pop(id(action), 0))
-
-    def _before_choicepoint_exhausted(
-        self,
-        choicepoint: ChoicepointFrame,
-    ) -> None:
-        self._record_terminal_path_limit_hits(choicepoint)
-
-    def _before_choicepoint_removed(self, choicepoint: ChoicepointFrame) -> None:
-        key = id(choicepoint)
-        self._path_limit_hits_before_action.pop(key, None)
-        self._terminal_path_limit_hits.pop(key, None)
-
-    def _record_terminal_path_limit_hits(
-        self,
-        choicepoint: ChoicepointFrame,
-    ) -> None:
-        self._record_path_limit_hits(
-            self._terminal_path_limit_hits.pop(id(choicepoint), 0)
-        )
-
-    def _record_path_limit_hits(self, count: int) -> None:
-        if count <= 0:
-            return
-        for _ in range(count):
-            trace(trace_logger, "pathlim_hit")
 
     def _available_actions(self, state: State) -> tuple[Action, ...]:
         while True:
             if state.tableau.root.closed:
-                # The final call: settle closed choicepoints and yield nothing.
-                # Bumping the depth ladder at a closed root would be spurious
-                # work and a spurious pathlim trace.
                 return super()._available_actions(state)
-            if self._stack_empty():
+            if not self._stack:
                 self._start_next_depth()
             actions = super()._available_actions(state)
             if actions:
                 return actions
             if not self._should_continue_after_empty_stack():
                 return ()
-            self._reset_search()
-            self._path_limit_hits_before_action.clear()
-            self._terminal_path_limit_hits.clear()
+            self._reset_search(state)
 
     def _start_next_depth(self) -> None:
-        previous_depth_limit = self.depth_limit
         self.depth_limit += 1
         self._path_limit_hit = False
-        if previous_depth_limit > 0:
-            trace(trace_logger, "pathlim")
 
     def _should_continue_after_empty_stack(self) -> bool:
         if self.comp is not None:
             if self.depth_limit >= self.comp:
+                # leanCoP's comp(N): restart in complete mode.
                 self.comp = None
                 self.cut_enabled = False
                 self.scut_enabled = False
@@ -293,14 +150,16 @@ class IDMemory(DFSMemory):
             return True
         return self._path_limit_hit
 
+    def _reset_search(self, state: State) -> None:
+        _ = state
+        self._stack.clear()
+
     def _exhaustion_status(self) -> AgentStatus:
         """A fixed point is claimable only from a complete final iteration.
 
         By the time the ladder stops, a comp() switch has already turned cut
         and scut off; if they are still on, the space was pruned and the claim
-        is forfeit. The path-limit condition -- the bound never bound during
-        the exhausting iteration -- is what _should_continue_after_empty_stack
-        already required to stop at all.
+        is forfeit.
         """
         if (
             self.comp is None
@@ -324,6 +183,6 @@ def first_action_id_agent(**options) -> ModelBasedAgent:
 
 __all__ = [
     "IDMemory",
-    "first_action_id_agent",
     "IterativeDeepeningOptions",
+    "first_action_id_agent",
 ]

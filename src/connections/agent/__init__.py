@@ -9,10 +9,8 @@ from connections.agent.base import (
     start_clause_ids,
 )
 from connections.agent.dfs import (
-    ChoicepointFrame,
     DFSMemory,
     Frame,
-    WorkFrame,
 )
 from connections.agent.id import (
     IDMemory,
@@ -31,7 +29,6 @@ __all__ = [
     "AgentDecision",
     "AgentStatus",
     "BacktrackGranularity",
-    "ChoicepointFrame",
     "Chooser",
     "DFSMemory",
     "Frame",
@@ -40,7 +37,6 @@ __all__ = [
     "Memory",
     "ModelBasedAgent",
     "StartMode",
-    "WorkFrame",
     "first",
     "first_action_id_agent",
     "start_clause_ids",

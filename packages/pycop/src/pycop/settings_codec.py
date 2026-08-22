@@ -5,7 +5,7 @@ import re
 from collections.abc import Mapping
 from typing import Any, cast
 
-from connections.agent import first_action_id_agent
+from pycop.leancop_memory import traced_leancop_agent
 from connections.run.strategy import MatrixOptions, PolicyOptions, Strategy
 
 
@@ -52,7 +52,7 @@ class LeancopSettingsCodec:
             return Strategy(
                 matrix=MatrixOptions(),
                 policy=PolicyOptions(
-                    policy_class=first_action_id_agent,
+                    policy_class=traced_leancop_agent,
                     args=_leancop_policy_args(),
                 ),
             )
@@ -91,7 +91,7 @@ class LeancopSettingsCodec:
                 mark_conjecture=conjecture,
             ),
             policy=PolicyOptions(
-                policy_class=first_action_id_agent,
+                policy_class=traced_leancop_agent,
                 args=_leancop_policy_args(
                     cut=cut,
                     scut=scut,
@@ -119,7 +119,7 @@ def _leancop_policy_args(
 
 
 def _policy_args(strategy: Strategy) -> Mapping[str, Any]:
-    if strategy.policy.policy_class is not first_action_id_agent:
+    if strategy.policy.policy_class is not traced_leancop_agent:
         raise TypeError("leanCoP settings codec requires the leanCoP agent factory")
     return cast(Mapping[str, Any], strategy.policy.args or {})
 
