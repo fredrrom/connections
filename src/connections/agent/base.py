@@ -5,8 +5,8 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from enum import Enum
 
-from connections.calculus.actions import Action
-from connections.calculus.state import State
+from connections.env.actions import Action
+from connections.env.state import State
 
 Chooser = Callable[[State, Sequence[Action]], Action]
 

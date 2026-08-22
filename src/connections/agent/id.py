@@ -21,10 +21,10 @@ from typing import TypeGuard
 from connections.agent.base import AgentOptions, AgentStatus
 from connections.agent.base import Chooser
 from connections.agent.dfs import OnlineDFSAgent
-from connections.calculus.actions import Action, ApplyAction
-from connections.calculus.dynamics import Dynamics
-from connections.calculus.rules import Extension
-from connections.calculus.state import State
+from connections.env.actions import Action, ApplyAction
+from connections.env.dynamics import Dynamics
+from connections.env.rules import Extension
+from connections.env.state import State
 
 
 class OnlineIDAgent(OnlineDFSAgent):

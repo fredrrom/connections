@@ -28,8 +28,8 @@ from typing import Any, Generic, TypeVar
 
 from connections.agent import Agent, AgentStatus
 from connections.interaction.outcome import ProverOutcome
-from connections.calculus.state import State
-from connections.calculus.tableau import Tableau
+from connections.env.state import State
+from connections.env.tableau import Tableau
 from connections.clausification import matrix_from_file
 from connections.syntax.logic import Domain, Logic
 from connections.syntax.matrix import Matrix

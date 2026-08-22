@@ -13,10 +13,10 @@ from connections.agent import (
     AgentStatus,
     OnlineIDAgent,
 )
-from connections.calculus.actions import Action
-from connections.calculus.dynamics import Dynamics
+from connections.env.actions import Action
+from connections.env.dynamics import Dynamics
 from connections.interaction.run import Problem, run_schedule as run_problem
-from connections.calculus.state import State
+from connections.env.state import State
 from connections.interaction.strategy import (
     MatrixOptions,
     PolicyOptions,

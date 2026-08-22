@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from connections.agent import Agent
-from connections.calculus.actions import Action
-from connections.calculus.dynamics import Dynamics
-from connections.calculus.state import State
+from connections.env.actions import Action
+from connections.env.dynamics import Dynamics
+from connections.env.state import State
 from connections.interaction.strategy import (
     MatrixOptions,
     PolicyOptions,

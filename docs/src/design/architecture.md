@@ -19,9 +19,9 @@ A library of primitives for clausal connection tableaux, in four groups.
 
     constraints     unification, rigid substitutions, prefixes
 
-**The calculus** -- the transition system a policy acts in.
+**The environment** -- the transition system an agent acts in.
 
-    calculus        state, tableau, actions, rules, dynamics
+    env             state, tableau, actions, rules, dynamics
 
 **Acting in it** -- one problem at a time.
 
@@ -29,8 +29,8 @@ A library of primitives for clausal connection tableaux, in four groups.
     interaction     build_state, rollout, run_schedule, result, judge
 
 Dependencies run upward: `constraints` and `parsing` over `syntax`,
-`clausification` over `parsing`, `calculus` over `syntax` and `constraints`,
-`agent` over `calculus`, and `interaction` over all of it. Nothing below
+`clausification` over `parsing`, `env` over `syntax` and `constraints`,
+`agent` over `env`, and `interaction` over all of it. Nothing below
 `interaction` knows
 about budgets, schedules or statuses; nothing below `agent` knows an agent
 exists.
@@ -71,7 +71,7 @@ them, and aggregating what comes back are each package's own business.
 ## Packages and dependency edges
 
 ```
-connections   calculus, run, SZS                         -> lark
+connections   env, agent, interaction                         -> lark
 pycop         leanCoP-equivalent prover, parity, CLI     -> connections
 ```
 

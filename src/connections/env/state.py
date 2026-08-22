@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 
 from connections.syntax.matrix import Literal, SignedPredicateSymbol
 from connections.constraints import ConstraintStore
-from connections.calculus.rules import Extension, Rule, Start
-from connections.calculus.tableau import RuleApplication, Tableau, TableauNode
+from connections.env.rules import Extension, Rule, Start
+from connections.env.tableau import RuleApplication, Tableau, TableauNode
 
 if TYPE_CHECKING:
     from connections.syntax.matrix import Matrix

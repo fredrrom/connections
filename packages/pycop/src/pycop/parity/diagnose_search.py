@@ -18,12 +18,12 @@ from connections.syntax.logic import Domain, Logic
 from connections.syntax.matrix import Clause, Literal
 from connections.interaction.outcome import ProverOutcome
 from connections.interaction.szs import to_szs_status
-from connections.calculus.actions import Action, ApplyAction, UndoAction
-from connections.calculus.dynamics import Dynamics
-from connections.calculus.rules import Extension, Factorization, Reduction, Start
-from connections.calculus.state import State
+from connections.env.actions import Action, ApplyAction, UndoAction
+from connections.env.dynamics import Dynamics
+from connections.env.rules import Extension, Factorization, Reduction, Start
+from connections.env.state import State
 from connections.interaction.strategy import MatrixOptions
-from connections.calculus.tableau import Tableau, TableauNode
+from connections.env.tableau import Tableau, TableauNode
 from pycop.settings_codec import LeancopSettingsCodec
 
 

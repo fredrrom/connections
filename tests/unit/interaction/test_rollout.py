@@ -7,8 +7,8 @@ import time
 import pytest
 
 from connections.agent import Agent, AgentStatus
-from connections.calculus.state import State
-from connections.calculus.tableau import Tableau
+from connections.env.state import State
+from connections.env.tableau import Tableau
 from connections.interaction.records import Rollout, Stop
 from connections.interaction.rollout import rollout
 

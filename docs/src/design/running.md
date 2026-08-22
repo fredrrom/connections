@@ -10,7 +10,7 @@ Four layers, each computing one thing:
 
 | layer | computes | knows nothing about |
 |---|---|---|
-| environment (`calculus`) | transitions: `A(s)`, `T`, membership in `S✓` | agents, budgets, files |
+| environment (`env`) | transitions: `A(s)`, `T`, membership in `S✓` | agents, budgets, files |
 | agent | the agent function: state to action, plus its own status | verdicts, schedules, SZS |
 | rollout | the agent function against the environment, under best-effort budgets | closure, proofs, strategies |
 | prover (`interaction`) | formulation, judging, reporting: one problem to one `Result` | processes, corpora, learning |

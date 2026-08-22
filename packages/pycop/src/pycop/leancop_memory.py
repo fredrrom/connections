@@ -16,10 +16,10 @@ from typing import TypeGuard
 
 from connections.agent.base import Agent, AgentOptions, AgentStatus
 
-from connections.calculus.actions import Action, ApplyAction
-from connections.calculus.dynamics import Dynamics
-from connections.calculus.rules import Extension, FactorizationMode, Start
-from connections.calculus.state import State
+from connections.env.actions import Action, ApplyAction
+from connections.env.dynamics import Dynamics
+from connections.env.rules import Extension, FactorizationMode, Start
+from connections.env.state import State
 from connections.syntax.matrix import Clause
 from connections.trace_logging import trace, trace_logger
 

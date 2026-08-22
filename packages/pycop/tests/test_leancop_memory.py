@@ -13,17 +13,17 @@ import pycop.leancop_memory as policy_module
 from pycop.leancop_memory import first as _first  # noqa: E501
 import pycop.leancop_memory as id_policy_module
 from pycop.leancop_memory import traced_leancop_agent as FirstActionIDPolicy
-from connections.calculus.actions import (
+from connections.env.actions import (
     Action,
     AnyApplyAction,
     ApplyAction,
     ApplyActions,
     UndoAction,
 )
-from connections.calculus.dynamics import Dynamics
-from connections.calculus.rules import Extension, Factorization, Reduction, Start
-from connections.calculus.state import State
-from connections.calculus.tableau import Tableau
+from connections.env.dynamics import Dynamics
+from connections.env.rules import Extension, Factorization, Reduction, Start
+from connections.env.state import State
+from connections.env.tableau import Tableau
 from connections.trace_logging import TRACE_LEVEL
 
 

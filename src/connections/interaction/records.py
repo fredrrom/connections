@@ -16,10 +16,10 @@ from enum import Enum
 from typing import Any, Generic, TypeVar
 
 from connections.agent.base import AgentStatus
-from connections.calculus.actions import Action, ApplyAction, UndoAction
-from connections.calculus.dynamics import Dynamics
-from connections.calculus.rules import Extension, Factorization, Reduction, Start
-from connections.calculus.state import State
+from connections.env.actions import Action, ApplyAction, UndoAction
+from connections.env.dynamics import Dynamics
+from connections.env.rules import Extension, Factorization, Reduction, Start
+from connections.env.state import State
 from connections.interaction.outcome import ProverOutcome
 from connections.interaction.szs import SZSStatus
 

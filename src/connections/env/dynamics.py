@@ -5,8 +5,8 @@ from typing import TypeVar
 
 from connections.syntax.matrix import Clause, Literal
 from connections.constraints import FreeVariableReference
-from connections.calculus.actions import Action, ApplyAction, ApplyActions, UndoAction
-from connections.calculus.rules import (
+from connections.env.actions import Action, ApplyAction, ApplyActions, UndoAction
+from connections.env.rules import (
     Extension,
     Factorization,
     FactorizationMode,
@@ -14,9 +14,9 @@ from connections.calculus.rules import (
     Rule,
     Start,
 )
-from connections.calculus.state import State
+from connections.env.state import State
 from connections.syntax.matrix import Matrix
-from connections.calculus.tableau import TableauNode
+from connections.env.tableau import TableauNode
 from connections.trace_logging import trace, trace_logger
 
 RuleT = TypeVar("RuleT", bound=Rule)
