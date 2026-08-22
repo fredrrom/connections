@@ -10,8 +10,8 @@ Initial prover-loop release.
   the transition system and `run` for everything above it. Agents implement
   policies: `Agent` is percept-in action-out, `AgentStatus` its word about its
   own search, and the judge in `run` produces outcomes and SZS from outside
-  the agent. `OnlineSearchAgent(memory, chooser)` composes search agents from
-  `DFSMemory`/`IDMemory` and a chooser.
+  the agent. `MarkovAgent`, `OnlineDFSAgent` and `OnlineIDAgent` take a
+  chooser and `AgentOptions`; a learned agent is a different chooser.
 - Public action records under `connections.calculus.actions`.
 - Corpus selection, run rows, summaries and profiling in `pycop.runs`.
 - DFS and iterative-deepening policy components with first-action default

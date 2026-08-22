@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from connections.agent.base import Agent, AgentOptions
-from connections.agent.search import Chooser
+from connections.agent.search import Chooser, start_clause_ids
 from connections.calculus.actions import Action
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.state import State
-from connections.agent.memory.dfs import start_clause_ids
 
 
 class MarkovAgent(Agent):

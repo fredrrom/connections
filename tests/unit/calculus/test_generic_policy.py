@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from connections.syntax.formula import Atom
 from connections.syntax.matrix import Clause, Literal, Matrix
-from connections.agent import AgentOptions, AgentStatus, DFSMemory, OnlineSearchAgent
+from connections.agent import AgentOptions, AgentStatus, OnlineDFSAgent
 
 
 from connections.calculus.actions import ApplyAction, UndoAction
@@ -32,11 +32,11 @@ def _second(state, actions):
 
 
 def _second_agent(**options):
-    return OnlineSearchAgent(DFSMemory(), _second, AgentOptions(**options))
+    return OnlineDFSAgent(_second, AgentOptions(**options))
 
 
 def _first_agent(**options):
-    return OnlineSearchAgent(DFSMemory(), _choose_first, AgentOptions(**options))
+    return OnlineDFSAgent(_choose_first, AgentOptions(**options))
 
 
 def test_dfs_policy_delegates_action_ordering() -> None:

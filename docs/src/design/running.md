@@ -228,27 +228,25 @@ recorded and applied, not by being left in memory.
 
 ## The model-based agent
 
-An agent is one function, `__call__(state) -> Action | None`, plus `status()`
-for its word about its own search. Most of the family here is R&N's
-model-based agent, implemented as a memory and a chooser:
+An agent is one function, `__call__(state) -> Action | None`, with `status`
+a plain attribute holding its word about its own search and `options` the
+record it was constructed with. The search agents keep R&N's model-based
+shape internally -- state that exposes `A(s, μ)` and updates on the chosen
+action -- as agent subclasses, each taking a chooser:
 
 ```python
-class Memory(Protocol):
-    def exposed(self, agent, state) -> Sequence[Action]   # A(s, μ) ⊆ A(s)
-    def update(self, agent, state, action) -> None        # U_π
-    # both receive the agent: config from agent.options, status onto agent
-
-OnlineSearchAgent(memory, choose)
+MarkovAgent(choose, options)                # no memory: choose over A(s)
+OnlineDFSAgent(choose, options)             # the fringe-mirroring stack
+OnlineIDAgent(choose, options)              # stack plus the depth ladder
 ```
 
-| memory -- what `A(s, μ)` exposes | chooser -- among what it exposed |
+| internal state -- what `A(s, μ)` exposes | chooser -- among what it exposed |
 |---|---|
-| none (markov) | `first` |
-| `DFSMemory`: the choicepoint stack | learned scorer |
-| `IDMemory`: stack plus depth ladder | |
+| none (markov) | pycop's `first` |
+| the choicepoint stack (DFS) | learned scorer |
+| stack plus depth ladder (ID) | |
 
-leanCoP is `OnlineSearchAgent(IDMemory(), first, options)` -- the
-`traced_leancop_agent` factory in pycop. A learned agent keeps the memory and replaces
+leanCoP is pycop's `traced_leancop_agent`. A learned agent keeps the memory and replaces
 the chooser, which is where the old multiple-inheritance diamond dissolved
 into composition. The warrant lives in the memory's `status()`: only the
 memory knows whether its options pruned, so only it can claim

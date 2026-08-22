@@ -5,7 +5,7 @@ import pytest
 from connections.clausification import matrix_from_file
 from connections.syntax.matrix import Matrix, SignedPredicateSymbol
 from connections.parsing.tptp.parser import TPTPParseError
-from connections.agent.memory.dfs import start_clause_ids
+from connections.agent.search import start_clause_ids
 from connections.trace_logging import CLAUSIFICATION_TRACE_LOGGER_NAME, TRACE_LEVEL
 
 

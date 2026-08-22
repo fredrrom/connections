@@ -15,8 +15,7 @@ from dataclasses import dataclass
 from typing import TypeGuard
 
 from connections.agent.base import Agent, AgentOptions, AgentStatus
-from connections.agent.memory.dfs import start_clause_ids
-from connections.agent.search import OnlineSearchAgent
+from connections.agent.search import start_clause_ids
 
 from connections.calculus.actions import Action, ApplyAction
 from connections.calculus.dynamics import Dynamics
@@ -54,7 +53,7 @@ class ChoicepointFrame:
 Frame = WorkFrame | ChoicepointFrame
 
 
-class TracedDFSMemory:
+class TracedDFSAgent(Agent):
     """leanCoP's search as a memory: a stack of choicepoints.
 
     Everything here is the machinery that used to be DFSPolicy, moved rather
@@ -65,6 +64,7 @@ class TracedDFSMemory:
 
     def __init__(
         self,
+        choose=None,
         *,
         cut: bool = False,
         scut: bool = False,
@@ -72,33 +72,39 @@ class TracedDFSMemory:
         factorization: FactorizationMode = "unify",
         start: StartMode = "positive",
     ) -> None:
+        super().__init__(
+            AgentOptions(
+                cut=cut,
+                scut=scut,
+                backtrack=backtrack,
+                factorization=factorization,
+                start=start,
+            )
+        )
+        self.choose = choose if choose is not None else first
         self.cut_enabled = cut
         self.scut_enabled = scut
         self.backtrack = backtrack
         self.factorization = factorization
         self.start = start
         self._stack: list[Frame] = []
-        self._exposed_actions: tuple[Action, ...] = ()
 
-    def exposed(self, agent: Agent, state: State) -> tuple[Action, ...]:
+    def __call__(self, state: State) -> Action | None:
         # _prepare_actions settles closed choicepoints on the way in, so the
         # call at a final state does this memory's shutdown before exposing
         # nothing.
         actions = self._available_actions(state)
         if not actions:
-            agent.status = (
+            self.status = (
                 AgentStatus.CLOSED
                 if state.tableau.root.closed
                 else self._exhaustion_status()
             )
-            return ()
-        agent.status = AgentStatus.SEARCHING
-        self._exposed_actions = actions
-        return actions
-
-    def update(self, agent: Agent, state: State, action: Action) -> None:
-        agent.status = AgentStatus.SEARCHING
-        self._after_action(state, self._exposed_actions, action)
+            return None
+        self.status = AgentStatus.SEARCHING
+        action = self.choose(state, actions)
+        self._after_action(state, actions, action)
+        return action
 
     def _exhaustion_status(self) -> AgentStatus:
         """The claim an empty frontier licenses, given the agent's options.
@@ -475,13 +481,14 @@ class IterativeDeepeningOptions:
     initial_depth: int = 1
 
 
-class TracedIDMemory(TracedDFSMemory):
+class TracedIDAgent(TracedDFSAgent):
     """Iterative deepening over the DFS memory: the depth ladder, comp
     switching, and the path-limit condition that decides whether a fixed
     point may be claimed."""
 
     def __init__(
         self,
+        choose=None,
         *,
         cut: bool = False,
         scut: bool = False,
@@ -492,6 +499,7 @@ class TracedIDMemory(TracedDFSMemory):
         initial_depth: int = 1,
     ) -> None:
         super().__init__(
+            choose,
             cut=cut,
             scut=scut,
             backtrack=backtrack,
@@ -768,18 +776,16 @@ def _is_extension_action(action: Action) -> TypeGuard[ApplyAction[Extension]]:
     return isinstance(action, ApplyAction) and isinstance(action.rule, Extension)
 
 
-def traced_leancop_agent(**options) -> OnlineSearchAgent:
-    """leanCoP's agent: traced iterative-deepening memory, first-choice chooser."""
-    return OnlineSearchAgent(
-        TracedIDMemory(**options), first, AgentOptions(**options)
-    )
+def traced_leancop_agent(**options) -> TracedIDAgent:
+    """leanCoP's agent: the traced iterative-deepening search, first-choice."""
+    return TracedIDAgent(first, **options)
 
 
 
 
 __all__ = [
-    "TracedDFSMemory",
-    "TracedIDMemory",
+    "TracedDFSAgent",
+    "TracedIDAgent",
     "first",
     "traced_leancop_agent",
 ]

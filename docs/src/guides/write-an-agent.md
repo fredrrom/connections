@@ -70,10 +70,10 @@ honest. The judge maps claims to `CounterSatisfiable`/`Satisfiable` and
 Most reactive agents are a memory and a chooser:
 
 ```python
-from connections.agent import DFSMemory, IDMemory, OnlineSearchAgent, first
+from connections.agent import AgentOptions, OnlineDFSAgent, OnlineIDAgent
 
-leancop = OnlineSearchAgent(IDMemory(), first, AgentOptions(cut=True, comp=7))
-learned = OnlineSearchAgent(DFSMemory(), my_scorer, options)
+deepening = OnlineIDAgent(my_scorer, AgentOptions(comp=7))
+learned = OnlineDFSAgent(my_scorer, AgentOptions(factorization="equal"))
 ```
 
 The memory is the search: it exposes `A(s, μ)`, updates on the chosen

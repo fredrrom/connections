@@ -1,8 +1,8 @@
 """The clean and traced memories must take identical actions.
 
-The connections library ships clean memories: no trace choreography, no
+The connections library ships clean agents: no trace choreography, no
 deferred bookkeeping, rebuilt on the fringe-mirroring invariant. pycop ships
-the traced memories whose event streams are bit-identical to leanCoP. This
+the traced agents whose event streams are bit-identical to leanCoP. This
 test is the referee between them: same problem, same options, identical
 action sequences and final statuses. Any divergence is a bug in one of them.
 """
@@ -13,12 +13,12 @@ from pathlib import Path
 
 import pytest
 
-from connections.agent import AgentOptions, IDMemory, OnlineSearchAgent
+from connections.agent import AgentOptions, OnlineIDAgent
 from connections.run import Problem, build_state
 from connections.run.rollout import rollout
 from connections.run.strategy import MatrixOptions
 
-from pycop.leancop_memory import TracedIDMemory, first
+from pycop.leancop_memory import TracedIDAgent, first
 
 M2K = Path("/Users/fredrik/dev/phd/benchmarks/m2k")
 
@@ -34,9 +34,8 @@ DISCIPLINES = [
 ]
 
 
-def _rollout(problem: Path, memory, options):
+def _rollout(problem: Path, agent):
     state = build_state(Problem(problem), matrix_options=MatrixOptions())
-    agent = OnlineSearchAgent(memory, first, AgentOptions(**options))
     return rollout(state, agent, step_limit=3000)
 
 
@@ -62,8 +61,8 @@ def test_clean_and_traced_memories_act_identically(name, options, request):
             )
         )
 
-    clean = _rollout(problem, IDMemory(), options)
-    traced = _rollout(problem, TracedIDMemory(**options), options)
+    clean = _rollout(problem, OnlineIDAgent(first, AgentOptions(**options)))
+    traced = _rollout(problem, TracedIDAgent(first, **options))
 
     assert clean.steps == traced.steps
     assert clean.stop == traced.stop

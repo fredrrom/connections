@@ -12,8 +12,7 @@ from connections.agent import (
     Agent,
     AgentOptions,
     AgentStatus,
-    IDMemory,
-    OnlineSearchAgent,
+    OnlineIDAgent,
 )
 from connections.calculus.actions import Action
 from connections.calculus.dynamics import Dynamics
@@ -84,7 +83,7 @@ def _no_action_strategy() -> Strategy:
 
 
 def _id_agent(**options):
-    return OnlineSearchAgent(IDMemory(), lambda s, a: a[0], AgentOptions(**options))
+    return OnlineIDAgent(lambda s, a: a[0], AgentOptions(**options))
 
 
 def _leancop_strategy(**policy_args: Any) -> Strategy:
@@ -402,9 +401,7 @@ def test_pycop_prover_reinitializes_policy_for_each_run(tmp_path, monkeypatch):
     created: list[Agent] = []
 
     def tracking_agent(**options):
-        agent = OnlineSearchAgent(
-            IDMemory(), lambda s, a: a[0], AgentOptions(**options)
-        )
+        agent = OnlineIDAgent(lambda s, a: a[0], AgentOptions(**options))
         created.append(agent)
         return agent
 
