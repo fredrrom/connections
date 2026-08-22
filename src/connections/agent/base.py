@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from enum import Enum
 
 from connections.calculus.actions import Action
 from connections.calculus.state import State
+
+Chooser = Callable[[State, Sequence[Action]], Action]
 
 
 class AgentStatus(Enum):
@@ -61,4 +64,5 @@ __all__ = [
     "Agent",
     "AgentOptions",
     "AgentStatus",
+    "Chooser",
 ]

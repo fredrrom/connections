@@ -15,9 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from collections.abc import Callable, Sequence
-
-from connections.agent.base import Agent, AgentOptions, AgentStatus
+from connections.agent.base import Agent, AgentOptions, AgentStatus, Chooser
 from connections.calculus.actions import Action, ApplyAction, UndoAction
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.rules import Start
@@ -28,9 +26,6 @@ from connections.calculus.state import State
 class Frame:
     goal_id: int
     actions: list[Action]
-
-
-Chooser = Callable[[State, Sequence[Action]], Action]
 
 
 class OnlineDFSAgent(Agent):

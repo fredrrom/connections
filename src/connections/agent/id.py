@@ -19,7 +19,8 @@ from dataclasses import replace
 from typing import TypeGuard
 
 from connections.agent.base import AgentOptions, AgentStatus
-from connections.agent.dfs import Chooser, OnlineDFSAgent
+from connections.agent.base import Chooser
+from connections.agent.dfs import OnlineDFSAgent
 from connections.calculus.actions import Action, ApplyAction
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.rules import Extension
