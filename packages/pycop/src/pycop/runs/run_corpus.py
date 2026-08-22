@@ -15,7 +15,7 @@ from connections.calculus.outcome import ProverOutcome
 from connections.run.szs import SZSStatus
 from connections.run.result import Result
 from connections.run.entry import (
-    ProblemSpec,
+    Problem,
     ProofFoundCallback,
     run as run_one_problem,
 )
@@ -343,7 +343,7 @@ def _scheduled_problem_runner(
     source_dirs = tuple(source_file_dirs)
 
     def run_problem(problem_path: Path) -> Result[Any]:
-        problem = ProblemSpec(
+        problem = Problem(
             problem_path,
             logic=logic,
             domain=domain,

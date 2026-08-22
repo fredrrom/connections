@@ -10,7 +10,7 @@ from connections.calculus.outcome import ProverOutcome
 from connections.run.szs import SZSStatus
 from connections.policy import FirstActionIDPolicy, Policy, PolicyDecision
 from connections.calculus.dynamics import Dynamics
-from connections.run.entry import ProblemSpec, run as run_problem
+from connections.run.entry import Problem, run as run_problem
 from connections.calculus.state import State
 from connections.run.strategy import (
     MatrixOptions,
@@ -104,7 +104,7 @@ def test_prover_run_uses_source_file_dirs(tmp_path):
     problem.write_text("include('axioms.ax').\nfof(c,conjecture,p).\n")
 
     result = run_problem(
-        ProblemSpec(problem, source_file_dirs=(lib_dir,)),
+        Problem(problem, source_file_dirs=(lib_dir,)),
         schedule=StrategySchedule.single(_first_strategy()),
     )
 
@@ -122,7 +122,7 @@ def test_prover_run_follows_control_loop_to_theorem(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     run_result = run_problem(
-        ProblemSpec(problem),
+        Problem(problem),
         schedule=StrategySchedule.single(_first_strategy()),
     )
     result = run_result.strategy_results[0]
@@ -144,7 +144,7 @@ def test_prover_run_accepts_single_strategy(tmp_path, monkeypatch):
     )
 
     result = run_problem(
-        ProblemSpec(problem),
+        Problem(problem),
         schedule=_first_strategy(),
     )
 
@@ -164,7 +164,7 @@ def test_prover_run_reports_non_theorem_when_no_action(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     run_result = run_problem(
-        ProblemSpec(problem),
+        Problem(problem),
         schedule=StrategySchedule.single(_no_action_strategy()),
     )
     result = run_result.strategy_results[0]
@@ -188,7 +188,7 @@ def test_prover_step_limit_counts_transitions(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     run_result = run_problem(
-        ProblemSpec(problem),
+        Problem(problem),
         schedule=_single_entry_schedule(_no_action_strategy(), steps=0),
     )
     result = run_result.strategy_results[0]
@@ -209,7 +209,7 @@ def test_prover_run_requires_schedule(tmp_path, monkeypatch):
     )
     run = run_problem
     try:
-        run(ProblemSpec(problem))  # ty: ignore[missing-argument]
+        run(Problem(problem))  # ty: ignore[missing-argument]
     except TypeError as err:
         assert "schedule" in str(err)
     else:
@@ -229,7 +229,7 @@ def test_prover_run_accepts_scheduled_entries(tmp_path, monkeypatch):
     entry = WeightedStrategy(strategy=settings, weight=3)
 
     result = run_problem(
-        ProblemSpec(problem),
+        Problem(problem),
         schedule=StrategySchedule.from_weighted((entry,)),
     )
 
@@ -252,7 +252,7 @@ def test_prover_run_passes_closed_state_to_proof_callback(tmp_path, monkeypatch)
     )
 
     result = run_problem(
-        ProblemSpec(problem),
+        Problem(problem),
         schedule=schedule,
         on_proof_found=lambda event: event.state.tableau.root.closed,
     )
@@ -289,7 +289,7 @@ def test_prover_caches_matrices_across_schedule_entries(tmp_path, monkeypatch):
         ]
     )
     result = run_problem(
-        ProblemSpec(problem),
+        Problem(problem),
         schedule=schedule,
     )
 
@@ -313,7 +313,7 @@ def test_prover_timeout_includes_matrix_construction(tmp_path, monkeypatch):
     settings = _no_action_strategy()
 
     run_result = run_problem(
-        ProblemSpec(problem),
+        Problem(problem),
         schedule=_single_entry_schedule(settings, timeout_seconds=0.001),
     )
     result = run_result.strategy_results[0]
@@ -332,7 +332,7 @@ def test_prover_reports_expired_timeout_before_state_construction(tmp_path):
     settings = _no_action_strategy()
 
     run_result = run_problem(
-        ProblemSpec(problem),
+        Problem(problem),
         schedule=_single_entry_schedule(settings, timeout_seconds=0.0),
     )
     result = run_result.strategy_results[0]
@@ -360,7 +360,7 @@ def test_prover_reports_memory_error_as_memory_out(tmp_path, monkeypatch):
     settings = _no_action_strategy()
 
     run_result = run_problem(
-        ProblemSpec(problem),
+        Problem(problem),
         schedule=_single_entry_schedule(settings, timeout_seconds=1.0),
     )
     result = run_result.strategy_results[0]
@@ -395,11 +395,11 @@ def test_pycop_prover_reinitializes_policy_for_each_run(tmp_path, monkeypatch):
     )
     
     first = run_problem(
-        ProblemSpec(problem),
+        Problem(problem),
         schedule=StrategySchedule.single(settings),
     ).strategy_results[0]
     second = run_problem(
-        ProblemSpec(problem),
+        Problem(problem),
         schedule=StrategySchedule.single(settings),
     ).strategy_results[0]
 
@@ -419,7 +419,7 @@ def test_prover_wall_alarm_restores_signal_state(tmp_path):
     handler_before = signal.getsignal(signal.SIGALRM)
 
     run_problem(
-        ProblemSpec(problem),
+        Problem(problem),
         schedule=_single_entry_schedule(_first_strategy(), timeout_seconds=30.0),
     )
 
@@ -444,7 +444,7 @@ def test_proof_callback_shares_strategy_wall_clock_budget(tmp_path, monkeypatch)
 
     started = time.monotonic()
     result = run_problem(
-        ProblemSpec(problem),
+        Problem(problem),
         schedule=schedule,
         on_proof_found=slow_callback,
     )

@@ -14,7 +14,7 @@ from typing import Any, Iterator, Sequence
 
 
 from connections.run.szs import SZSStatus
-from connections.run.entry import ProblemSpec, run as run_problem
+from connections.run.entry import Problem, run as run_problem
 from connections.run.strategy import StrategySchedule
 from pycop.settings_codec import LeancopSettingsCodec
 from connections.trace_logging import trace_event_sink
@@ -229,7 +229,7 @@ def native_pycop_trace(
     try:
         with trace_event_sink(events.append), _hard_timeout(timeout_seconds):
             strategy = LeancopSettingsCodec.from_tokens(list(case.settings))
-            problem = ProblemSpec(
+            problem = Problem(
                 problem_path,
                 logic=case.logic,
                 domain=case.domain,

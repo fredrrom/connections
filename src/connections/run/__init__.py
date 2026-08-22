@@ -6,7 +6,7 @@ from typing import Any
 _EXPORTS = {
     "MatrixOptions": "connections.run.strategy",
     "PolicyOptions": "connections.run.strategy",
-    "ProblemSpec": "connections.run.entry",
+    "Problem": "connections.run.entry",
     "ProofFound": "connections.run.entry",
     "ProofFoundCallback": "connections.run.entry",
     "Result": "connections.run.result",

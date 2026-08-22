@@ -15,11 +15,11 @@ def test_prover_public_api_exports_documented_boundary():
     )
     from connections.calculus.dynamics import Dynamics
     from connections.calculus.state import State
-    from connections.run.entry import ProblemSpec, run as run_problem
+    from connections.run.entry import Problem, run as run_problem
     from connections.run.strategy import MatrixOptions, StrategySchedule
 
     assert run_problem is not None
-    assert ProblemSpec is not None
+    assert Problem is not None
     assert State is not None
     assert Dynamics is not None
     assert MatrixOptions is not None

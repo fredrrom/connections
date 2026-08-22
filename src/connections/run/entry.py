@@ -54,7 +54,7 @@ MatrixCache = dict[tuple[object, ...], Matrix]
 
 
 @dataclass(frozen=True, slots=True)
-class ProblemSpec:
+class Problem:
     """A problem as a file plus the context needed to read it.
 
     Source directories are part of the call. Nothing here reads ``TPTP``,
@@ -79,7 +79,7 @@ class ProblemSpec:
 
 @dataclass(frozen=True, slots=True)
 class ProofFound(Generic[StrategyT]):
-    problem: ProblemSpec
+    problem: Problem
     strategy_index: int
     strategy: StrategyT
     result: StrategyResult[StrategyT]
@@ -93,7 +93,7 @@ class _StrategyRun(Generic[StrategyT]):
 
 
 def run(
-    problem: ProblemSpec,
+    problem: Problem,
     *,
     schedule: StrategyT | StrategySchedule[StrategyT],
     on_proof_found: ProofFoundCallback[StrategyT] | None = None,
@@ -115,7 +115,7 @@ def run(
 
 
 def build_state(
-    problem: ProblemSpec,
+    problem: Problem,
     *,
     matrix_options: MatrixOptions,
     matrix_cache: MatrixCache | None = None,
@@ -136,7 +136,7 @@ def build_state(
 
 
 def _run_schedule(
-    problem: ProblemSpec,
+    problem: Problem,
     *,
     schedule: StrategyT | StrategySchedule[StrategyT],
     on_proof_found: ProofFoundCallback[StrategyT] | None = None,
@@ -205,7 +205,7 @@ def _strategy_schedule(
 
 
 def _run_strategy(
-    problem: ProblemSpec,
+    problem: Problem,
     *,
     entry: ScheduledStrategy[StrategyT],
     matrix_cache: MatrixCache | None = None,
@@ -257,7 +257,7 @@ def _run_strategy(
 
 
 def _matrix_from_file(
-    problem: ProblemSpec,
+    problem: Problem,
     *,
     matrix_options: MatrixOptions,
     matrix_cache: MatrixCache | None,
@@ -288,7 +288,7 @@ def _matrix_from_file(
 
 
 def _matrix_cache_key(
-    problem: ProblemSpec,
+    problem: Problem,
     *,
     matrix_options: MatrixOptions,
 ) -> tuple[object, ...]:
@@ -304,7 +304,7 @@ def _matrix_cache_key(
 
 
 __all__ = [
-    "ProblemSpec",
+    "Problem",
     "ProofFound",
     "ProofFoundCallback",
     "build_state",

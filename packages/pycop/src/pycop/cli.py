@@ -22,7 +22,7 @@ from pycop.runs import (
 )
 from connections.run.szs import SZSStatus
 from connections.run.result import StrategyResult
-from connections.run.entry import ProblemSpec, run as run_problem
+from connections.run.entry import Problem, run as run_problem
 from connections.run.strategy import (
     PolicyOptions,
     ScheduledStrategy,
@@ -218,7 +218,7 @@ def main(argv: list[str] | None = None) -> int:
                 source_file_dirs=source_file_dirs,
             )
 
-        problem = ProblemSpec(
+        problem = Problem(
             problem_paths[0],
             logic=logic,
             domain=domain,
