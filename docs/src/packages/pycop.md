@@ -59,8 +59,8 @@ runner adds the rest. See [running](../design/running.md#results).
 Benchmark corpora:
 
 ```bash
-pycop-download-benchmarks --list
-pycop-download-benchmarks tptp-v6.4.0 iltp qmltp --root benchmarks
+uv run pycop-download-benchmarks --list
+uv run pycop-download-benchmarks tptp-v6.4.0 iltp qmltp --root benchmarks
 ```
 
 ## Profiling

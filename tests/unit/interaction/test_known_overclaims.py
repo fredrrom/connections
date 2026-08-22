@@ -30,7 +30,7 @@ WITNESSES = ["t100_relat_1", "t10_enumset1"]
 def test_witness_is_not_counter_satisfiable(name):
     problem = M2K / f"{name}.p"
     if not problem.exists():
-        pytest.skip("m2k corpus not present")
+        pytest.skip("m2k corpus not present")  # ty: ignore[invalid-argument-type, too-many-positional-arguments]
     strategy = LeancopSettingsCodec.from_tokens(["cut", "comp(7)"])
     result = run_schedule(
         Problem(problem),

@@ -29,13 +29,13 @@ For development, see [Development](docs/src/guides/development.md).
 Run the pyCoP prover on a TPTP problem:
 
 ```bash
-pycop Problems/SYN/SYN001+1.p classical
+uv run pycop Problems/SYN/SYN001+1.p classical
 ```
 
 Run a single leanCoP strategy:
 
 ```bash
-pycop Problems/SYN/SYN001+1.p classical \
+uv run pycop Problems/SYN/SYN001+1.p classical \
   --settings cut \
   --settings 'comp(7)'
 ```
@@ -43,20 +43,20 @@ pycop Problems/SYN/SYN001+1.p classical \
 Run a schedule:
 
 ```bash
-pycop Problems/SYN/SYN001+1.p classical \
+uv run pycop Problems/SYN/SYN001+1.p classical \
   --schedule classical
 ```
 
 Run over a directory or file list and write corpus rows:
 
 ```bash
-pycop Problems/SYN --out artifacts/corpus/syn.jsonl --steps 1000 --overwrite
+uv run pycop Problems/SYN --out artifacts/corpus/syn.jsonl --steps 1000 --overwrite
 ```
 
 Download benchmark corpora:
 
 ```bash
-pycop-download-benchmarks --list
+uv run pycop-download-benchmarks --list
 ```
 
 Supported logic arguments are `classical`, `intuitionistic`, `D`, `T`, `S4`,

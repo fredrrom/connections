@@ -24,7 +24,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Sync dependencies
-        run: uv sync --locked --dev --group docs
+        run: uv sync --locked --all-packages --dev --group docs
 
       - name: Lint with ruff
         run: uv run ruff check .

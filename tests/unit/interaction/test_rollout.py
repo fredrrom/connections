@@ -111,7 +111,7 @@ def test_unrecorded_rollouts_still_count_steps():
 
 def test_recorded_actions_must_agree_with_the_step_count():
     with pytest.raises(ValueError):
-        Rollout(state=None, status=AgentStatus.GAVE_UP, truncation=None, actions=(), steps=3)
+        Rollout(state=None, status=AgentStatus.GAVE_UP, truncation=None, actions=(), steps=3)  # ty: ignore[invalid-argument-type]
 
 
 def test_the_rollout_never_reads_the_tableau():
@@ -123,7 +123,7 @@ def test_the_rollout_never_reads_the_tableau():
 
     agent = _Scripted()
 
-    result = rollout(_NoTableau(), agent)
+    result = rollout(_NoTableau(), agent)  # ty: ignore[invalid-argument-type]
 
     assert result.truncation is None
     assert agent.states_seen and isinstance(agent.states_seen[0], _NoTableau)
