@@ -71,7 +71,7 @@ class IDPolicy(DFSPolicy):
             return tuple(
                 ApplyAction(goal_id, rule)
                 for rule in Dynamics.start_rules_for(
-                    state, start_clause_ids(state.problem.matrix, self.start)
+                    state, start_clause_ids(state.matrix, self.start)
                 )
             )
         if (
@@ -95,12 +95,12 @@ class IDPolicy(DFSPolicy):
         hits_before_action: dict[int, int] = {}
         pending_hits = 0
         if goal.clause_idx is not None and goal.literal_index is not None:
-            for clause_idx, lit_idx in state.problem.matrix.complements(
+            for clause_idx, lit_idx in state.matrix.complements(
                 goal.clause_idx,
                 goal.literal_index,
             ):
                 instance_id = state.fresh_instance_id()
-                clause = state.problem.matrix.clauses[clause_idx]
+                clause = state.matrix.clauses[clause_idx]
                 if goal.depth + 1 >= self.depth_limit and not clause.is_ground:
                     if Dynamics.extension_terms_unify_for_position(
                         state,
@@ -173,7 +173,7 @@ class IDPolicy(DFSPolicy):
         goal_id: int,
         extension_actions: list[ApplyAction[Extension]],
     ) -> tuple[tuple[ApplyAction[Extension] | None, Clause], ...]:
-        if state.problem.logic not in _MODAL_LOGICS:
+        if state.matrix.logic not in _MODAL_LOGICS:
             return tuple((action, action.rule.clause) for action in extension_actions)
 
         goal = state.tableau.goals[goal_id]
@@ -201,7 +201,7 @@ class IDPolicy(DFSPolicy):
         clause_idx = key[0]
         if clause_idx is None:
             raise RuntimeError("source-less extension action has no matrix clause")
-        return state.problem.matrix.clauses[clause_idx]
+        return state.matrix.clauses[clause_idx]
 
     def _after_choicepoint_created(self, choicepoint: ChoicepointFrame) -> None:
         if self._pending_path_limit_plan is None:

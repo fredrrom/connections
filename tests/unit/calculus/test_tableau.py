@@ -1,7 +1,6 @@
 from connections.syntax.formula import Atom
 from connections.syntax.matrix import Clause, Literal, Matrix
 from connections.calculus.state import State
-from connections.calculus.problem import Problem
 from connections.calculus.rules import Extension, Reduction, Start
 from connections.calculus.tableau import Tableau
 
@@ -12,7 +11,7 @@ def lit(name: str, *, neg: bool = False) -> Literal:
 
 def state() -> State:
     return State(
-        Problem(matrix=Matrix((Clause((lit("dummy"),)),))),
+        Matrix((Clause((lit("dummy"),)),)),
         Tableau(),
     )
 

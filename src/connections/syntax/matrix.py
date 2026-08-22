@@ -12,6 +12,7 @@ from typing import (
     TypeAlias,
 )
 
+from connections.syntax.logic import Domain, Logic
 from connections.syntax.formula import Atom, Prefix, Variable
 ClauseRole: TypeAlias = TypingLiteral["axiom", "conjecture"]
 LiteralPosition: TypeAlias = tuple[int, int]
@@ -98,7 +99,18 @@ class Clause:
 
 @dataclass
 class Matrix:
+    """The static context: omega in [d, omega].
+
+    Logic and domain are part of a matrix's identity, not options. They
+    parameterize which connections are admissible and whether a closed
+    tableau's prefix constraints are satisfiable, so two stamps over the same
+    clauses are two different transition systems. Identity is by content:
+    ``digest()`` hashes the clauses and the stamp, never the caches.
+    """
+
     clauses: Tuple[Clause, ...]
+    logic: Logic = "classical"
+    domain: Domain = "constant"
     source_has_conjecture: bool | None = None
     connection_graph: Dict[SignedPredicateSymbol, Tuple[LiteralPosition, ...]] = field(
         init=False, repr=False
@@ -109,7 +121,44 @@ class Matrix:
     positive_clauses: Tuple[int, ...] = field(init=False, repr=False)
     conjecture_clauses: Tuple[int, ...] = field(init=False, repr=False)
 
+    def stamped(self, *, logic: Logic | None = None, domain: Domain | None = None) -> "Matrix":
+        """This matrix under a different logic/domain stamp: a different omega."""
+        if logic is not None:
+            self.logic = logic
+        if domain is not None:
+            self.domain = domain
+        self._digest = None
+        return self
+
+    def digest(self) -> str:
+        """Content identity: clauses plus the logic/domain stamp.
+
+        Cached after first computation; derived caches never participate.
+        """
+        if self._digest is None:
+            import hashlib
+
+            h = hashlib.sha256()
+            h.update(self.logic.encode())
+            h.update(self.domain.encode())
+            for clause in self.clauses:
+                h.update(clause.role.encode())
+                for literal in clause.literals:
+                    h.update(str(literal).encode())
+                h.update(b"|")
+            self._digest = h.hexdigest()
+        return self._digest
+
+    def __hash__(self) -> int:
+        return hash(self.digest())
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Matrix):
+            return NotImplemented
+        return self.digest() == other.digest()
+
     def __post_init__(self) -> None:
+        self._digest: str | None = None
         self.connection_graph = self._build_connection_graph()
         self.statically_filtered_connection_graph = {}
         self.positive_clauses = self._build_positive_clauses()

@@ -14,13 +14,11 @@ def test_prover_public_api_exports_documented_boundary():
         UndoAction,
     )
     from connections.calculus.dynamics import Dynamics
-    from connections.calculus.problem import Problem
     from connections.calculus.state import State
     from connections.run.entry import ProblemSpec, run as run_problem
     from connections.run.strategy import MatrixOptions, StrategySchedule
 
     assert run_problem is not None
-    assert Problem is not None
     assert ProblemSpec is not None
     assert State is not None
     assert Dynamics is not None

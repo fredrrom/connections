@@ -22,9 +22,12 @@ def matrix_from_file(
     domain: Domain = "constant",
     source_file_dirs: Iterable[str | Path] = (),
 ) -> Matrix:
-    """Load a matrix from a source file using the native parser and translator."""
+    """Load a matrix from a source file using the native parser and translator.
 
-    _ = domain
+    The returned matrix carries its logic/domain stamp: they are part of omega's
+    identity, since they parameterize admissibility and the accepting set.
+    """
+
     resolved_source_file_dirs = tuple(
         Path(directory).resolve() for directory in source_file_dirs
     )
@@ -41,6 +44,8 @@ def matrix_from_file(
         mark_conjecture=mark_conjecture,
         logic=logic,
     )
+    matrix.logic = logic
+    matrix.domain = domain
     if clausification_trace_logger.isEnabledFor(TRACE_LEVEL):
         trace(clausification_trace_logger, "%s", "matrix.from_file.done")
     return matrix

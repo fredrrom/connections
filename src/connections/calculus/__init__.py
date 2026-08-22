@@ -14,7 +14,6 @@ _EXPORTS = {
     "Factorization": "connections.calculus.rules",
     "FactorizationAction": "connections.calculus.actions",
     "FactorizationMode": "connections.calculus.rules",
-    "Problem": "connections.calculus.problem",
     "ProverOutcome": "connections.calculus.outcome",
     "Reduction": "connections.calculus.rules",
     "ReductionAction": "connections.calculus.actions",

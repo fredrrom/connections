@@ -20,7 +20,6 @@ from connections.calculus.actions import (
     UndoAction,
 )
 from connections.calculus.dynamics import Dynamics
-from connections.calculus.problem import Problem
 from connections.calculus.rules import Extension, Factorization, Reduction, Start
 from connections.calculus.state import State
 from connections.calculus.tableau import Tableau
@@ -31,9 +30,7 @@ def _lit(label: str) -> Literal:
     return Literal(atom=Atom(label))
 
 
-_DUMMY_PROBLEM = Problem(
-    matrix=Matrix((Clause((_lit("dummy"),)),))
-)
+_DUMMY_PROBLEM = Matrix((Clause((_lit("dummy"),)),))
 
 
 class _ChooseFirstDFSPolicy(policy_module.DFSPolicy):
@@ -169,8 +166,7 @@ def _make_state(
     action_space = _FakeActionSpace(
         tableau, goals=goals, rule_applications=rule_applications
     )
-    state = State(
-        problem=cast(Any, _DUMMY_PROBLEM),
+    state = State(matrix=cast(Any, _DUMMY_PROBLEM),
         tableau=cast(Any, tableau),
     )
     state.fringe = list(action_space.goals(state))
@@ -772,8 +768,7 @@ def test_modal_iterative_deepening_traces_rejected_prefix_path_limit_candidate(
     path = tmp_path / "modal.p"
     path.write_text("qmf(c,conjecture,(#box:p => p)).\n", encoding="utf-8")
     matrix = matrix_from_file(path, logic="D", domain="constant")
-    state = State(
-        problem=Problem(matrix=matrix, logic="D"),
+    state = State(matrix=matrix.stamped(logic="D"),
         tableau=Tableau(),
     )
     policy = FirstActionIDPolicy(cut=True, scut=True, comp=7)
@@ -827,8 +822,7 @@ def test_iterative_deepening_continues_after_comp_with_plain_settings(
 
 
 def test_iterative_deepening_empty_matrix_has_no_start_choicepoint(caplog):
-    state = State(
-        problem=Problem(matrix=Matrix(())),
+    state = State(matrix=Matrix(()),
         tableau=Tableau(),
     )
     policy = FirstActionIDPolicy(
@@ -849,8 +843,7 @@ def test_iterative_deepening_empty_matrix_has_no_start_choicepoint(caplog):
 
 
 def test_pycop_policy_keeps_real_empty_clause_as_start_action(caplog):
-    state = State(
-        problem=Problem(matrix=Matrix((Clause(()),))),
+    state = State(matrix=Matrix((Clause(()),)),
         tableau=Tableau(),
     )
     policy = FirstActionIDPolicy(

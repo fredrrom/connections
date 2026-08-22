@@ -27,7 +27,6 @@ from collections.abc import Callable
 from typing import Any, Generic, TypeVar
 
 from connections.calculus.outcome import ProverOutcome
-from connections.calculus.problem import Problem
 from connections.calculus.state import State
 from connections.calculus.tableau import Tableau
 from connections.clausification import matrix_from_file
@@ -133,14 +132,7 @@ def build_state(
         matrix_options=matrix_options,
         matrix_cache=matrix_cache,
     )
-    return State(
-        problem=Problem(
-            matrix=matrix,
-            logic=problem.logic,
-            domain=problem.domain,
-        ),
-        tableau=Tableau(),
-    )
+    return State(matrix=matrix, tableau=Tableau())
 
 
 def _run_schedule(
@@ -249,7 +241,7 @@ def _run_strategy(
         outcome = ProverOutcome.TIMEOUT
     except MemoryError:
         outcome = ProverOutcome.MEMORY_OUT
-    has_conjecture = None if state is None else state.problem.has_conjecture
+    has_conjecture = None if state is None else state.matrix.source_has_conjecture
     result = StrategyResult(
         strategy=strategy,
         outcome=outcome,

@@ -6,7 +6,6 @@ from connections.calculus.outcome import ProverOutcome
 from connections.policy import DFSPolicy
 from connections.calculus.actions import ApplyAction, UndoAction
 from connections.calculus.dynamics import Dynamics
-from connections.calculus.problem import Problem
 from connections.calculus.rules import Start
 from connections.calculus.state import State
 from connections.calculus.tableau import Tableau
@@ -17,8 +16,7 @@ def _lit(name: str, *, neg: bool = False) -> Literal:
 
 
 def _state(matrix: Matrix) -> State:
-    return State(
-        problem=Problem(matrix=matrix),
+    return State(matrix=matrix,
         tableau=Tableau(),
     )
 

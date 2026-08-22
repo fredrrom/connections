@@ -49,7 +49,7 @@ class _FirstRulePolicy(Policy):
             actions = Dynamics.apply_actions(
                 state,
                 goal,
-                start_ids=state.problem.matrix.positive_clauses,
+                start_ids=state.matrix.positive_clauses,
             ).ordered()
             if actions:
                 return actions[0]

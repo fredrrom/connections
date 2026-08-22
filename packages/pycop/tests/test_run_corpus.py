@@ -15,7 +15,7 @@ from pycop.runs import RunRow, run_corpus, run_corpus_records, summarize_run_row
 class _FirstRulePolicy(Policy):
     def __call__(self, state: State) -> PolicyDecision:
         for goal in state.fringe:
-            actions = Dynamics.apply_actions(state, goal, start_ids=state.problem.matrix.positive_clauses).ordered()
+            actions = Dynamics.apply_actions(state, goal, start_ids=state.matrix.positive_clauses).ordered()
             if actions:
                 return actions[0]
         return None

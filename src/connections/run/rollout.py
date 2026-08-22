@@ -55,8 +55,8 @@ class Rollout:
 
 def _closed(state: State) -> bool:
     return state.tableau.root.closed and state.constraints.satisfiable(
-        logic=state.problem.logic,
-        domain=state.problem.domain,
+        logic=state.matrix.logic,
+        domain=state.matrix.domain,
     )
 
 

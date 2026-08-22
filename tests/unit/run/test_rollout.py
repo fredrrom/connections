@@ -6,7 +6,6 @@ import time
 
 from connections.calculus.actions import ApplyAction, UndoAction
 from connections.calculus.outcome import ProverOutcome
-from connections.calculus.problem import Problem
 from connections.calculus.state import State
 from connections.calculus.tableau import Tableau
 from connections.policy import Policy
@@ -16,8 +15,7 @@ from tests.unit.run.test_run import _non_theorem_matrix
 
 
 def _state():
-    return State(
-        problem=Problem(matrix=_non_theorem_matrix()),
+    return State(matrix=_non_theorem_matrix(),
         tableau=Tableau(),
     )
 
@@ -161,14 +159,14 @@ def test_a_final_state_ends_the_rollout_without_consulting_the_policy():
         def satisfiable(*, logic, domain):
             return True
 
-    class _Problem:
+    class _Matrix:
         logic = "classical"
         domain = "constant"
 
     class _AlreadyClosed:
         tableau = _Tableau()
         constraints = _Constraints()
-        problem = _Problem()
+        matrix = _Matrix()
 
     policy = _Scripted()
 

@@ -66,14 +66,14 @@ class Dynamics:
         """
         rules: list[Start] = []
         for idx in clause_ids:
-            clause = state.problem.matrix.clauses[idx]
+            clause = state.matrix.clauses[idx]
             instance_id = state.fresh_instance_id()
             delta = state.constraints.delta_for_free_variables(
                 ()
                 if not clause.free_variables
                 else Dynamics._free_variable_refs(clause, instance_id),
-                logic=state.problem.logic,
-                domain=state.problem.domain,
+                logic=state.matrix.logic,
+                domain=state.matrix.domain,
             )
             if delta is None:
                 continue
@@ -109,7 +109,7 @@ class Dynamics:
             target_instance: int | None,
         ) -> Factorization | None:
             if (
-                state.problem.logic == "classical"
+                state.matrix.logic == "classical"
                 and source_literal.is_ground
                 and target_literal.is_ground
             ):
@@ -127,8 +127,8 @@ class Dynamics:
                     left_instance=source_instance,
                     right=target_literal,
                     right_instance=target_instance,
-                    logic=state.problem.logic,
-                    domain=state.problem.domain,
+                    logic=state.matrix.logic,
+                    domain=state.matrix.domain,
                 ):
                     return Factorization(source_id, mode="equal")
                 return None
@@ -137,8 +137,8 @@ class Dynamics:
                 older_instance=source_instance,
                 newer=target_literal,
                 newer_instance=target_instance,
-                logic=state.problem.logic,
-                domain=state.problem.domain,
+                logic=state.matrix.logic,
+                domain=state.matrix.domain,
             )
             if delta is None:
                 return None
@@ -174,7 +174,7 @@ class Dynamics:
             target_instance: int | None,
         ) -> Reduction | None:
             if (
-                state.problem.logic == "classical"
+                state.matrix.logic == "classical"
                 and source_literal.is_ground
                 and target_literal.is_ground
             ):
@@ -186,8 +186,8 @@ class Dynamics:
                 older_instance=source_instance,
                 newer=target_literal,
                 newer_instance=target_instance,
-                logic=state.problem.logic,
-                domain=state.problem.domain,
+                logic=state.matrix.logic,
+                domain=state.matrix.domain,
             )
             if delta is None:
                 return None
@@ -214,7 +214,7 @@ class Dynamics:
         cached_rules = cache.current_rules(target_gate)
         if cached_rules is not None:
             return cached_rules  # type: ignore[return-value]
-        keys = state.problem.matrix.complements(goal.clause_idx, goal.literal_index)
+        keys = state.matrix.complements(goal.clause_idx, goal.literal_index)
         rules: list[Extension] = []
         for clause_idx, lit_idx in keys:
             instance_id = state.fresh_instance_id()
@@ -244,7 +244,7 @@ class Dynamics:
         if target_context is None:
             return None
         literal, literal_instance = target_context
-        clause = state.problem.matrix.clauses[clause_idx]
+        clause = state.matrix.clauses[clause_idx]
         selected_literal = clause.literal(lit_idx)
         free_variables = (
             ()
@@ -252,7 +252,7 @@ class Dynamics:
             else Dynamics._free_variable_refs(clause, instance_id)
         )
         if (
-            state.problem.logic == "classical"
+            state.matrix.logic == "classical"
             and literal.is_ground
             and selected_literal.is_ground
         ):
@@ -260,8 +260,8 @@ class Dynamics:
                 return None
             delta = state.constraints.delta_for_free_variables(
                 free_variables,
-                logic=state.problem.logic,
-                domain=state.problem.domain,
+                logic=state.matrix.logic,
+                domain=state.matrix.domain,
             )
             if delta is None:
                 return None
@@ -280,8 +280,8 @@ class Dynamics:
             older_instance=literal_instance,
             newer=selected_literal,
             newer_instance=instance_id,
-            logic=state.problem.logic,
-            domain=state.problem.domain,
+            logic=state.matrix.logic,
+            domain=state.matrix.domain,
             free_variables=free_variables,
         )
         if delta is None:
@@ -310,9 +310,9 @@ class Dynamics:
         if target_context is None:
             return False
         target_literal, target_instance = target_context
-        selected_literal = state.problem.matrix.clauses[clause_idx].literal(lit_idx)
+        selected_literal = state.matrix.clauses[clause_idx].literal(lit_idx)
         if (
-            state.problem.logic == "classical"
+            state.matrix.logic == "classical"
             and target_literal.is_ground
             and selected_literal.is_ground
         ):
@@ -335,7 +335,7 @@ class Dynamics:
         goal = state.tableau.goals[goal_id]
         if goal.clause_idx is None or goal.literal_index is None:
             return ()
-        return state.problem.matrix.complements(goal.clause_idx, goal.literal_index)
+        return state.matrix.complements(goal.clause_idx, goal.literal_index)
 
     @staticmethod
     def extension_term_candidate_positions_for(
@@ -351,11 +351,11 @@ class Dynamics:
             return ()
 
         candidates: list[tuple[int, int]] = []
-        for clause_idx, lit_idx in state.problem.matrix.complements(
+        for clause_idx, lit_idx in state.matrix.complements(
             goal.clause_idx,
             goal.literal_index,
         ):
-            selected_literal = state.problem.matrix.clauses[clause_idx].literal(lit_idx)
+            selected_literal = state.matrix.clauses[clause_idx].literal(lit_idx)
             unifies, _ = state.constraints.terms.unify_literals(
                 older=target_literal,
                 older_instance=target_instance,
@@ -396,7 +396,7 @@ class Dynamics:
                 if path_literal is None:
                     continue
                 if (
-                    state.problem.logic == "classical"
+                    state.matrix.logic == "classical"
                     and clause_literal.is_ground
                     and path_literal.is_ground
                 ):
@@ -408,8 +408,8 @@ class Dynamics:
                     left_instance=child_goal.instance_id,
                     right=path_literal,
                     right_instance=state.tableau.goals[path_goal_id].instance_id,
-                    logic=state.problem.logic,
-                    domain=state.problem.domain,
+                    logic=state.matrix.logic,
+                    domain=state.matrix.domain,
                 ):
                     return clause_literal, path_literal
         return None

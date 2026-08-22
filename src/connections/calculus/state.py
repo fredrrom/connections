@@ -9,12 +9,14 @@ from connections.calculus.rules import Extension, Rule, Start
 from connections.calculus.tableau import RuleApplication, Tableau, TableauNode
 
 if TYPE_CHECKING:
-    from connections.calculus.problem import Problem
+    from connections.syntax.matrix import Matrix
 
 
 class State:
-    def __init__(self, problem: Problem, tableau: Tableau) -> None:
-        self.problem = problem
+    """[d, omega]: the derivation together with its static context."""
+
+    def __init__(self, matrix: Matrix, tableau: Tableau) -> None:
+        self.matrix = matrix
         self.tableau = tableau
         self.reset()
 

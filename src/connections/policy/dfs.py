@@ -315,7 +315,7 @@ class DFSPolicy(Policy):
             state,
             state.tableau.goals[goal_id],
             factorization=self.factorization,
-            start_ids=start_clause_ids(state.problem.matrix, self.start),
+            start_ids=start_clause_ids(state.matrix, self.start),
         ).ordered()
 
     def _after_choicepoint_created(self, choicepoint: ChoicepointFrame) -> None:

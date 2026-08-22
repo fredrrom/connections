@@ -20,7 +20,6 @@ from connections.calculus.outcome import ProverOutcome
 from connections.run.szs import to_szs_status
 from connections.calculus.actions import Action, ApplyAction, UndoAction
 from connections.calculus.dynamics import Dynamics
-from connections.calculus.problem import Problem
 from connections.calculus.rules import Extension, Factorization, Reduction, Start
 from connections.calculus.state import State
 from connections.run.strategy import MatrixOptions
@@ -131,7 +130,7 @@ def diagnose(
 
     szs_status = to_szs_status(
         outcome,
-        has_conjecture=state.problem.has_conjecture,
+        has_conjecture=state.matrix.source_has_conjecture,
     )
     return {
         "schema": "connections.search_diagnostic.v1",
@@ -141,10 +140,10 @@ def diagnose(
         "settings": list(settings),
         "decoded_settings": LeancopSettingsCodec.to_tokens(strategy),
         "matrix": {
-            "clauses": len(state.problem.matrix.clauses),
-            "positive_start_clauses": len(state.problem.matrix.positive_clauses),
-            "conjecture_clauses": len(state.problem.matrix.conjecture_clauses),
-            "source_has_conjecture": state.problem.matrix.source_has_conjecture,
+            "clauses": len(state.matrix.clauses),
+            "positive_start_clauses": len(state.matrix.positive_clauses),
+            "conjecture_clauses": len(state.matrix.conjecture_clauses),
+            "source_has_conjecture": state.matrix.source_has_conjecture,
         },
         "outcome": None if outcome is None else outcome.value,
         "szs_status": None if szs_status is None else szs_status.value,
@@ -173,15 +172,9 @@ def _build_state(
         domain=domain,
         source_file_dirs=source_file_dirs,
     )
-    return State(
-        problem=Problem(
-            matrix=matrix,
-            mark_conjecture=matrix_options.mark_conjecture,
-            logic=logic,
-            domain=domain,
-        ),
-        tableau=Tableau(),
-    )
+    matrix.logic = logic
+    matrix.domain = domain
+    return State(matrix=matrix, tableau=Tableau())
 
 
 def audit_state(state: State, *, audit: SearchAudit) -> None:
@@ -203,14 +196,14 @@ def audit_state(state: State, *, audit: SearchAudit) -> None:
 
 def _audit_start_goal(state: State, goal: TableauNode, *, audit: SearchAudit) -> None:
     for clause_idx in state.problem.start_clause_ids:
-        clause = state.problem.matrix.clauses[clause_idx]
+        clause = state.matrix.clauses[clause_idx]
         audit.count("start_candidates")
         instance_id = _diagnostic_instance_id("start", clause_idx, 0)
         free_variables = _free_variable_refs(clause, instance_id)
         if state.constraints.delta_for_free_variables(
             free_variables,
-            logic=state.problem.logic,
-            domain=state.problem.domain,
+            logic=state.matrix.logic,
+            domain=state.matrix.domain,
         ) is None:
             audit.count("start_rejected_free_variables")
             literal = clause.literal(0) if clause.literal_count else _empty_literal()
@@ -249,8 +242,8 @@ def _audit_factorization_goal(
             left_instance=source_instance,
             right=target_literal,
             right_instance=target_instance,
-            logic=state.problem.logic,
-            domain=state.problem.domain,
+            logic=state.matrix.logic,
+            domain=state.matrix.domain,
         ):
             audit.count("factorization_equal_rejected")
             continue
@@ -295,12 +288,12 @@ def _audit_extension_goal(state: State, goal: TableauNode, *, audit: SearchAudit
     if target_context is None or goal.clause_idx is None or goal.literal_index is None:
         return
     target_literal, target_instance = target_context
-    for clause_idx, lit_idx in state.problem.matrix.complements(
+    for clause_idx, lit_idx in state.matrix.complements(
         goal.clause_idx,
         goal.literal_index,
     ):
         audit.count("extension_candidates")
-        clause = state.problem.matrix.clauses[clause_idx]
+        clause = state.matrix.clauses[clause_idx]
         selected_literal = clause.literal(lit_idx)
         instance_id = _diagnostic_instance_id("extension", clause_idx, lit_idx)
         reason, equation = _classify_literal_pair(
@@ -334,7 +327,7 @@ def _classify_literal_pair(
     free_variables: tuple[tuple[Any, int | None], ...],
 ) -> tuple[str, PrefixEquation | None]:
     if (
-        state.problem.logic == "classical"
+        state.matrix.logic == "classical"
         and older.is_ground
         and newer.is_ground
     ):
@@ -364,8 +357,8 @@ def _classify_literal_pair(
 
     if not state.constraints.free_variable_refs_admissible(
         free_variables,
-        logic=state.problem.logic,
-        domain=state.problem.domain,
+        logic=state.matrix.logic,
+        domain=state.matrix.domain,
         pending_bindings=bindings,
     ):
         return "free_variables_rejected", equation
@@ -382,7 +375,7 @@ def _classify_prefix_pair(
     newer_instance: int | None,
     pending_bindings: tuple[TermBinding, ...],
 ) -> tuple[str, PrefixEquation | None]:
-    if state.problem.logic.lower() == "classical":
+    if state.matrix.logic.lower() == "classical":
         return "allowed", None
 
     left_prefix, right_prefix = _oriented_substituted_prefixes(
@@ -398,14 +391,14 @@ def _classify_prefix_pair(
         return "allowed", equation
     if not prefix_equations_satisfiable(
         (equation,),
-        logic=state.problem.logic,
-        domain=state.problem.domain,
+        logic=state.matrix.logic,
+        domain=state.matrix.domain,
     ):
         return "prefix_local_rejected", equation
     if not prefix_equations_satisfiable(
         (*state.constraints.prefix_equations, equation),
-        logic=state.problem.logic,
-        domain=state.problem.domain,
+        logic=state.matrix.logic,
+        domain=state.matrix.domain,
     ):
         return "prefix_cumulative_rejected", equation
     return "allowed", equation
@@ -420,7 +413,7 @@ def _oriented_substituted_prefixes(
     newer_instance: int | None,
     pending_bindings: tuple[TermBinding, ...],
 ) -> tuple[Prefix, Prefix]:
-    if state.problem.logic.lower() in {"intuitionistic", "intu"}:
+    if state.matrix.logic.lower() in {"intuitionistic", "intu"}:
         if older.polarity is False and newer.polarity is True:
             left, left_instance = older, older_instance
             right, right_instance = newer, newer_instance
