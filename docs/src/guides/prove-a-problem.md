@@ -7,7 +7,7 @@ call.
 ## From the command line
 
 ```bash
-uv run pycop path/to/problem.p
+uv run pycop examples/socrates.p
 ```
 
 Point it at a directory instead and it walks the tree for problem files.
