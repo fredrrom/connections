@@ -236,15 +236,20 @@ def _verified_closed(state: State) -> bool:
     )
 
 
+# The agent's word, in the prover's vocabulary. Statuses absent from the map
+# carry no claim and fall through to GAVE_UP.
+_STATUS_OUTCOME = {
+    AgentStatus.DFS_EXHAUSTED: ProverOutcome.EXHAUSTED,
+    AgentStatus.ID_FIXED_POINT: ProverOutcome.EXHAUSTED,
+}
+
+
 def _judge(attempt, state: State) -> ProverOutcome:
     """Combine the rollout's observation with the agent's word.
 
     Closure is verified first, from the state itself, whatever the agent said:
-    the proof state is the prover's to extract, and a proof found on the last
-    budgeted step is still a proof. The agent's word matters only for the
-    negative claims, where it is queried about itself, never about the
-    problem: an affirmative systematic claim makes the exhaustion a statement
-    about the problem, anything else is giving up.
+    a proof found on the last budgeted step is still a proof. The agent's word
+    matters only for the negative verdicts, through the map above.
     """
     if _verified_closed(state):
         return ProverOutcome.PROVED
@@ -252,13 +257,10 @@ def _judge(attempt, state: State) -> ProverOutcome:
         return ProverOutcome.STEP_BUDGET
     if attempt.stop is Stop.TIME_BUDGET:
         return ProverOutcome.TIME_BUDGET
-    status = attempt.status
-    if status is AgentStatus.CLOSED:
+    if attempt.status is AgentStatus.CLOSED:
         # The agent believed it closed; the state says otherwise.
         return ProverOutcome.ERROR
-    if status is not None and status.claims_exhausted:
-        return ProverOutcome.EXHAUSTED
-    return ProverOutcome.GAVE_UP
+    return _STATUS_OUTCOME.get(attempt.status, ProverOutcome.GAVE_UP)
 
 
 def _proof_size(state: State) -> int:

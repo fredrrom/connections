@@ -35,7 +35,6 @@ nav:
     - Running: design/running.md
   - Packages:
     - pycop: packages/pycop.md
-    - imitation: packages/imitation.md
   - Changelog: changelog.md
   - API reference:
     - Overview: reference/index.md

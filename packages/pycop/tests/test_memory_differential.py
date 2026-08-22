@@ -3,7 +3,7 @@
 The connections library ships clean memories: no trace choreography, no
 deferred bookkeeping, rebuilt on the fringe-mirroring invariant. pycop ships
 the traced memories whose event streams are bit-identical to leanCoP. This
-test is the referee between them: same problem, same discipline, identical
+test is the referee between them: same problem, same options, identical
 action sequences and final statuses. Any divergence is a bug in one of them.
 """
 
@@ -13,12 +13,12 @@ from pathlib import Path
 
 import pytest
 
-from connections.agent import IDMemory, ModelBasedAgent, first
+from connections.agent import AgentOptions, IDMemory, OnlineSearchAgent
 from connections.run import Problem, build_state
 from connections.run.rollout import rollout
 from connections.run.strategy import MatrixOptions
 
-from pycop.leancop_memory import TracedIDMemory
+from pycop.leancop_memory import TracedIDMemory, first
 
 M2K = Path("/Users/fredrik/dev/phd/benchmarks/m2k")
 
@@ -34,9 +34,10 @@ DISCIPLINES = [
 ]
 
 
-def _rollout(problem: Path, memory):
+def _rollout(problem: Path, memory, options):
     state = build_state(Problem(problem), matrix_options=MatrixOptions())
-    return rollout(state, ModelBasedAgent(memory, first), step_limit=3000)
+    agent = OnlineSearchAgent(memory, first, AgentOptions(**options))
+    return rollout(state, agent, step_limit=3000)
 
 
 @pytest.mark.parametrize("name", PROBLEMS)
@@ -53,7 +54,7 @@ def test_clean_and_traced_memories_act_identically(name, options, request):
         # which can be non-chronological; the clean memory backtracks
         # chronologically. Genuine behaviour, not choreography -- the reopen
         # rule is the remaining port. Soundness is unaffected either way:
-        # both disciplines are systematic in plain mode.
+        # both searches are systematic in plain mode.
         request.node.add_marker(
             pytest.mark.xfail(
                 reason="step-mode reopen rule not yet ported to DFSMemory",
@@ -61,8 +62,8 @@ def test_clean_and_traced_memories_act_identically(name, options, request):
             )
         )
 
-    clean = _rollout(problem, IDMemory(**options))
-    traced = _rollout(problem, TracedIDMemory(**options))
+    clean = _rollout(problem, IDMemory(), options)
+    traced = _rollout(problem, TracedIDMemory(**options), options)
 
     assert clean.steps == traced.steps
     assert clean.stop == traced.stop

@@ -2,12 +2,18 @@ from __future__ import annotations
 
 from connections.syntax.formula import Atom
 from connections.syntax.matrix import Clause, Literal, Matrix
-from connections.agent import AgentStatus, DFSMemory, ModelBasedAgent, first
+from connections.agent import AgentOptions, AgentStatus, DFSMemory, OnlineSearchAgent
+
+
 from connections.calculus.actions import ApplyAction, UndoAction
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.rules import Start
 from connections.calculus.state import State
 from connections.calculus.tableau import Tableau
+
+def _choose_first(state, actions):
+    _ = state
+    return actions[0]
 
 
 def _lit(name: str, *, neg: bool = False) -> Literal:
@@ -26,11 +32,11 @@ def _second(state, actions):
 
 
 def _second_agent(**options):
-    return ModelBasedAgent(DFSMemory(**options), _second)
+    return OnlineSearchAgent(DFSMemory(), _second, AgentOptions(**options))
 
 
 def _first_agent(**options):
-    return ModelBasedAgent(DFSMemory(**options), first)
+    return OnlineSearchAgent(DFSMemory(), _choose_first, AgentOptions(**options))
 
 
 def test_dfs_policy_delegates_action_ordering() -> None:
@@ -97,4 +103,4 @@ def test_dfs_policy_returns_non_theorem_after_root_exhaustion() -> None:
     assert isinstance(undo, UndoAction)
     Dynamics.transition(state, undo)
     assert policy(state) is None
-    assert policy.status() is AgentStatus.DFS_EXHAUSTED
+    assert policy.status is AgentStatus.DFS_EXHAUSTED

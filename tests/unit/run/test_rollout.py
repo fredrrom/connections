@@ -22,18 +22,16 @@ class _Scripted(Agent):
     """Yields each scripted action in turn, then nothing."""
 
     def __init__(self, actions=(), status=AgentStatus.GAVE_UP):
+        super().__init__()
         self.script = list(actions)
         self.calls = 0
         self.states_seen = []
-        self._status = status
+        self.status = status
 
     def __call__(self, state):
         self.calls += 1
         self.states_seen.append(state)
         return self.script.pop(0) if self.script else None
-
-    def status(self):
-        return self._status
 
 
 def test_an_agent_with_no_action_stops_the_rollout():

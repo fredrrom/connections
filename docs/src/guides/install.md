@@ -50,8 +50,7 @@ Working on one member does not require installing the others.
 
 ## Python
 
-`connections` requires Python 3.10 or later. Members may be narrower --
-`imitation` needs 3.12 or later because of its model dependencies.
+`connections` requires Python 3.10 or later.
 
 ## Optional external tools
 

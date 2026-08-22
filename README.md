@@ -16,8 +16,6 @@ The packages built on it, under `packages/`:
 
 - `pycop`: The pyCoP prover tested extensively for inference step order parity with leanCoP 2.0, ileanCoP 1.2, and MleanCoP 1.3.
 
-- `imitation`: Imitation learning experiments and infrastructure.
-
 ## Install
 
 ```bash

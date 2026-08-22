@@ -14,19 +14,25 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TypeGuard
 
-from connections.agent.base import (
-    AgentStatus,
-    BacktrackGranularity,
-    StartMode,
-    start_clause_ids,
-)
-from connections.agent.memory import ModelBasedAgent, first
+from connections.agent.base import Agent, AgentOptions, AgentStatus
+from connections.agent.memory.dfs import start_clause_ids
+from connections.agent.search import OnlineSearchAgent
+
 from connections.calculus.actions import Action, ApplyAction
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.rules import Extension, FactorizationMode, Start
 from connections.calculus.state import State
 from connections.syntax.matrix import Clause
 from connections.trace_logging import trace, trace_logger
+
+BacktrackGranularity = str
+StartMode = str
+
+
+def first(state, actions):
+    """leanCoP's chooser: the first exposed action, in memory order."""
+    _ = state
+    return actions[0]
 
 _MODAL_LOGICS = frozenset({"D", "T", "S4", "S5"})
 ExtensionKey = tuple[int | None, int]
@@ -49,7 +55,7 @@ Frame = WorkFrame | ChoicepointFrame
 
 
 class TracedDFSMemory:
-    """leanCoP's search discipline as a memory: a stack of choicepoints.
+    """leanCoP's search as a memory: a stack of choicepoints.
 
     Everything here is the machinery that used to be DFSPolicy, moved rather
     than rewritten: ``exposed`` is the old action preparation, ``update`` the
@@ -72,33 +78,30 @@ class TracedDFSMemory:
         self.factorization = factorization
         self.start = start
         self._stack: list[Frame] = []
-        self._status = AgentStatus.SEARCHING
         self._exposed_actions: tuple[Action, ...] = ()
 
-    def exposed(self, state: State) -> tuple[Action, ...]:
+    def exposed(self, agent: Agent, state: State) -> tuple[Action, ...]:
         # _prepare_actions settles closed choicepoints on the way in, so the
         # call at a final state does this memory's shutdown before exposing
         # nothing.
         actions = self._available_actions(state)
         if not actions:
-            self._status = (
+            agent.status = (
                 AgentStatus.CLOSED
                 if state.tableau.root.closed
                 else self._exhaustion_status()
             )
             return ()
-        self._status = AgentStatus.SEARCHING
+        agent.status = AgentStatus.SEARCHING
         self._exposed_actions = actions
         return actions
 
-    def update(self, state: State, action: Action) -> None:
+    def update(self, agent: Agent, state: State, action: Action) -> None:
+        agent.status = AgentStatus.SEARCHING
         self._after_action(state, self._exposed_actions, action)
 
-    def status(self) -> AgentStatus:
-        return self._status
-
     def _exhaustion_status(self) -> AgentStatus:
-        """The claim an empty frontier licenses, given this discipline.
+        """The claim an empty frontier licenses, given the agent's options.
 
         Cut and scut prune non-redundant parts of the space; conjecture start
         is incomplete when the axioms alone are contradictory. Any of them
@@ -474,7 +477,7 @@ class IterativeDeepeningOptions:
 
 class TracedIDMemory(TracedDFSMemory):
     """Iterative deepening over the DFS memory: the depth ladder, comp
-    switching, and the path-limit discipline that decides whether a fixed
+    switching, and the path-limit condition that decides whether a fixed
     point may be claimed."""
 
     def __init__(
@@ -765,9 +768,11 @@ def _is_extension_action(action: Action) -> TypeGuard[ApplyAction[Extension]]:
     return isinstance(action, ApplyAction) and isinstance(action.rule, Extension)
 
 
-def traced_leancop_agent(**options) -> ModelBasedAgent:
-    """leanCoP's agent: iterative-deepening memory, first-choice chooser."""
-    return ModelBasedAgent(TracedIDMemory(**options), first)
+def traced_leancop_agent(**options) -> OnlineSearchAgent:
+    """leanCoP's agent: traced iterative-deepening memory, first-choice chooser."""
+    return OnlineSearchAgent(
+        TracedIDMemory(**options), first, AgentOptions(**options)
+    )
 
 
 
@@ -775,5 +780,6 @@ def traced_leancop_agent(**options) -> ModelBasedAgent:
 __all__ = [
     "TracedDFSMemory",
     "TracedIDMemory",
+    "first",
     "traced_leancop_agent",
 ]

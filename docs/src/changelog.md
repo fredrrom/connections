@@ -10,7 +10,7 @@ Initial prover-loop release.
   the transition system and `run` for everything above it. Agents implement
   policies: `Agent` is percept-in action-out, `AgentStatus` its word about its
   own search, and the judge in `run` produces outcomes and SZS from outside
-  the agent. `ModelBasedAgent(memory, chooser)` composes search agents from
+  the agent. `OnlineSearchAgent(memory, chooser)` composes search agents from
   `DFSMemory`/`IDMemory` and a chooser.
 - Public action records under `connections.calculus.actions`.
 - Corpus selection, run rows, summaries and profiling in `pycop.runs`.

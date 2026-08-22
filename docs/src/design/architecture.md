@@ -34,15 +34,11 @@ Dependencies run upward: `constraints` and `parsing` over `syntax`,
 about budgets, schedules or statuses; nothing below `agent` knows an agent
 exists.
 
-The R&N learning-agent architecture maps onto the layers directly:
-
-| R&N | here |
-|---|---|
-| environment | *P(M)*, the calculus |
-| performance element | the agent: percept in, action out |
-| critic | the judge in `run`: verdicts from outside the agent |
-| learning element | the `imitation` package |
-| problem generator | the schedule (one problem) and the corpus sampler (many) |
+The architecture is Russell and Norvig's: the calculus *P(M)* is the
+environment, and `agent` is the agent -- percept in, action out. `run` is
+neither. It sits above both, pairing an agent with an environment, spending
+budgets, and judging the outcome from outside; its verdicts are the performance
+standard, not part of the agent.
 
 !!! note "One cycle today"
 
@@ -62,7 +58,6 @@ It is not a prover. The named provers are in packages: a configuration and a CLI
 | | |
 |---|---|
 | `pycop` | leanCoP-equivalent strategies, parity harness, CLI |
-| `imitation` | learned policies, training, campaigns |
 
 A CLI owns argument parsing, schedule selection, SZS on stdout, and the exit
 code.
@@ -77,7 +72,6 @@ them, and aggregating what comes back are each package's own business.
 ```
 connections   calculus, run, SZS                         -> lark
 pycop         leanCoP-equivalent prover, parity, CLI     -> connections
-imitation     policies, graph model, training, campaigns -> connections, torch
 ```
 
 `connections` never imports from a package built on it. 

@@ -97,7 +97,7 @@ def rollout(
             return Rollout(
                 state=state,
                 stop=Stop.AGENT_DONE,
-                status=agent.status(),
+                status=agent.status,
                 actions=None if actions is None else tuple(actions),
                 steps=steps,
             )

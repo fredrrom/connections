@@ -31,7 +31,7 @@ class FirstAdmissible(Agent):
 ```
 
 Start selection is yours, like factorization: the matrix's role indexes are
-facts, and which subset you query is your discipline.
+facts, and which subset you query is your option.
 
 You cannot make an unsound proof this way. An agent acts only through `T`, so
 every state it reaches is a valid partial tableau, and the judge verifies any
@@ -59,7 +59,7 @@ from connections.agent import AgentStatus
 
 `CLOSED` says you observed your derivation close. `DFS_EXHAUSTED` and
 `ID_FIXED_POINT` affirmatively claim systematic coverage of a complete
-fragment of the action space -- claim them only if your discipline ignored
+fragment of the action space -- claim them only if your search ignored
 nothing but redundant rule families. Cut, scut, conjecture start, or a depth
 bound that ever bound all forfeit the claim; answer `GAVE_UP`, which is always
 honest. The judge maps claims to `CounterSatisfiable`/`Satisfiable` and
@@ -70,13 +70,13 @@ honest. The judge maps claims to `CounterSatisfiable`/`Satisfiable` and
 Most reactive agents are a memory and a chooser:
 
 ```python
-from connections.agent import DFSMemory, IDMemory, ModelBasedAgent, first
+from connections.agent import DFSMemory, IDMemory, OnlineSearchAgent, first
 
-leancop = ModelBasedAgent(IDMemory(cut=True, comp=7), first)
-learned = ModelBasedAgent(DFSMemory(), my_scorer)
+leancop = OnlineSearchAgent(IDMemory(), first, AgentOptions(cut=True, comp=7))
+learned = OnlineSearchAgent(DFSMemory(), my_scorer, options)
 ```
 
-The memory is the discipline: it exposes `A(s, μ)`, updates on the chosen
+The memory is the search: it exposes `A(s, μ)`, updates on the chosen
 action, and owns the warrant in its `status()`. The chooser picks among what
 is exposed and nothing else -- `first` reproduces leanCoP order; a learned
 scorer is just another chooser. A planner that runs transitions of its own
@@ -101,7 +101,7 @@ the tableau and constraint store are duplicated.
 ## One thing to know about undo
 
 The action space is not a stack. Any rule application the tableau carries may
-be undone, not only the most recent; a discipline that wants stack behaviour
+be undone, not only the most recent; a search that wants stack behaviour
 imposes it in its own memory. If you use the full freedom, read the known gap
 in [dynamics](../design/dynamics.md#undoing) first: non-chronological undo can
 currently leave a goal marked closed whose connection no longer holds.

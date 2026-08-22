@@ -10,13 +10,12 @@ from connections.run.outcome import ProverOutcome
 from connections.run.szs import SZSStatus
 from connections.agent import (
     Agent,
-    AgentDecision,
+    AgentOptions,
     AgentStatus,
     IDMemory,
-    ModelBasedAgent,
-    first,
-    first_action_id_agent,
+    OnlineSearchAgent,
 )
+from connections.calculus.actions import Action
 from connections.calculus.dynamics import Dynamics
 from connections.run.entry import Problem, run as run_problem
 from connections.calculus.state import State
@@ -52,7 +51,7 @@ def _non_theorem_matrix() -> Matrix:
 
 
 class _FirstRulePolicy(Agent):
-    def __call__(self, state: State) -> AgentDecision:
+    def __call__(self, state: State) -> Action | None:
         for goal in state.fringe:
             actions = Dynamics.apply_actions(
                 state,
@@ -65,7 +64,7 @@ class _FirstRulePolicy(Agent):
 
 
 class _NoActionPolicy(_FirstRulePolicy):
-    def __call__(self, state: State) -> AgentDecision:
+    def __call__(self, state: State) -> Action | None:
         _ = state
         return None
 
@@ -84,10 +83,14 @@ def _no_action_strategy() -> Strategy:
     )
 
 
+def _id_agent(**options):
+    return OnlineSearchAgent(IDMemory(), lambda s, a: a[0], AgentOptions(**options))
+
+
 def _leancop_strategy(**policy_args: Any) -> Strategy:
     return Strategy(
         matrix=MatrixOptions(),
-        policy=PolicyOptions(policy_class=first_action_id_agent, args=policy_args),
+        policy=PolicyOptions(policy_class=_id_agent, args=policy_args),
     )
 
 
@@ -399,7 +402,9 @@ def test_pycop_prover_reinitializes_policy_for_each_run(tmp_path, monkeypatch):
     created: list[Agent] = []
 
     def tracking_agent(**options):
-        agent = ModelBasedAgent(IDMemory(**options), first)
+        agent = OnlineSearchAgent(
+            IDMemory(), lambda s, a: a[0], AgentOptions(**options)
+        )
         created.append(agent)
         return agent
 

@@ -134,10 +134,9 @@ number that partly measures the cluster.
 the specific cases, and `GaveUp` for a system stopping of its own accord.
 
 **An agent** speaks only about itself, in `AgentStatus`: `CLOSED`,
-`DFS_EXHAUSTED`, `ID_FIXED_POINT`, `GAVE_UP`. Each member carries the one
-claim the judge reads, `claims_exhausted`; the judge never pattern-matches on
-members, so a new agent adds a member and its claim without the judge learning
-vocabulary. `GAVE_UP` is the default when an agent offers nothing and claims
+`DFS_EXHAUSTED`, `ID_FIXED_POINT`, `GAVE_UP`. AgentStatus is a plain
+enum; the judge in `run` holds the one map from statuses to outcomes, and
+statuses absent from the map carry no claim. `GAVE_UP` is the default when an agent offers nothing and claims
 nothing, so an unsound non-theorem requires an agent to overclaim
 affirmatively.
 
@@ -193,7 +192,7 @@ the prover.
 ## Running many problems
 
 Nothing in `connections` does this. Each package solves it under its own
-constraints, and they differ in one respect that matters.
+constraints.
 
 **pycop** can pool trivially: its attempt is `run(problem, schedule)`, and both
 arguments are picklable. In practice a subprocess per problem is simpler still,
@@ -202,14 +201,9 @@ which no worker pool does, and OOM arrives as a signal in the return code. The
 command it spawns is its own CLI -- the one CASC invokes -- so there is one path
 rather than two.
 
-**imitation** cannot: its attempt holds a loaded model, which does not pickle.
-Its options are a CLI of its own to spawn, or persistent workers that load once
-and read problems from a pipe, replaced when one hangs. The second amortises a
-one-to-two second load that the first pays per problem.
-
-Both are threads around processes: a thread waiting on a subprocess is blocked
-in `waitpid` and holds no lock, so a thread per core is enough to keep the cores
-busy.
+The result is threads around processes: a thread waiting on a subprocess is
+blocked in `waitpid` and holds no lock, so a thread per core is enough to keep
+the cores busy.
 
 CASC permits this. Its rules handle process hierarchies -- "for systems that
 create multiple processes the signal is sent first to the process at the top of
@@ -240,11 +234,11 @@ model-based agent, implemented as a memory and a chooser:
 
 ```python
 class Memory(Protocol):
-    def exposed(self, state) -> Sequence[Action]   # A(s, μ) ⊆ A(s)
-    def update(self, state, action) -> None        # U_π
-    def status(self) -> AgentStatus                # its word, warrant included
+    def exposed(self, agent, state) -> Sequence[Action]   # A(s, μ) ⊆ A(s)
+    def update(self, agent, state, action) -> None        # U_π
+    # both receive the agent: config from agent.options, status onto agent
 
-ModelBasedAgent(memory, choose)
+OnlineSearchAgent(memory, choose)
 ```
 
 | memory -- what `A(s, μ)` exposes | chooser -- among what it exposed |
@@ -253,11 +247,11 @@ ModelBasedAgent(memory, choose)
 | `DFSMemory`: the choicepoint stack | learned scorer |
 | `IDMemory`: stack plus depth ladder | |
 
-leanCoP is `ModelBasedAgent(IDMemory(...), first)` -- the
-`first_action_id_agent` factory. A learned agent keeps the memory and replaces
+leanCoP is `OnlineSearchAgent(IDMemory(), first, options)` -- the
+`traced_leancop_agent` factory in pycop. A learned agent keeps the memory and replaces
 the chooser, which is where the old multiple-inheritance diamond dissolved
 into composition. The warrant lives in the memory's `status()`: only the
-memory knows whether its discipline pruned, so only it can claim
+memory knows whether its options pruned, so only it can claim
 `DFS_EXHAUSTED` or `ID_FIXED_POINT`, and it answers `GAVE_UP` otherwise.
 
 This factoring is a convenience for reactive agents, not a law. A planner --

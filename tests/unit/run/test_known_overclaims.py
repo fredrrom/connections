@@ -1,4 +1,4 @@
-"""Known ID overclaims: the pathlim discipline undercounts blocked candidates.
+"""Known ID overclaims: the path-limit condition undercounts blocked candidates.
 
 Two m2k problems where leanCoP proves Theorem but our ID agent claims a fixed
 point under cut+comp(7). Instrumentation (2026-08-22) shows the flag lifecycle
@@ -34,7 +34,7 @@ WITNESSES = ["t100_relat_1", "t10_enumset1"]
 
 @pytest.mark.parametrize("name", WITNESSES)
 @pytest.mark.xfail(
-    reason="ID pathlim discipline undercounts blocked candidates at the limit",
+    reason="ID pathlim search undercounts blocked candidates at the limit",
     strict=True,
 )
 def test_witness_is_not_counter_satisfiable(name):

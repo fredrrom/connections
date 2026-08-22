@@ -10,7 +10,8 @@ from connections.syntax.formula import Atom, Variable
 from connections.syntax.matrix import Clause, Literal, Matrix
 from connections.agent import AgentStatus
 import pycop.leancop_memory as policy_module
-from connections.agent.memory import ModelBasedAgent as _MBA, first as _first  # noqa: E501
+from connections.agent.search import OnlineSearchAgent as _MBA
+from pycop.leancop_memory import first as _first  # noqa: E501
 import pycop.leancop_memory as id_policy_module
 from pycop.leancop_memory import traced_leancop_agent as FirstActionIDPolicy
 from connections.calculus.actions import (
@@ -252,7 +253,7 @@ def test_dfs_policy_with_scut_only_tries_first_start_clause(monkeypatch):
     assert policy(state) is None
     # scut prunes non-redundant alternatives, so this exhaustion licenses
     # no claim about the problem: the honest status is giving up.
-    assert policy.status() is AgentStatus.GAVE_UP
+    assert policy.status is AgentStatus.GAVE_UP
 
 
 def test_dfs_policy_reads_cut_and_scut_from_constructor_args():
@@ -836,7 +837,7 @@ def test_iterative_deepening_empty_matrix_has_no_start_choicepoint(caplog):
     action = policy(state)
 
     assert action is None
-    assert policy.status() is AgentStatus.ID_FIXED_POINT
+    assert policy.status is AgentStatus.ID_FIXED_POINT
     assert caplog.messages == [
         "pathlim",
         "pathlim",

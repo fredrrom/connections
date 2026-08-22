@@ -1,43 +1,20 @@
 from __future__ import annotations
 
-from connections.agent.base import (
-    Agent,
-    AgentDecision,
-    AgentStatus,
-    BacktrackGranularity,
-    StartMode,
-    start_clause_ids,
-)
-from connections.agent.dfs import (
-    DFSMemory,
-    Frame,
-)
-from connections.agent.id import (
-    IDMemory,
-    IterativeDeepeningOptions,
-    first_action_id_agent,
-)
-from connections.agent.memory import (
-    Chooser,
-    Memory,
-    ModelBasedAgent,
-    first,
-)
+from connections.agent.base import Agent, AgentOptions, AgentStatus
+from connections.agent.markov import MarkovAgent
+from connections.agent.memory import DFSMemory, Frame, IDMemory, start_clause_ids
+from connections.agent.search import Chooser, Memory, OnlineSearchAgent
 
 __all__ = [
     "Agent",
-    "AgentDecision",
+    "AgentOptions",
     "AgentStatus",
-    "BacktrackGranularity",
     "Chooser",
     "DFSMemory",
     "Frame",
     "IDMemory",
-    "IterativeDeepeningOptions",
+    "MarkovAgent",
     "Memory",
-    "ModelBasedAgent",
-    "StartMode",
-    "first",
-    "first_action_id_agent",
+    "OnlineSearchAgent",
     "start_clause_ids",
 ]

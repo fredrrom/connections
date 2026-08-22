@@ -57,7 +57,7 @@ claim.
 
 **Undoing an application** at a node. Any application the tableau carries may be
 undone, not only the most recent, so the action space is not a stack. A policy
-that wants stack discipline imposes it in its own memory; the system does not.
+that wants stack search imposes it in its own memory; the system does not.
 
 ## What a transition guarantees
 

@@ -11,7 +11,6 @@ Run these before sending changes:
 ```bash
 uv run pytest tests
 uv run --package pycop pytest packages/pycop/tests
-uv run --package imitation pytest packages/imitation/tests
 uv run ruff check .
 uv run ty check
 uv build
@@ -31,8 +30,7 @@ connections/            workspace root, and the `connections` distribution
 ├── docs/               this site
 ├── src/connections/    the library
 └── packages/
-    ├── pycop/          leanCoP-equivalent prover, parity, CLI
-    └── imitation/      learned policies, training, campaigns
+    └── pycop/          leanCoP-equivalent prover, parity, CLI
 ```
 
 Every member repeats the same shape: its own `pyproject.toml`, its own
