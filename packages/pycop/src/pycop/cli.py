@@ -93,11 +93,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--settings",
         "--setting",
         action="append",
+        nargs="+",
         dest="settings",
         default=[],
+        metavar="TOKEN",
         help=(
-            "Strategy settings, leanCoP list syntax: "
-            "--settings '[cut,comp(7)]'. Repeatable single tokens also work."
+            "Strategy settings: space-separated tokens or leanCoP list "
+            "syntax, e.g. --settings cut 'comp(7)' or --settings "
+            "'[cut,comp(7)]'. Put the problem path before this flag."
         ),
     )
     parser.add_argument(
@@ -190,7 +193,8 @@ def main(argv: list[str] | None = None) -> int:
         else:
             tokens = [
                 token
-                for chunk in args.settings
+                for group in args.settings
+                for chunk in group
                 for token in LeancopSettingsCodec.split_token_list(chunk)
             ]
             strategy = LeancopSettingsCodec.from_tokens(tokens)

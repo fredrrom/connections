@@ -34,7 +34,7 @@ uv run pycop Problems/SYN \
   --out artifacts/corpus/syn.jsonl \
   --pattern "*.p" \
   --limit 25 \
-  --settings '[cut,comp(7)]' \
+  --settings cut 'comp(7)' \
   --steps 1000 \
   --timeout 10 \
   --continue-on-error \
@@ -68,7 +68,7 @@ pycop-download-benchmarks tptp-v6.4.0 iltp qmltp --root benchmarks
 ```bash
 uv run pycop Problems/SYN \
   --profile artifacts/profile/syn-cut-comp7 \
-  --settings '[cut,comp(7)]' \
+  --settings cut 'comp(7)' \
   --steps 1000 \
   --timeout 10 \
   --overwrite
