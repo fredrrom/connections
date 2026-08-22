@@ -10,7 +10,7 @@ agents in pycop.
 
 The comp switch mutates the options: leanCoP's comp(N) restarts in
 complete mode, so cut and scut are turned off on the agent itself, which is
-also what makes the exhaustion claim honest afterwards.
+also why _exhaustion_status can rely on them afterwards.
 """
 
 from __future__ import annotations
@@ -113,8 +113,8 @@ class OnlineIDAgent(OnlineDFSAgent):
     def _should_continue_after_empty_stack(self) -> bool:
         if self.options.comp is not None:
             if self.depth_limit >= self.options.comp:
-                # leanCoP's comp(N): restart in complete mode. Mutating the
-                # options is what makes the exhaustion claim honest afterwards.
+                # leanCoP's comp(N): restart in complete mode. The options
+                # are mutated so _exhaustion_status sees the switch.
                 self.options = replace(
                     self.options, comp=None, cut=False, scut=False
                 )

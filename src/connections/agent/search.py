@@ -79,11 +79,12 @@ class OnlineDFSAgent(Agent):
         frame.actions.remove(action)
 
     def _exhaustion_status(self) -> AgentStatus:
-        """The claim an empty frontier licenses, given the agent's options.
+        """What running out of actions means, given the options.
 
-        Cut and scut prune non-redundant parts of the space; conjecture start
-        is incomplete when the axioms alone are contradictory. Any of them
-        forfeits the exhaustion claim.
+        Cut and scut prune parts of the space that may contain proofs, and
+        conjecture start is incomplete when the axioms alone are
+        contradictory. With any of them set, an empty frontier proves
+        nothing, so the status is GAVE_UP rather than DFS_EXHAUSTED.
         """
         options = self.options
         if options.cut or options.scut or options.start != "positive":

@@ -140,7 +140,7 @@ statuses absent from the map carry no claim. `GAVE_UP` is the default when an ag
 nothing, so an unsound non-theorem requires an agent to overclaim
 affirmatively.
 
-**The judge** combines the rollout's observation with the agent's word:
+**The judge** combines the rollout's observation with the agent's status:
 
 ```
 state verifiably closed              -> PROVED     -> Theorem / Unsatisfiable
@@ -153,10 +153,9 @@ Closure is verified first, from the state itself, whatever the agent said: a
 proof found on the last budgeted step is still a proof, and an agent that
 believed it closed when the state disagrees is an error, never a proof.
 
-**The warrant.** An exhaustion claim is licensed only by systematic coverage
+**The warrant.** An exhaustion status is valid only with systematic coverage
 of a complete fragment of the action space. Discipline may ignore rule
-families redundant for completeness -- factorization -- and keeps the claim; it
-forfeits the claim when it prunes ones that are not: cut, scut, conjecture
+families redundant for completeness -- factorization -- and keeps the status valid; it stops being valid when it prunes ones that are not: cut, scut, conjecture
 start, or a depth bound that ever bound. leanCoP's `comp(N)` restores the
 claim by switching the final iterations to complete mode.
 

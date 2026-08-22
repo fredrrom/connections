@@ -236,7 +236,7 @@ def _verified_closed(state: State) -> bool:
     )
 
 
-# The agent's word, in the prover's vocabulary. Statuses absent from the map
+# Agent statuses mapped to outcomes. Statuses absent from the map
 # carry no claim and fall through to GAVE_UP.
 _STATUS_OUTCOME = {
     AgentStatus.DFS_EXHAUSTED: ProverOutcome.EXHAUSTED,
@@ -245,11 +245,11 @@ _STATUS_OUTCOME = {
 
 
 def _judge(attempt, state: State) -> ProverOutcome:
-    """Combine the rollout's observation with the agent's word.
+    """Turn the rollout result and the agent's status into an outcome.
 
-    Closure is verified first, from the state itself, whatever the agent said:
-    a proof found on the last budgeted step is still a proof. The agent's word
-    matters only for the negative verdicts, through the map above.
+    Closure is checked first, from the state itself, regardless of what the
+    agent reported: a proof found on the last budgeted step is still a proof.
+    The agent's status only decides the negative outcomes, via the map above.
     """
     if _verified_closed(state):
         return ProverOutcome.PROVED

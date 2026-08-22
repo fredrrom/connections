@@ -9,10 +9,10 @@ from connections.calculus.state import State
 
 
 class AgentStatus(Enum):
-    """The agent's word about its own search.
+    """What the agent reports about its own search.
 
-    How each status is interpreted -- which of them license which SZS verdicts
-    -- is the judge's business, mapped in ``run``.
+    The mapping from statuses to outcomes and SZS verdicts lives in ``run``,
+    next to the judge.
     """
 
     SEARCHING = "searching"
@@ -44,8 +44,8 @@ class Agent(ABC):
     """An agent acting in the transition system: percept in, action out.
 
     The agent returns actions only; returning ``None`` ends the rollout.
-    ``status`` is a plain attribute holding the agent's word about its own
-    search, maintained by whatever updates the agent's state.
+    ``status`` is a plain attribute reporting the state of the agent's own
+    search, updated as the agent acts.
     """
 
     def __init__(self, options: AgentOptions | None = None) -> None:
