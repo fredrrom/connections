@@ -14,6 +14,6 @@ disagree the notes are the intent.
 | [clausification](clausification.md) | formulas to a matrix |
 | [constraints](constraints.md) | unification, substitutions, prefixes |
 | [calculus](calculus.md) | state, tableau, actions, rules, dynamics |
-| [policy](policy.md) | the policy interface and shipped policies |
+| [agent](agent.md) | the agent interface and shipped agents |
 | [run](run.md) | problems, strategies, schedules, results, SZS |
 

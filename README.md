@@ -14,9 +14,9 @@ The library, `connections`, lives in `src/connections/`; its module map is in
 [Architecture](https://fredrrom.github.io/connections/design/architecture/).
 The packages built on it, under `packages/`:
 
-- `pycop`: a prover tested extensively for inference step order parity with leanCoP 2.0, ileanCoP 1.2, and MleanCoP 1.3.
+- `pycop`: The pyCoP prover tested extensively for inference step order parity with leanCoP 2.0, ileanCoP 1.2, and MleanCoP 1.3.
 
-- `imitation`: Imitation learning experiments and infrastructure.
+- `imitation`: imitation learning experiments and infrastructure.
 
 ## Install
 

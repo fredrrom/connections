@@ -45,7 +45,7 @@ nav:
     - clausification: reference/clausification.md
     - constraints: reference/constraints.md
     - calculus: reference/calculus.md
-    - policy: reference/policy.md
+    - agent: reference/agent.md
     - run: reference/run.md
 
 plugins:
