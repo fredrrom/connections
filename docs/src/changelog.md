@@ -6,7 +6,7 @@ Initial prover-loop release.
 
 ### Added
 
-- `run`, `build_state` and `rollout` as the entry points, over `calculus` for
+- `run_schedule`, `build_state` and `rollout` as the entry points, over `calculus` for
   the transition system and `run` for everything above it. Agents implement
   policies: `Agent` is percept-in action-out, `AgentStatus` its word about its
   own search, and the judge in `run` produces outcomes and SZS from outside

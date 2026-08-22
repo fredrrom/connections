@@ -37,8 +37,14 @@ class OnlineDFSAgent(Agent):
         super().__init__(options)
         self.choose = choose
         self._stack: list[Frame] = []
+        self._episode: State | None = None
 
     def __call__(self, state: State) -> Action | None:
+        if state is not self._episode:
+            # A new initial state is the environment's reset; the agent
+            # notices from the percept. Derivation-bound memory dies here.
+            self._episode = state
+            self._on_new_episode()
         actions = self._available_actions(state)
         if not actions:
             self.status = (
@@ -51,6 +57,10 @@ class OnlineDFSAgent(Agent):
         action = self.choose(state, actions)
         self._consume(action)
         return action
+
+    def _on_new_episode(self) -> None:
+        self._stack.clear()
+        self.status = AgentStatus.SEARCHING
 
     def _consume(self, action: Action) -> None:
         if not isinstance(action, ApplyAction):

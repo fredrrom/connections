@@ -17,7 +17,7 @@ from connections.run.result import Result
 from connections.run.prover import (
     Problem,
     ProofFoundCallback,
-    run as run_one_problem,
+    run_schedule as run_one_problem,
 )
 from connections.run.strategy import Strategy, StrategySchedule
 

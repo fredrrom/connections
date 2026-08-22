@@ -32,6 +32,7 @@ class OnlineIDAgent(OnlineDFSAgent):
         self, choose: Chooser, options: AgentOptions | None = None
     ) -> None:
         super().__init__(choose, options)
+        self._constructed_options = self.options
         self.depth_limit = self.options.initial_depth - 1
         self._path_limit_hit = False
 
@@ -120,6 +121,14 @@ class OnlineIDAgent(OnlineDFSAgent):
                 self.depth_limit = 0
             return True
         return self._path_limit_hit
+
+    def _on_new_episode(self) -> None:
+        super()._on_new_episode()
+        # The comp switch mutates the options; a fresh episode starts from the
+        # options the agent was constructed with.
+        self.options = self._constructed_options
+        self.depth_limit = self.options.initial_depth - 1
+        self._path_limit_hit = False
 
     def _exhaustion_status(self) -> AgentStatus:
         """A fixed point is claimable only from a complete final iteration."""

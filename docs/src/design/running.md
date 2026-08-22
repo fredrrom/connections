@@ -31,11 +31,21 @@ Budgets inside connections are best effort: steps and seconds divide the
 schedule and are checked between rollout steps. connections imposes no
 wall-clock alarm and no memory cap on itself. A hard guarantee that a problem
 ends needs a supervising process that can kill this one, and Timeout and
-MemoryOut are that supervisor's verdicts, never the prover's own.
+MemoryOut are that supervisor's verdicts, never the prover's own. Threads do
+not change this: a Python thread cannot be killed, a timed-out wait leaves the
+thread running and competing for the interpreter, and rollouts are pure Python
+so threads add no parallelism either. The process is the unit that times out
+cleanly; threads only earn their place waiting on subprocesses.
+
+Within one run, `run_schedule` caches materialized matrices per formulation
+and agents per recipe: the same strategy listed twice gets one agent, which
+notices each entry's fresh initial state from the percept and resets its
+derivation-bound memory there. What its persistent strata carry across the
+entries is the agent's business.
 
 Learning agents sit above runs, not inside them. An agent persists exactly as
 long as its caller keeps it: fresh per entry by default, across a schedule via
-`run(..., agent=)`, across a corpus in a campaign that collects trajectories
+`run_schedule(..., agent=)`, across a corpus in a campaign that collects trajectories
 and updates parameters between episodes. The prover neither knows nor cares
 whether the agent it runs is learning.
 
@@ -86,7 +96,7 @@ and the seconds it is given, by weight.
 
 ```python
 build_state(problem_spec, *, matrix_options) -> State
-run(problem_spec, *, schedule) -> Result
+run_schedule(problem, *, schedule) -> Result
 ```
 
 `build_state` is where a file becomes a state, and the one place `run` reaches
@@ -95,7 +105,7 @@ matrix, wrap it as the initial state of *P(M)*. `run`
 does that for each strategy in the schedule, rolls the agent out under that
 strategy's share of the budget, and stops at the first success. Agent lifetime
 is the caller's choice: by default each entry instantiates a fresh agent from
-its options, the frozen-theta protocol, while `run(..., agent=)` reuses one
+its options, the frozen-theta protocol, while `run_schedule(..., agent=)` reuses one
 agent across entries -- the deliberate exception for intra-conjecture work.
 Verdicts aggregate by strength: a proof stops the schedule, and a systematic
 strategy's exhaustion is never overwritten by a later pruned strategy's giving

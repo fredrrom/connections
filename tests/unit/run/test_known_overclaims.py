@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from connections.run import Problem, run
+from connections.run import Problem, run_schedule
 from connections.run.strategy import StrategySchedule
 from connections.run.szs import SZSStatus
 
@@ -42,7 +42,7 @@ def test_witness_is_not_counter_satisfiable(name):
     if not problem.exists():
         pytest.skip("m2k corpus not present")
     strategy = LeancopSettingsCodec.from_tokens(["cut", "comp(7)"])
-    result = run(
+    result = run_schedule(
         Problem(problem),
         schedule=StrategySchedule.single(strategy, steps=20000, timeout_seconds=10.0),
     )

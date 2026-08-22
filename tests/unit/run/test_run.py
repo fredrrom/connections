@@ -15,7 +15,7 @@ from connections.agent import (
 )
 from connections.calculus.actions import Action
 from connections.calculus.dynamics import Dynamics
-from connections.run.prover import Problem, run as run_problem
+from connections.run.prover import Problem, run_schedule as run_problem
 from connections.calculus.state import State
 from connections.run.strategy import (
     MatrixOptions,
@@ -355,18 +355,21 @@ def test_pycop_prover_reinitializes_policy_for_each_run(tmp_path, monkeypatch):
 
 
 def test_the_package_exports_the_function_not_a_module():
-    """`from connections.run import run` must give the callable.
+    """The exported names must be callables, not modules.
 
-    A submodule named `run` inside the package `run` would shadow it: Python
-    binds a submodule as an attribute of its package, and that lookup wins
-    before any lazy export in __init__. The module is called `entry` for
-    exactly this reason, and this test is what notices if it moves back.
+    A submodule sharing a function's name shadows it: Python binds a submodule
+    as an attribute of its package, and that lookup wins before any lazy
+    export in __init__. This test is what notices.
     """
     import types
 
-    from connections.run import build_state, rollout, run
+    from connections.run import build_state, rollout, run_schedule
 
-    for name, obj in (("run", run), ("build_state", build_state), ("rollout", rollout)):
+    for name, obj in (
+        ("run_schedule", run_schedule),
+        ("build_state", build_state),
+        ("rollout", rollout),
+    ):
         assert callable(obj), f"connections.run.{name} is {obj!r}"
         assert not isinstance(obj, types.ModuleType), f"{name} resolved to a module"
 
@@ -380,7 +383,7 @@ def test_importing_a_submodule_does_not_shadow_the_function():
 
     assert callable(connections.run.rollout)
     assert not isinstance(connections.run.rollout, types.ModuleType)
-    assert callable(connections.run.run)
+    assert callable(connections.run.run_schedule)
 
 
 def test_a_persistent_agent_is_reused_across_schedule_entries(tmp_path, monkeypatch):
@@ -455,3 +458,49 @@ def test_expired_strategy_deadline_is_best_effort_time_budget(tmp_path, monkeypa
     assert result.outcome is ProverOutcome.TIME_BUDGET
     assert result.szs_status is SZSStatus.RESOURCE_OUT
     assert result.steps == 0
+
+
+def test_cached_agent_reused_across_entries_with_isolated_episodes(
+    tmp_path, monkeypatch
+):
+    """One agent per recipe within the run; each entry is a fresh episode.
+
+    The schedule lists the same strategy object twice, so the agent cache
+    serves one instance to both entries. Episode detection from the percept
+    must make the second entry behave exactly like a fresh agent would.
+    """
+    monkeypatch.setattr(
+        run_module,
+        "matrix_from_file",
+        lambda *args, **kwargs: _non_theorem_matrix(),
+    )
+    problem = tmp_path / "non_theorem.p"
+    problem.write_text("fof(a1,axiom,p).\nfof(c,conjecture,q).\n", encoding="utf-8")
+
+    created = []
+    real_instantiate = PolicyOptions.instantiate
+
+    def counting(self):
+        agent = real_instantiate(self)
+        created.append(agent)
+        return agent
+
+    monkeypatch.setattr(PolicyOptions, "instantiate", counting)
+
+    shared = _leancop_strategy()
+    schedule = StrategySchedule.from_weighted(
+        [
+            WeightedStrategy(strategy=shared, weight=1),
+            WeightedStrategy(strategy=shared, weight=1),
+        ]
+    )
+    result = run_problem(Problem(problem), schedule=schedule)
+
+    assert len(created) == 1, "one agent per recipe within the run"
+    first_entry, second_entry = result.strategy_results
+    assert first_entry.outcome == second_entry.outcome
+    assert first_entry.agent_status == second_entry.agent_status
+    assert first_entry.steps == second_entry.steps, (
+        "the second episode must look exactly like the first: derivation-bound "
+        "memory died at the boundary, and the comp switch was undone"
+    )

@@ -21,7 +21,7 @@ _EXPORTS = {
     "WeightedStrategy": "connections.run.strategy",
     "build_state": "connections.run.prover",
     "rollout": "connections.run.rollout",
-    "run": "connections.run.prover",
+    "run_schedule": "connections.run.prover",
     "to_szs_status": "connections.run.szs",
 }
 

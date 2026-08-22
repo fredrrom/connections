@@ -88,7 +88,7 @@ class _StrategyRun(Generic[StrategyT]):
     proof_state: State | None = None
 
 
-def run(
+def run_schedule(
     problem: Problem,
     *,
     schedule: StrategyT | StrategySchedule[StrategyT],
@@ -164,12 +164,14 @@ def _run_schedule(
     szs_status: SZSStatus | None = None
     proof_payload: Any | None = None
     matrix_cache: MatrixCache = {}
+    agent_cache: dict[int, Agent] = {}
 
     for strategy_index, entry in enumerate(schedule.entries):
         strategy_run = _run_strategy(
             problem,
             entry=entry,
             matrix_cache=matrix_cache,
+            agent_cache=agent_cache,
             agent=agent,
             record_trajectory=record_trajectory,
         )
@@ -259,6 +261,7 @@ def _run_strategy(
     *,
     entry: ScheduledStrategy[StrategyT],
     matrix_cache: MatrixCache | None = None,
+    agent_cache: dict[int, Agent] | None = None,
     agent: Agent | None = None,
     record_trajectory: bool = False,
 ) -> _StrategyRun[StrategyT]:
@@ -275,7 +278,19 @@ def _run_strategy(
         matrix_options=strategy.matrix,
         matrix_cache=matrix_cache,
     )
-    acting = agent if agent is not None else strategy.policy.instantiate()
+    if agent is not None:
+        acting = agent
+    elif agent_cache is not None:
+        # One agent per recipe within the run: the performance element
+        # persists, and detects episode boundaries from the percept. What its
+        # persistent strata carry across entries is the agent's business.
+        key = id(strategy.policy)
+        acting = agent_cache.get(key)
+        if acting is None:
+            acting = strategy.policy.instantiate()
+            agent_cache[key] = acting
+    else:
+        acting = strategy.policy.instantiate()
     attempt = rollout(
         state,
         acting,
@@ -362,5 +377,5 @@ __all__ = [
     "ProofFound",
     "ProofFoundCallback",
     "build_state",
-    "run",
+    "run_schedule",
 ]
