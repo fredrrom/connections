@@ -4,26 +4,19 @@
 [![docs](https://github.com/fredrrom/connections/actions/workflows/pages.yml/badge.svg?branch=main)](https://fredrrom.github.io/connections/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/fredrrom/connections/blob/main/LICENSE)
 
-Agentic primitives, provers, and experiments for classical, intuitionistic, and modal first-order logic based on connection tableau. Design notes, guides, and the API reference are published at <https://fredrrom.github.io/connections/>.
+Agentic primitives, provers, and experiments for classical, intuitionistic, and modal first-order logic based on connection tableau. 
+
+Design notes, guides, and the API reference are published at <https://fredrrom.github.io/connections/>.
 
 ## Package Layout
 
-The library, `src/connections/`, with dependencies running upward:
-
-- `connections.syntax`: terms, literals, clauses, matrices
-- `connections.parsing`: TPTP text to statements and formulas
-- `connections.clausification`: formulas to a matrix
-- `connections.constraints`: term and prefix unification, free-variable
-  constraints
-- `connections.calculus`: state, tableau, actions, rules, and dynamics
-- `connections.policy`: DFS and iterative-deepening policies
-- `connections.run`: problems, strategies, schedules, results, SZS status
-
+The library, `connections`, lives in `src/connections/`; its module map is in
+[Architecture](https://fredrrom.github.io/connections/design/architecture/).
 The packages built on it, under `packages/`:
 
 - `pycop`: a prover tested extensively for inference step order parity with leanCoP 2.0, ileanCoP 1.2, and MleanCoP 1.3.
 
-- `imitation`: learned policies, datasets, training, campaigns
+- `imitation`: Imitation learning experiments and infrastructure.
 
 ## Install
 

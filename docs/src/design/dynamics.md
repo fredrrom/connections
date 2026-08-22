@@ -115,6 +115,17 @@ planner instances of the same interface rather than variants of the system.
 The composition of policies from smaller parts, and why it fits reactive
 policies but not planners, is in [running](running.md).
 
+!!! warning "Known gap: ID overclaims a fixed point"
+
+    Two m2k problems (t100_relat_1, t10_enumset1) draw CounterSatisfiable under
+    cut+comp(7) where leanCoP proves Theorem. The flag lifecycle through the
+    comp switch is correct; the failure is that at the final depth the agent
+    detects zero gate-blocked unifiable candidates while the reference still
+    finds them and deepens. The divergence is in which candidates reach the
+    depth gate at the limit boundary. Pinned as strict xfail in
+    tests/unit/run/test_known_overclaims.py; the scut/cut variants are already
+    honest GaveUp through the warrant gate.
+
 !!! warning "Known gap"
 
     Iterative deepening does not respect this boundary today. Trace-parity work
