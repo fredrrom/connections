@@ -49,7 +49,7 @@ def binding(variable, target, instance_id=None):
 
 
 def _state_for(matrix: Matrix) -> State:
-    problem = Problem(matrix=matrix, start_clauses="positive")
+    problem = Problem(matrix=matrix)
     tableau = Tableau()
     return State(problem, tableau)
 
@@ -77,7 +77,7 @@ def test_dynamics_exposes_structured_goal_and_proof_step_views():
     assert tuple(goal.goal_id for goal in state.fringe) == (tableau.root_goal_id,)
     assert tuple(tableau.rule_applications) == ()
 
-    start = dynamics.apply_actions(state, tableau.root).start[0]
+    start = dynamics.apply_actions(state, tableau.root, start_ids=state.problem.matrix.positive_clauses).start[0]
     assert isinstance(start, ApplyAction)
 
     dynamics.transition(state, start)
@@ -108,7 +108,7 @@ def test_dynamics_orders_goal_actions_before_undo():
     )
     tableau = state.tableau
     dynamics = Dynamics
-    dynamics.transition(state, dynamics.apply_actions(state, tableau.root).start[0])
+    dynamics.transition(state, dynamics.apply_actions(state, tableau.root, start_ids=state.problem.matrix.positive_clauses).start[0])
 
     goal = state.fringe[0]
     actions = [*dynamics.apply_actions(state, goal).ordered()]
@@ -138,7 +138,7 @@ def test_dynamics_can_be_constructed_directly_from_problem_and_tableau():
     )
     dynamics = Dynamics
 
-    assert len(dynamics.apply_actions(state, state.tableau.root).start) == 1
+    assert len(dynamics.apply_actions(state, state.tableau.root, start_ids=state.problem.matrix.positive_clauses).start) == 1
 
 
 def test_transition_with_no_action_returns_same_state():
@@ -159,7 +159,7 @@ def test_dynamics_returns_no_apply_actions_for_regularizable_goal():
     )
     tableau = state.tableau
     dynamics = Dynamics
-    dynamics.transition(state, dynamics.apply_actions(state, tableau.root).start[0])
+    dynamics.transition(state, dynamics.apply_actions(state, tableau.root, start_ids=state.problem.matrix.positive_clauses).start[0])
     dynamics.transition(
         state, dynamics.apply_actions(state, state.fringe[0]).extension[0]
     )
@@ -176,7 +176,7 @@ def test_dynamics_returns_no_apply_actions_for_regularizable_goal():
 
 def test_regularity_ignores_consumed_extension_literal():
     state = State(
-        Problem(matrix=Matrix((Clause((lit("dummy"),)),)), start_clauses="positive"),
+        Problem(matrix=Matrix((Clause((lit("dummy"),)),))),
         Tableau(),
     )
     tableau = state.tableau
@@ -200,7 +200,7 @@ def test_regularity_ignores_consumed_extension_literal():
 
 def test_regularity_ignores_closed_sibling_literals():
     state = State(
-        Problem(matrix=Matrix((Clause((lit("dummy"),)),)), start_clauses="positive"),
+        Problem(matrix=Matrix((Clause((lit("dummy"),)),))),
         Tableau(),
     )
     tableau = state.tableau
@@ -233,7 +233,7 @@ def test_extension_constraint_delta_binds_new_clause_variables_to_older_goal_var
     )
     tableau = state.tableau
     dynamics = Dynamics
-    dynamics.transition(state, dynamics.apply_actions(state, tableau.root).start[0])
+    dynamics.transition(state, dynamics.apply_actions(state, tableau.root, start_ids=state.problem.matrix.positive_clauses).start[0])
 
     goal_id = state.fringe[0].goal_id
     extension = dynamics.apply_actions(state, tableau.goals[goal_id]).extension[0]
@@ -249,7 +249,7 @@ def test_start_rule_carries_clause_free_variables():
     state = _state_for(
         Matrix((Clause((lit("p", free_variable),), free_variables=(free_variable,)),))
     )
-    start = Dynamics.apply_actions(state, state.tableau.root).start[0]
+    start = Dynamics.apply_actions(state, state.tableau.root, start_ids=state.problem.matrix.positive_clauses).start[0]
 
     assert start.rule.constraint_delta.free_variables == (
         (free_variable, start.rule.instance_id),
@@ -276,7 +276,7 @@ def test_extension_rule_carries_clause_free_variables():
         )
     )
     Dynamics.transition(
-        state, Dynamics.apply_actions(state, state.tableau.root).start[0]
+        state, Dynamics.apply_actions(state, state.tableau.root, start_ids=state.problem.matrix.positive_clauses).start[0]
     )
 
     goal = state.fringe[0]
@@ -306,14 +306,13 @@ def test_start_rule_rejects_inadmissible_free_variables():
                     ),
                 )
             ),
-            start_clauses="positive",
             logic="D",
             domain="varying",
         ),
         Tableau(),
     )
 
-    assert Dynamics.apply_actions(state, state.tableau.root).start == ()
+    assert Dynamics.apply_actions(state, state.tableau.root, start_ids=state.problem.matrix.positive_clauses).start == ()
 
 
 def test_extension_rule_rejects_inadmissible_free_variables():
@@ -339,14 +338,13 @@ def test_extension_rule_rejects_inadmissible_free_variables():
                     ),
                 )
             ),
-            start_clauses="positive",
             logic="D",
             domain="cumulative",
         ),
         Tableau(),
     )
     Dynamics.transition(
-        state, Dynamics.apply_actions(state, state.tableau.root).start[0]
+        state, Dynamics.apply_actions(state, state.tableau.root, start_ids=state.problem.matrix.positive_clauses).start[0]
     )
 
     assert Dynamics.apply_actions(state, state.fringe[0]).extension == ()
@@ -365,7 +363,7 @@ def test_undo_removes_bindings_owned_by_removed_rule_application():
     )
     dynamics = Dynamics
     dynamics.transition(
-        state, dynamics.apply_actions(state, state.tableau.root).start[0]
+        state, dynamics.apply_actions(state, state.tableau.root, start_ids=state.problem.matrix.positive_clauses).start[0]
     )
     goal_id = state.fringe[0].goal_id
     extension = dynamics.apply_actions(state, state.tableau.goals[goal_id]).extension[0]
@@ -393,7 +391,7 @@ def test_extension_rules_use_source_clause_instances():
     )
     dynamics = Dynamics
     dynamics.transition(
-        state, dynamics.apply_actions(state, state.tableau.root).start[0]
+        state, dynamics.apply_actions(state, state.tableau.root, start_ids=state.problem.matrix.positive_clauses).start[0]
     )
     goal_id = state.fringe[0].goal_id
 
@@ -416,7 +414,7 @@ def test_reduction_constraint_delta_binds_new_goal_variables_to_older_path_varia
     v_var = Variable("V", vid=3)
 
     state = State(
-        Problem(matrix=Matrix((Clause((lit("dummy"),)),)), start_clauses="positive"),
+        Problem(matrix=Matrix((Clause((lit("dummy"),)),))),
         Tableau(),
     )
     tableau = state.tableau
@@ -447,7 +445,7 @@ def test_reduction_constraint_delta_binds_new_goal_variables_to_older_path_varia
 
 def test_factorization_sources_from_closed_siblings_on_path_only():
     state = State(
-        Problem(matrix=Matrix((Clause((lit("dummy"),)),)), start_clauses="positive"),
+        Problem(matrix=Matrix((Clause((lit("dummy"),)),))),
         Tableau(),
     )
     tableau = state.tableau
@@ -504,7 +502,7 @@ def test_factorization_constraint_delta_binds_new_goal_variables_to_closed_sourc
     x_var = Variable("X", vid=1)
     y_var = Variable("Y", vid=2)
     state = State(
-        Problem(matrix=Matrix((Clause((lit("dummy"),)),)), start_clauses="positive"),
+        Problem(matrix=Matrix((Clause((lit("dummy"),)),))),
         Tableau(),
     )
     tableau = state.tableau

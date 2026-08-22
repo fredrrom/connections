@@ -4,7 +4,7 @@ from abc import abstractmethod
 from dataclasses import dataclass
 
 from connections.calculus.outcome import ProverOutcome
-from connections.policy.base import BacktrackGranularity, Policy
+from connections.policy.base import BacktrackGranularity, Policy, StartMode, start_clause_ids
 from connections.calculus.actions import Action, ApplyAction
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.rules import FactorizationMode, Start
@@ -39,11 +39,13 @@ class DFSPolicy(Policy):
         scut: bool = False,
         backtrack: BacktrackGranularity = "step",
         factorization: FactorizationMode = "unify",
+        start: StartMode = "positive",
     ) -> None:
         self.cut_enabled = cut
         self.scut_enabled = scut
         self.backtrack = backtrack
         self.factorization = factorization
+        self.start = start
         self._stack: list[Frame] = []
         self._stop_reason: ProverOutcome | None = None
 
@@ -313,6 +315,7 @@ class DFSPolicy(Policy):
             state,
             state.tableau.goals[goal_id],
             factorization=self.factorization,
+            start_ids=start_clause_ids(state.problem.matrix, self.start),
         ).ordered()
 
     def _after_choicepoint_created(self, choicepoint: ChoicepointFrame) -> None:

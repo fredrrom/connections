@@ -5,7 +5,6 @@ from pathlib import Path
 
 from connections.clausification.translate import (
     ClausificationTranslationMode,
-    StartClausesMode,
     clausify,
 )
 from connections.syntax.logic import Domain, Logic
@@ -18,7 +17,7 @@ def matrix_from_file(
     *,
     translation: ClausificationTranslationMode = "default",
     reorder: int = 0,
-    start_clauses: StartClausesMode = "positive",
+    mark_conjecture: bool = False,
     logic: Logic = "classical",
     domain: Domain = "constant",
     source_file_dirs: Iterable[str | Path] = (),
@@ -39,7 +38,7 @@ def matrix_from_file(
         parsed,
         translation=translation,
         reorder=reorder,
-        start_clauses=start_clauses,
+        mark_conjecture=mark_conjecture,
         logic=logic,
     )
     if clausification_trace_logger.isEnabledFor(TRACE_LEVEL):

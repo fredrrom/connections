@@ -4,13 +4,7 @@
 [![docs](https://github.com/fredrrom/connections/actions/workflows/pages.yml/badge.svg?branch=main)](https://fredrrom.github.io/connections/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/fredrrom/connections/blob/main/LICENSE)
 
-`connections` provides classical, intuitionistic, and modal connection-tableaux
-construction primitives for proof-search control. It
-contains a small prover loop, reusable search policies, native
-FOF/CNF/QMF matrix construction, and `pycop`, a reimplementation of leanCoP 2.1,
-ileanCoP 1.2, and MleanCoP 1.3 in this same framework, tested extensively for
-parity of inference step ordering.
-
+`connections` provides agentic primitives for classical, intuitionistic, and modal first-order prover construction based on connection tableau. `packages/pycop` is a prover built on connections tested extensively for inference step order parity with leanCoP 2.0, ileanCoP 1.2, and MleanCoP 1.3.
 
 ## Package Layout
 

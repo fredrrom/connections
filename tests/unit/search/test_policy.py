@@ -32,7 +32,7 @@ def _lit(label: str) -> Literal:
 
 
 _DUMMY_PROBLEM = Problem(
-    matrix=Matrix((Clause((_lit("dummy"),)),)), start_clauses="positive"
+    matrix=Matrix((Clause((_lit("dummy"),)),))
 )
 
 
@@ -773,7 +773,7 @@ def test_modal_iterative_deepening_traces_rejected_prefix_path_limit_candidate(
     path.write_text("qmf(c,conjecture,(#box:p => p)).\n", encoding="utf-8")
     matrix = matrix_from_file(path, logic="D", domain="constant")
     state = State(
-        problem=Problem(matrix=matrix, start_clauses="positive", logic="D"),
+        problem=Problem(matrix=matrix, logic="D"),
         tableau=Tableau(),
     )
     policy = FirstActionIDPolicy(cut=True, scut=True, comp=7)
@@ -828,7 +828,7 @@ def test_iterative_deepening_continues_after_comp_with_plain_settings(
 
 def test_iterative_deepening_empty_matrix_has_no_start_choicepoint(caplog):
     state = State(
-        problem=Problem(matrix=Matrix(()), start_clauses="positive"),
+        problem=Problem(matrix=Matrix(())),
         tableau=Tableau(),
     )
     policy = FirstActionIDPolicy(
@@ -850,7 +850,7 @@ def test_iterative_deepening_empty_matrix_has_no_start_choicepoint(caplog):
 
 def test_pycop_policy_keeps_real_empty_clause_as_start_action(caplog):
     state = State(
-        problem=Problem(matrix=Matrix((Clause(()),)), start_clauses="positive"),
+        problem=Problem(matrix=Matrix((Clause(()),))),
         tableau=Tableau(),
     )
     policy = FirstActionIDPolicy(

@@ -48,7 +48,8 @@ def test_load_schedule_entries_from_json_file(tmp_path):
     assert _args(entries[0].strategy)["cut"] is True
     assert _args(entries[0].strategy)["comp"] == 7
     assert entries[1].strategy.matrix.translation == "def"
-    assert entries[1].strategy.matrix.start_clauses == "conjecture"
+    assert entries[1].strategy.matrix.mark_conjecture is True
+    assert entries[1].strategy.policy.args["start"] == "conjecture"
 
 
 def test_load_schedule_entries_from_builtin_name():

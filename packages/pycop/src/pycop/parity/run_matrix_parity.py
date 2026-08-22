@@ -169,7 +169,7 @@ def native_matrix_dump(
         problem_path,
         translation=matrix_options.translation,
         reorder=matrix_options.reorder,
-        start_clauses=matrix_options.start_clauses,
+        mark_conjecture=matrix_options.mark_conjecture,
         logic=case.logic,
         domain=case.domain,
         source_file_dirs=source_file_dirs,

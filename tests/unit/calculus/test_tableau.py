@@ -12,7 +12,7 @@ def lit(name: str, *, neg: bool = False) -> Literal:
 
 def state() -> State:
     return State(
-        Problem(matrix=Matrix((Clause((lit("dummy"),)),)), start_clauses="positive"),
+        Problem(matrix=Matrix((Clause((lit("dummy"),)),))),
         Tableau(),
     )
 

@@ -246,7 +246,7 @@ def test_clausify_document_marks_conjecture_clauses_without_marker_literals(tmp_
     matrix = clausify(
         parsed,
         translation="nodef",
-        start_clauses="conjecture",
+        mark_conjecture=True,
     )
 
     assert not any(
@@ -274,7 +274,7 @@ def test_clausify_emits_matrix_construction_trace(tmp_path, caplog):
     matrix = clausify(
         parsed,
         translation="nodef",
-        start_clauses="conjecture",
+        mark_conjecture=True,
     )
 
     assert caplog.messages[:3] == [

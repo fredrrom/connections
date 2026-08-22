@@ -168,7 +168,7 @@ def _build_state(
         path,
         translation=matrix_options.translation,
         reorder=matrix_options.reorder,
-        start_clauses=matrix_options.start_clauses,
+        mark_conjecture=matrix_options.mark_conjecture,
         logic=logic,
         domain=domain,
         source_file_dirs=source_file_dirs,
@@ -176,7 +176,7 @@ def _build_state(
     return State(
         problem=Problem(
             matrix=matrix,
-            start_clauses=matrix_options.start_clauses,
+            mark_conjecture=matrix_options.mark_conjecture,
             logic=logic,
             domain=domain,
         ),

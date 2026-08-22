@@ -21,7 +21,7 @@ class LeancopSettingsCodec:
 
         if matrix.translation in {"def", "nodef"}:
             tokens.append(matrix.translation)
-        if matrix.start_clauses == "conjecture":
+        if matrix.mark_conjecture:
             tokens.append("conj")
         if matrix.reorder > 0:
             tokens.append(f"reo({matrix.reorder})")
@@ -43,7 +43,7 @@ class LeancopSettingsCodec:
     def from_tokens(tokens: list[str] | None) -> Strategy:
         translation = "default"
         reorder = 0
-        start_clauses = "positive"
+        conjecture = False
         cut = False
         scut = False
         comp: int | None = None
@@ -65,7 +65,7 @@ class LeancopSettingsCodec:
                 translation = "def"
                 continue
             if token == "conj":
-                start_clauses = "conjecture"
+                conjecture = True
                 continue
 
             match = re.fullmatch(r"reo\((\d+)\)", token)
@@ -88,11 +88,16 @@ class LeancopSettingsCodec:
             matrix=MatrixOptions(
                 translation=translation,
                 reorder=reorder,
-                start_clauses=start_clauses,
+                mark_conjecture=conjecture,
             ),
             policy=PolicyOptions(
                 policy_class=FirstActionIDPolicy,
-                args=_leancop_policy_args(cut=cut, scut=scut, comp=comp),
+                args=_leancop_policy_args(
+                    cut=cut,
+                    scut=scut,
+                    comp=comp,
+                    start="conjecture" if conjecture else "positive",
+                ),
             ),
         )
 
@@ -102,11 +107,13 @@ def _leancop_policy_args(
     cut: bool = False,
     scut: bool = False,
     comp: int | None = None,
+    start: str = "positive",
 ) -> dict[str, object]:
     return {
         "cut": cut,
         "scut": scut,
         "comp": comp,
+        "start": start,
         "factorization": "equal",
     }
 

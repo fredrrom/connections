@@ -6,6 +6,7 @@ from typing import TypeGuard
 from connections.syntax.matrix import Clause
 from connections.calculus.outcome import ProverOutcome
 from connections.policy.base import BacktrackGranularity
+from connections.policy.base import StartMode, start_clause_ids
 from connections.policy.dfs import ChoicepointFrame, DFSPolicy
 from connections.calculus.actions import Action, ApplyAction
 from connections.calculus.dynamics import Dynamics
@@ -32,6 +33,7 @@ class IDPolicy(DFSPolicy):
         comp: int | None = None,
         backtrack: BacktrackGranularity = "step",
         factorization: FactorizationMode = "unify",
+        start: StartMode = "positive",
         initial_depth: int = 1,
     ) -> None:
         super().__init__(
@@ -39,6 +41,7 @@ class IDPolicy(DFSPolicy):
             scut=scut,
             backtrack=backtrack,
             factorization=factorization,
+            start=start,
         )
         if initial_depth < 1:
             raise ValueError("initial_depth must be at least 1")
@@ -67,7 +70,9 @@ class IDPolicy(DFSPolicy):
             self._pending_path_limit_plan = (goal_id, {}, 0)
             return tuple(
                 ApplyAction(goal_id, rule)
-                for rule in Dynamics.start_rules_for(state, goal_id)
+                for rule in Dynamics.start_rules_for(
+                    state, start_clause_ids(state.problem.matrix, self.start)
+                )
             )
         if (
             getattr(goal, "clause_idx", None) is None

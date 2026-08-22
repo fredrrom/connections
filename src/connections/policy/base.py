@@ -9,6 +9,20 @@ from connections.calculus.state import State
 
 
 PolicyDecision: TypeAlias = Action | None
+StartMode: TypeAlias = Literal["positive", "conjecture"]
+
+
+def start_clause_ids(matrix, mode: StartMode) -> tuple[int, ...]:
+    """The clauses this agent asks to start from.
+
+    Selection is the agent's, like factorization: the matrix's role indexes are
+    facts, which subset to query is discipline. "conjecture" falls back to the
+    positive clauses when the matrix has no conjecture-role clauses, matching
+    leanCoP.
+    """
+    if mode == "conjecture":
+        return matrix.conjecture_clauses or matrix.positive_clauses
+    return matrix.positive_clauses
 BacktrackGranularity: TypeAlias = Literal["step", "maximal"]
 
 

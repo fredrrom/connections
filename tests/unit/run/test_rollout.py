@@ -17,7 +17,7 @@ from tests.unit.run.test_run import _non_theorem_matrix
 
 def _state():
     return State(
-        problem=Problem(matrix=_non_theorem_matrix(), start_clauses="positive"),
+        problem=Problem(matrix=_non_theorem_matrix()),
         tableau=Tableau(),
     )
 

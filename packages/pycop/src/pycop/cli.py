@@ -471,7 +471,7 @@ def _print_schedule_report(
     print(
         f"strategy {strategy_index + 1}: tokens=[{','.join(tokens)}], "
         f"translation={matrix.translation}, "
-        f"start={matrix.start_clauses}, "
+        f"conj_marked={matrix.mark_conjecture}, "
         f"cut={args.get('cut', False)}, "
         f"scut={args.get('scut', False)}, comp={args.get('comp')}, "
         f"steps={entry.step_limit}, seconds={entry.timeout_seconds}"

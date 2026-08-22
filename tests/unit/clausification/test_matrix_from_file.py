@@ -5,7 +5,7 @@ import pytest
 from connections.clausification import matrix_from_file
 from connections.syntax.matrix import Matrix, SignedPredicateSymbol
 from connections.parsing.tptp.parser import TPTPParseError
-from connections.calculus.problem import Problem
+from connections.policy.base import start_clause_ids
 from connections.trace_logging import CLAUSIFICATION_TRACE_LOGGER_NAME, TRACE_LEVEL
 
 
@@ -57,7 +57,7 @@ def test_matrix_from_file_uses_direct_cnf_matrix_construction(tmp_path):
     _assert_matrix_indices_consistent(matrix)
     assert matrix.source_has_conjecture is False
     assert matrix.conjecture_clauses == (1,)
-    assert Problem(matrix=matrix, start_clauses="conjecture").start_clause_ids == (1,)
+    assert start_clause_ids(matrix, "conjecture") == (1,)
     assert [
         (clause.role, [str(literal) for literal in clause.literals])
         for clause in matrix.clauses

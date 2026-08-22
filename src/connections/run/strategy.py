@@ -5,19 +5,18 @@ from dataclasses import dataclass, field
 import math
 from typing import Any, Generic, TypeVar
 
-from connections.clausification import (
-    ClausificationTranslationMode,
-    StartClausesMode,
-)
+from connections.clausification import ClausificationTranslationMode
 from connections.policy import Policy
 
 StrategyT = TypeVar("StrategyT")
 
 @dataclass(frozen=True, slots=True)
 class MatrixOptions:
+    """Formulation: what changes the matrix. Start selection is the agent's."""
+
     translation: ClausificationTranslationMode = "default"
     reorder: int = 0
-    start_clauses: StartClausesMode = "positive"
+    mark_conjecture: bool = False
 
 
 @dataclass(frozen=True, slots=True)

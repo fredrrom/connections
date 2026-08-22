@@ -28,6 +28,7 @@ class Dynamics:
         goal: TableauNode,
         *,
         factorization: FactorizationMode = "unify",
+        start_ids: tuple[int, ...] = (),
     ) -> ApplyActions:
         if goal.closed:
             return ApplyActions()
@@ -38,7 +39,7 @@ class Dynamics:
         if goal.goal_id == state.tableau.root_goal_id:
             return ApplyActions(
                 start=Dynamics._apply_actions(
-                    goal.goal_id, Dynamics.start_rules_for(state, goal.goal_id)
+                    goal.goal_id, Dynamics.start_rules_for(state, start_ids)
                 )
             )
         return ApplyActions(
@@ -57,9 +58,14 @@ class Dynamics:
         )
 
     @staticmethod
-    def start_rules_for(state: State, _goal_id: int) -> tuple[Start, ...]:
+    def start_rules_for(state: State, clause_ids: tuple[int, ...]) -> tuple[Start, ...]:
+        """Start rules for the given clauses.
+
+        Which clauses may start is the agent's selection -- positive, conjecture,
+        or anything else. Legality of each start is checked here regardless.
+        """
         rules: list[Start] = []
-        for idx in state.problem.start_clause_ids:
+        for idx in clause_ids:
             clause = state.problem.matrix.clauses[idx]
             instance_id = state.fresh_instance_id()
             delta = state.constraints.delta_for_free_variables(

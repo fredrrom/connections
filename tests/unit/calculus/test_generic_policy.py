@@ -18,7 +18,7 @@ def _lit(name: str, *, neg: bool = False) -> Literal:
 
 def _state(matrix: Matrix) -> State:
     return State(
-        problem=Problem(matrix=matrix, start_clauses="positive"),
+        problem=Problem(matrix=matrix),
         tableau=Tableau(),
     )
 

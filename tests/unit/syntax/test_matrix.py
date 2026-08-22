@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from connections.syntax.formula import Atom, Function, Prefix, Variable
 from connections.syntax.matrix import Clause, Literal, Matrix, SignedPredicateSymbol
-from connections.calculus.problem import Problem
+from connections.policy.base import start_clause_ids
 
 
 def _assert_matrix_indices_consistent(matrix: Matrix) -> None:
@@ -129,7 +129,7 @@ def test_clause_carries_free_variables():
     assert clause.free_variables == (variable,)
 
 
-def test_matrix_start_clauses_positive_mode_selects_positive_clauses():
+def test_matrix_role_indexes_expose_positive_and_conjecture_clauses():
     pos = Clause((Literal(atom=Atom("p"), polarity=True),))
     neg = Clause((Literal(atom=Atom("q"), polarity=False),))
     conj = Clause((Literal(atom=Atom("r"), polarity=True),), role="conjecture")
@@ -138,23 +138,19 @@ def test_matrix_start_clauses_positive_mode_selects_positive_clauses():
     assert matrix.positive_clauses == (0, 2)
     assert matrix.conjecture_clauses == (2,)
 
-def test_problem_conjecture_start_falls_back_to_positive_clauses():
+def test_conjecture_start_selection_falls_back_to_positive_clauses():
     matrix = Matrix((Clause((Literal(atom=Atom("p"), polarity=True),)),))
-    problem = Problem(matrix=matrix, start_clauses="conjecture")
 
-    assert problem.start_clause_ids == (0,)
+    assert start_clause_ids(matrix, "conjecture") == (0,)
 
 
-def test_problem_start_clause_indices_use_conjecture_clauses_when_requested():
+def test_conjecture_start_selection_uses_conjecture_clauses_when_present():
     ax = Clause((Literal(atom=Atom("p"), polarity=True),), role="axiom")
     conj = Clause((Literal(atom=Atom("q"), polarity=True),), role="conjecture")
     matrix = Matrix((ax, conj))
-    problem = Problem(matrix=matrix, start_clauses="conjecture")
 
-    assert problem.start_clause_ids == (1,)
-    starts = [clause_idx for clause_idx in problem.start_clause_ids]
-    assert len(starts) == 1
-    assert isinstance(starts[0], int)
+    starts = start_clause_ids(matrix, "conjecture")
+    assert starts == (1,)
     assert matrix.clauses[starts[0]].literals[0].atom.symbol == "q"
 
 

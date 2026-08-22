@@ -136,7 +136,6 @@ def build_state(
     return State(
         problem=Problem(
             matrix=matrix,
-            start_clauses=matrix_options.start_clauses,
             logic=problem.logic,
             domain=problem.domain,
         ),
@@ -285,7 +284,7 @@ def _matrix_from_file(
         problem.path,
         translation=matrix_options.translation,
         reorder=matrix_options.reorder,
-        start_clauses=matrix_options.start_clauses,
+        mark_conjecture=matrix_options.mark_conjecture,
         logic=problem.logic,
         domain=problem.domain,
         source_file_dirs=problem.source_file_dirs,
@@ -308,7 +307,7 @@ def _matrix_cache_key(
         tuple(Path(directory).resolve() for directory in problem.source_file_dirs),
         matrix_options.translation,
         matrix_options.reorder,
-        matrix_options.start_clauses,
+        matrix_options.mark_conjecture,
     )
 
 

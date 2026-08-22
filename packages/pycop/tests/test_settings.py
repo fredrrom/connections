@@ -26,7 +26,8 @@ def test_strategy_defaults():
     args = _args(strategy)
     assert matrix.translation == "default"
     assert matrix.reorder == 0
-    assert matrix.start_clauses == "positive"
+    assert matrix.mark_conjecture is False
+    assert strategy.policy.args["start"] == "positive"
     assert strategy.policy.policy_class is FirstActionIDPolicy
     assert args["factorization"] == "equal"
 
@@ -36,7 +37,7 @@ def test_leancop_settings_codec_to_token_list_from_strategy():
         matrix=MatrixOptions(
             translation="def",
             reorder=2,
-            start_clauses="conjecture",
+            mark_conjecture=True,
         )
     )
     assert LeancopSettingsCodec.to_token_list(strategy) == "[def,conj,reo(2)]"
@@ -69,6 +70,7 @@ def test_leancop_settings_codec_from_tokens_defaults_when_none():
         cut=False,
         scut=False,
         comp=None,
+        start="positive",
         factorization="equal",
     )
 
@@ -80,7 +82,8 @@ def test_leancop_settings_codec_from_tokens_supports_translation_and_search_flag
     matrix = strategy.matrix
     args = _args(strategy)
     assert matrix.translation == "def"
-    assert matrix.start_clauses == "conjecture"
+    assert matrix.mark_conjecture is True
+    assert strategy.policy.args["start"] == "conjecture"
     assert matrix.reorder == 2
     assert args["cut"] is True
     assert args["scut"] is True
