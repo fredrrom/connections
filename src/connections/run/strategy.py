@@ -6,7 +6,7 @@ import math
 from typing import Any, Generic, TypeVar
 
 from connections.clausification import ClausificationTranslationMode
-from connections.policy import Policy
+from connections.agent import Agent
 
 StrategyT = TypeVar("StrategyT")
 
@@ -21,10 +21,10 @@ class MatrixOptions:
 
 @dataclass(frozen=True, slots=True)
 class PolicyOptions:
-    policy_class: type[Policy]
+    policy_class: type[Agent]
     args: Mapping[str, Any] = field(default_factory=dict)
 
-    def instantiate(self) -> Policy:
+    def instantiate(self) -> Agent:
         return self.policy_class(**dict(self.args))
 
 

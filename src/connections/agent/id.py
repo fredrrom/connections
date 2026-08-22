@@ -5,9 +5,9 @@ from typing import TypeGuard
 
 from connections.syntax.matrix import Clause
 from connections.calculus.outcome import ProverOutcome
-from connections.policy.base import BacktrackGranularity
-from connections.policy.base import StartMode, start_clause_ids
-from connections.policy.dfs import ChoicepointFrame, DFSPolicy
+from connections.agent.base import BacktrackGranularity
+from connections.agent.base import StartMode, start_clause_ids
+from connections.agent.dfs import ChoicepointFrame, DFSPolicy
 from connections.calculus.actions import Action, ApplyAction
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.rules import Extension, FactorizationMode

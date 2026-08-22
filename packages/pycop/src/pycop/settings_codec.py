@@ -5,7 +5,7 @@ import re
 from collections.abc import Mapping
 from typing import Any, cast
 
-from connections.policy import FirstActionIDPolicy
+from connections.agent import FirstActionIDPolicy
 from connections.run.strategy import MatrixOptions, PolicyOptions, Strategy
 
 

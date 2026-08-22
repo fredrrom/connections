@@ -3,7 +3,7 @@ from __future__ import annotations
 from connections.syntax.formula import Atom
 from connections.syntax.matrix import Clause, Literal, Matrix
 from connections.calculus.outcome import ProverOutcome
-from connections.policy import DFSPolicy
+from connections.agent import DFSPolicy
 from connections.calculus.actions import ApplyAction, UndoAction
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.rules import Start

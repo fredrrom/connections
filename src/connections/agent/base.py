@@ -8,7 +8,7 @@ from connections.calculus.outcome import ProverOutcome
 from connections.calculus.state import State
 
 
-PolicyDecision: TypeAlias = Action | None
+AgentDecision: TypeAlias = Action | None
 StartMode: TypeAlias = Literal["positive", "conjecture"]
 
 
@@ -26,7 +26,7 @@ def start_clause_ids(matrix, mode: StartMode) -> tuple[int, ...]:
 BacktrackGranularity: TypeAlias = Literal["step", "maximal"]
 
 
-class Policy(ABC):
+class Agent(ABC):
     """An agent acting in the transition system.
 
     This is the agent-program interface: the policy perceives the current state
@@ -62,6 +62,6 @@ class Policy(ABC):
 
 __all__ = [
     "BacktrackGranularity",
-    "PolicyDecision",
-    "Policy",
+    "AgentDecision",
+    "Agent",
 ]

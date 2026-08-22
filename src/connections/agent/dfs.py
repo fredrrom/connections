@@ -4,14 +4,14 @@ from abc import abstractmethod
 from dataclasses import dataclass
 
 from connections.calculus.outcome import ProverOutcome
-from connections.policy.base import BacktrackGranularity, Policy, StartMode, start_clause_ids
+from connections.agent.base import BacktrackGranularity, Agent, StartMode, start_clause_ids
 from connections.calculus.actions import Action, ApplyAction
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.rules import FactorizationMode, Start
 from connections.calculus.state import State
 from connections.trace_logging import trace, trace_logger
 
-DFSPolicyDecision = Action | None
+DFSAgentDecision = Action | None
 
 
 @dataclass(slots=True)
@@ -31,7 +31,7 @@ class ChoicepointFrame:
 Frame = WorkFrame | ChoicepointFrame
 
 
-class DFSPolicy(Policy):
+class DFSPolicy(Agent):
     def __init__(
         self,
         *,
@@ -49,7 +49,7 @@ class DFSPolicy(Policy):
         self._stack: list[Frame] = []
         self._stop_reason: ProverOutcome | None = None
 
-    def __call__(self, state: State) -> DFSPolicyDecision:
+    def __call__(self, state: State) -> DFSAgentDecision:
         # _prepare_actions settles closed choicepoints on the way in, so a call
         # at a final state does this policy's shutdown before yielding nothing.
         actions = self._available_actions(state)

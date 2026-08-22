@@ -14,7 +14,7 @@ from connections.calculus.actions import Action, ApplyAction
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.outcome import ProverOutcome
 from connections.calculus.state import State
-from connections.policy import Policy
+from connections.agent import Agent
 from connections.trace_logging import trace, trace_logger
 
 
@@ -63,7 +63,7 @@ def _closed(state: State) -> bool:
 def rollout(
     state: State,
     *,
-    policy: Policy,
+    policy: Agent,
     step_limit: int | None = None,
     deadline: float | None = None,
 ) -> Rollout:

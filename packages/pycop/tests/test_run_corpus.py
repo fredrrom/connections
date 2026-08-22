@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from connections.policy import Policy, PolicyDecision
+from connections.agent import Agent, AgentDecision
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.state import State
 from connections.run.strategy import (
@@ -12,8 +12,8 @@ from connections.run.strategy import (
 from pycop.runs import RunRow, run_corpus, run_corpus_records, summarize_run_rows
 
 
-class _FirstRulePolicy(Policy):
-    def __call__(self, state: State) -> PolicyDecision:
+class _FirstRulePolicy(Agent):
+    def __call__(self, state: State) -> AgentDecision:
         for goal in state.fringe:
             actions = Dynamics.apply_actions(state, goal, start_ids=state.matrix.positive_clauses).ordered()
             if actions:

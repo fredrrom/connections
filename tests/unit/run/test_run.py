@@ -8,7 +8,7 @@ from connections.syntax.formula import Atom
 from connections.syntax.matrix import Clause, Literal, Matrix
 from connections.calculus.outcome import ProverOutcome
 from connections.run.szs import SZSStatus
-from connections.policy import FirstActionIDPolicy, Policy, PolicyDecision
+from connections.agent import FirstActionIDPolicy, Agent, AgentDecision
 from connections.calculus.dynamics import Dynamics
 from connections.run.entry import Problem, run as run_problem
 from connections.calculus.state import State
@@ -43,8 +43,8 @@ def _non_theorem_matrix() -> Matrix:
     )
 
 
-class _FirstRulePolicy(Policy):
-    def __call__(self, state: State) -> PolicyDecision:
+class _FirstRulePolicy(Agent):
+    def __call__(self, state: State) -> AgentDecision:
         for goal in state.fringe:
             actions = Dynamics.apply_actions(
                 state,
@@ -57,7 +57,7 @@ class _FirstRulePolicy(Policy):
 
 
 class _NoActionPolicy(_FirstRulePolicy):
-    def __call__(self, state: State) -> PolicyDecision:
+    def __call__(self, state: State) -> AgentDecision:
         _ = state
         return None
 
@@ -382,7 +382,7 @@ def test_pycop_prover_reinitializes_policy_for_each_run(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     class TrackingPolicy(FirstActionIDPolicy):
-        policies: list[Policy] = []
+        policies: list[Agent] = []
 
         def __init__(self) -> None:
             super().__init__()

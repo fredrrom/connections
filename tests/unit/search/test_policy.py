@@ -9,9 +9,9 @@ from connections.clausification import matrix_from_file
 from connections.syntax.formula import Atom, Variable
 from connections.syntax.matrix import Clause, Literal, Matrix
 from connections.calculus.outcome import ProverOutcome
-import connections.policy.dfs as policy_module
-import connections.policy.id as id_policy_module
-from connections.policy import FirstActionIDPolicy
+import connections.agent.dfs as policy_module
+import connections.agent.id as id_policy_module
+from connections.agent import FirstActionIDPolicy
 from connections.calculus.actions import (
     Action,
     AnyApplyAction,

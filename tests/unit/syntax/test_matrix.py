@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from connections.syntax.formula import Atom, Function, Prefix, Variable
 from connections.syntax.matrix import Clause, Literal, Matrix, SignedPredicateSymbol
-from connections.policy.base import start_clause_ids
+from connections.agent.base import start_clause_ids
 
 
 def _assert_matrix_indices_consistent(matrix: Matrix) -> None:

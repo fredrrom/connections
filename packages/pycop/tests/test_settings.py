@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from connections.policy import FirstActionIDPolicy
+from connections.agent import FirstActionIDPolicy
 from connections.run.strategy import MatrixOptions, PolicyOptions, Strategy
 from pycop.settings_codec import LeancopSettingsCodec
 

@@ -8,7 +8,7 @@ from connections.calculus.actions import ApplyAction, UndoAction
 from connections.calculus.outcome import ProverOutcome
 from connections.calculus.state import State
 from connections.calculus.tableau import Tableau
-from connections.policy import Policy
+from connections.agent import Agent
 from connections.run.rollout import Rollout, rollout
 
 from tests.unit.run.test_run import _non_theorem_matrix
@@ -20,7 +20,7 @@ def _state():
     )
 
 
-class _Scripted(Policy):
+class _Scripted(Agent):
     """Yields each scripted action in turn, then nothing."""
 
     def __init__(self, actions=(), stop_reason=None):

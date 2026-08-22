@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from connections.policy.base import (
+from connections.agent.base import (
     BacktrackGranularity,
-    Policy,
-    PolicyDecision,
+    Agent,
+    AgentDecision,
 )
-from connections.policy.dfs import (
+from connections.agent.dfs import (
     ChoicepointFrame,
     DFSPolicy,
     Frame,
     WorkFrame,
 )
-from connections.policy.id import (
+from connections.agent.id import (
     FirstActionIDPolicy,
     IDPolicy,
     IterativeDeepeningOptions,
@@ -25,7 +25,7 @@ __all__ = [
     "Frame",
     "IDPolicy",
     "IterativeDeepeningOptions",
-    "Policy",
-    "PolicyDecision",
+    "Agent",
+    "AgentDecision",
     "WorkFrame",
 ]
