@@ -1,17 +1,11 @@
-"""Known ID overclaims: the path-limit condition undercounts blocked candidates.
+"""Former ID overclaims, kept as regressions.
 
-Two m2k problems where leanCoP proves Theorem but our ID agent claims a fixed
-point under cut+comp(7). Instrumentation (2026-08-22) shows the flag lifecycle
-is correct through the comp switch: depths 1..6 record path-limit hits, then at
-depth_limit=7 in complete mode the agent detects zero gate-blocked unifiable
-candidates and stops, while the reference at the same point still finds blocked
-candidates (a third pathlim_hit at trace event 163 that native never emits) and
-deepens to a proof.
-
-So the divergence is in which candidates reach the depth gate at the limit
-boundary, not in the flag reset. Until that is fixed, these two problems
-produce an unsound CounterSatisfiable. The scut/cut variants of the same
-problems are already honest GaveUp via the warrant gate.
+Two m2k problems where leanCoP proves Theorem but the old frame-stack ID
+agent claimed a fixed point under cut+comp(7): its path-limit condition
+undercounted blocked candidates at the limit boundary. The rewrite of the
+search agents onto per-goal alternatives with abandon-and-regenerate
+backtracking (2026-08-23) fixed the undercount, so these are now plain
+assertions that the unsound CounterSatisfiable never comes back.
 """
 
 from __future__ import annotations
@@ -33,10 +27,6 @@ WITNESSES = ["t100_relat_1", "t10_enumset1"]
 
 
 @pytest.mark.parametrize("name", WITNESSES)
-@pytest.mark.xfail(
-    reason="ID pathlim search undercounts blocked candidates at the limit",
-    strict=True,
-)
 def test_witness_is_not_counter_satisfiable(name):
     problem = M2K / f"{name}.p"
     if not problem.exists():

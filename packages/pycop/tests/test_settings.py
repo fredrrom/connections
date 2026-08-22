@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pycop.leancop_memory import traced_leancop_agent
+from pycop.leancop import leancop_agent
 from connections.interaction.strategy import MatrixOptions, PolicyOptions, Strategy
 from pycop.settings_codec import LeancopSettingsCodec
 
@@ -12,7 +12,7 @@ def _leancop_strategy(
 ) -> Strategy:
     return Strategy(
         matrix=matrix or MatrixOptions(),
-        policy=PolicyOptions(policy_class=traced_leancop_agent, args=policy_args),
+        policy=PolicyOptions(policy_class=leancop_agent, args=policy_args),
     )
 
 
@@ -28,7 +28,7 @@ def test_strategy_defaults():
     assert matrix.reorder == 0
     assert matrix.mark_conjecture is False
     assert strategy.policy.args["start"] == "positive"
-    assert strategy.policy.policy_class is traced_leancop_agent
+    assert strategy.policy.policy_class is leancop_agent
     assert args["factorization"] == "equal"
 
 

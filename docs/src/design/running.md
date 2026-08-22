@@ -287,17 +287,22 @@ action -- as agent subclasses, each taking a chooser:
 
 ```python
 MarkovAgent(choose, options)                # no memory: choose over A(s)
-OnlineDFSAgent(choose, options)             # the fringe-mirroring stack
-OnlineIDAgent(choose, options)              # stack plus the depth ladder
+OnlineDFSAgent(choose, options)             # untried alternatives per goal
+OnlineIDAgent(choose, options)              # alternatives plus the depth ladder
 ```
 
 | internal state -- what `A(s, μ)` exposes | chooser -- among what it exposed |
 |---|---|
 | none (markov) | pycop's `first` |
-| the choicepoint stack (DFS) | learned scorer |
-| stack plus depth ladder (ID) | |
+| per-goal alternatives (DFS) | learned scorer |
+| alternatives plus depth ladder (ID) | |
 
-leanCoP is pycop's `traced_leancop_agent`. A learned agent keeps the memory and replaces
+leanCoP is pycop's `leancop_agent`: `OnlineIDAgent` with the `first`
+chooser and leanCoP's option spellings. There is no separate traced
+implementation; the agents emit leanCoP's trace events at leanCoP's
+positions the same way the rollout emits one event per action, and the
+trace logger decides whether anyone is listening.
+A learned agent keeps the memory and replaces
 the chooser, which is where the old multiple-inheritance diamond dissolved
 into composition. The agent sets its own `status`: only it
 memory knows whether its options pruned, so only it can claim

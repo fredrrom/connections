@@ -1,42 +1,42 @@
-"""Depth-first search over the fringe-mirroring invariant.
+"""Depth-first search read off the state itself.
 
-The state is the source of truth, and the agent's stack adds only what the
-state cannot know: which alternatives remain untried per goal. One frame per goal,
-the stack mirroring the ordered fringe -- the current goal is ``fringe[0]``,
-and any disagreement between stack and state resolves to a single undo.
+The state already is the search stack: ``fringe[0]`` is the current goal,
+and the newest live rule application is the step that chronological
+backtracking undoes. The agent's memory is one dict, the untried
+alternatives per goal, generated when the goal first becomes current and
+deleted when the search abandons it. Deletion is what keeps the dict
+honest: alternatives are only valid under the constraints they were
+generated under, and chronological undo restores exactly those constraints
+whenever a goal is resumed, while a goal revisited after abandonment is
+generated afresh. This is Prolog's backtracking, which is why leanCoP is
+this agent's iterative-deepening subclass with a first-action chooser.
 
-The stack is the agent's internal state, read against ``self.options`` and
-reported through ``self.status``. It emits no trace events;
-leanCoP's event choreography is pycop's parity claim, carried by the traced
-agents there.
+The agent emits leanCoP's ``cut`` and ``scut`` trace events at leanCoP's
+positions, the same way the rollout emits one event per action: the trace
+logger decides whether anyone is listening.
 """
 
 from __future__ import annotations
-
-from dataclasses import dataclass
 
 from connections.agent.base import Agent, AgentOptions, AgentStatus, Chooser
 from connections.env.actions import Action, ApplyAction, UndoAction
 from connections.env.dynamics import Dynamics
 from connections.env.rules import Start
 from connections.env.state import State
-
-
-@dataclass(slots=True)
-class Frame:
-    goal_id: int
-    actions: list[Action]
+from connections.trace_logging import trace, trace_logger
 
 
 class OnlineDFSAgent(Agent):
-    """Depth-first search over the fringe-mirroring stack, with a chooser."""
+    """Depth-first search with a chooser over the per-goal alternatives."""
 
     def __init__(
         self, choose: Chooser, options: AgentOptions | None = None
     ) -> None:
         super().__init__(options)
         self.choose = choose
-        self._stack: list[Frame] = []
+        self._alternatives: dict[int, list[Action]] = {}
+        self._committed: set[int] = set()
+        self._scut_goal_id: int | None = None
         self._episode: State | None = None
 
     def __call__(self, state: State) -> Action | None:
@@ -59,16 +59,16 @@ class OnlineDFSAgent(Agent):
         return action
 
     def _on_new_episode(self) -> None:
-        self._stack.clear()
+        self._alternatives.clear()
+        self._committed.clear()
+        self._scut_goal_id = None
         self.status = AgentStatus.SEARCHING
 
     def _consume(self, action: Action) -> None:
         if not isinstance(action, ApplyAction):
             return
-        frame = self._stack[-1]
-        if frame.goal_id != action.goal_id:
-            raise RuntimeError("selected action does not belong to the active frame")
-        frame.actions.remove(action)
+        self._before_action(action)
+        self._alternatives[action.goal_id].remove(action)
 
     def _exhaustion_status(self) -> AgentStatus:
         """What running out of actions means, given the options.
@@ -86,47 +86,21 @@ class OnlineDFSAgent(Agent):
     # -- the search ---------------------------------------------------------
 
     def _available_actions(self, state: State) -> tuple[Action, ...]:
-        while True:
-            if state.tableau.root.closed:
-                # The final call: backtracking here would undo the proof.
-                return ()
-            if self.options.cut:
-                self._discard_closed_frames(state)
-
-            current_goal_id = None if not state.fringe else state.fringe[0].goal_id
-            if current_goal_id is None:
-                undo = self._backtrack_action(state)
-                return () if undo is None else (undo,)
-
-            if not self._stack:
-                self._push_frame(state, current_goal_id)
-                continue
-
-            frame = self._stack[-1]
-            if frame.goal_id != current_goal_id:
-                if current_goal_id not in {old.goal_id for old in self._stack}:
-                    self._push_frame(state, current_goal_id)
-                    continue
-                undo = self._backtrack_action(state)
-                return () if undo is None else (undo,)
-
-            goal = state.tableau.goals.get(frame.goal_id)
-            if goal is None:
-                self._stack.pop()
-                continue
-            if goal.closed:
-                if self.options.cut:
-                    self._discard_closed_frames(state)
-                    continue
-                undo = self._backtrack_action(state)
-                return () if undo is None else (undo,)
-            if goal.applied_rule_application_id is not None:
-                undo = self._undo_frame(state, len(self._stack) - 1)
-                return () if undo is None else (undo,)
-            if not frame.actions:
-                undo = self._backtrack_action(state)
-                return () if undo is None else (undo,)
-            return tuple(frame.actions)
+        if self.options.cut:
+            self._commit_closed(state)
+        if state.tableau.root.closed:
+            # The final call: backtracking here would undo the proof.
+            return ()
+        goal_id = state.fringe[0].goal_id
+        alternatives = self._alternatives.get(goal_id)
+        if alternatives is None:
+            alternatives = list(self._actions_for_goal(state, goal_id))
+            self._apply_scut(state, goal_id, alternatives)
+            self._alternatives[goal_id] = alternatives
+        if alternatives:
+            return tuple(alternatives)
+        self._abandon(goal_id)
+        return self._backtrack(state)
 
     def _actions_for_goal(self, state: State, goal_id: int) -> tuple[Action, ...]:
         return Dynamics.apply_actions(
@@ -136,54 +110,89 @@ class OnlineDFSAgent(Agent):
             start=self.options.start,
         ).ordered()
 
-    def _push_frame(self, state: State, goal_id: int) -> Frame | None:
-        if goal_id not in state.tableau.goals:
-            return None
-        frame = Frame(
-            goal_id=goal_id,
-            actions=list(self._actions_for_goal(state, goal_id)),
-        )
-        self._apply_scut(state, frame)
-        self._stack.append(frame)
-        return frame
+    def _backtrack(self, state: State) -> tuple[Action, ...]:
+        app_id = self._backtrack_application(state)
+        if app_id is None:
+            return ()
+        self._forget_subtree(state, app_id)
+        return (UndoAction(app_id),)
 
-    def _apply_scut(self, state: State, frame: Frame) -> None:
-        if not self.options.scut or frame.goal_id != state.tableau.root_goal_id:
-            return
-        for action in frame.actions:
-            if isinstance(action, ApplyAction) and isinstance(action.rule, Start):
-                frame.actions = [action]
-                return
+    def _backtrack_application(self, state: State) -> int | None:
+        """The step to undo: the newest, skipping committed subtrees.
 
-    def _backtrack_action(self, state: State) -> UndoAction | None:
-        if self._stack:
-            self._stack.pop()
-        if not self._stack:
-            return None
-
+        Under cut a committed goal's alternatives are gone, so unwinding its
+        subtree step by step would only re-derive that; the undo jumps to the
+        newest step whose goal can still be resumed, removing the committed
+        subtree whole.
+        """
         if self.options.backtrack == "maximal":
-            while len(self._stack) > 1 and not self._stack[-1].actions:
-                self._stack.pop()
+            ancestor_app_id = self._resumable_ancestor_application(state)
+            if ancestor_app_id is not None:
+                return ancestor_app_id
+        applications = state.tableau.rule_applications
+        for app_id in reversed(applications):
+            if applications[app_id].parent_goal_id not in self._committed:
+                return app_id
+        return None
 
-        return self._undo_frame(state, len(self._stack) - 1)
+    def _resumable_ancestor_application(self, state: State) -> int | None:
+        """The applied step of the nearest ancestor with untried alternatives."""
+        goal = state.fringe[0]
+        while goal.parent_rule_application_id is not None:
+            parent_goal_id = state.tableau.rule_applications[
+                goal.parent_rule_application_id
+            ].parent_goal_id
+            goal = state.tableau.goals[parent_goal_id]
+            if self._alternatives.get(parent_goal_id):
+                return goal.applied_rule_application_id
+        return None
 
-    def _undo_frame(self, state: State, frame_index: int) -> UndoAction | None:
-        del self._stack[frame_index + 1 :]
-        goal = state.tableau.goals.get(self._stack[-1].goal_id)
-        if goal is None:
-            return None
-        return Dynamics.get_undo(state, goal)
+    def _forget_subtree(self, state: State, app_id: int) -> None:
+        for child_goal_id in state.tableau.rule_applications[app_id].child_goal_ids:
+            self._forget(child_goal_id)
+            child_app_id = state.tableau.goals[child_goal_id].applied_rule_application_id
+            if child_app_id is not None:
+                self._forget_subtree(state, child_app_id)
 
-    def _discard_closed_frames(self, state: State) -> None:
-        while self._stack:
-            goal = state.tableau.goals.get(self._stack[-1].goal_id)
-            if goal is not None and not goal.closed:
+    def _abandon(self, goal_id: int) -> None:
+        self._forget(goal_id)
+
+    def _forget(self, goal_id: int) -> None:
+        self._alternatives.pop(goal_id, None)
+        self._committed.discard(goal_id)
+
+    def _before_action(self, action: ApplyAction) -> None:
+        _ = action
+
+    # -- cut and scut -------------------------------------------------------
+
+    def _commit_closed(self, state: State) -> None:
+        """leanCoP's cut: a closed goal's remaining alternatives are discarded."""
+        for goal_id in reversed(self._alternatives):
+            if goal_id in self._committed:
+                continue
+            goal = state.tableau.goals.get(goal_id)
+            if goal is None or not goal.closed:
+                continue
+            self._committed.add(goal_id)
+            self._alternatives[goal_id].clear()
+            if goal_id != self._scut_goal_id:
+                trace(trace_logger, "cut")
+
+    def _apply_scut(
+        self, state: State, goal_id: int, alternatives: list[Action]
+    ) -> None:
+        if not self.options.scut or goal_id != state.tableau.root_goal_id:
+            return
+        for action in alternatives:
+            if isinstance(action, ApplyAction) and isinstance(action.rule, Start):
+                alternatives[:] = [action]
+                self._scut_goal_id = goal_id
+                trace(trace_logger, "scut")
                 return
-            self._stack.pop()
 
 
 __all__ = [
     "Chooser",
-    "Frame",
     "OnlineDFSAgent",
 ]
