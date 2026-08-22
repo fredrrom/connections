@@ -40,6 +40,34 @@ class LeancopSettingsCodec:
         return f"[{','.join(LeancopSettingsCodec.to_tokens(strategy))}]"
 
     @staticmethod
+    def split_token_list(text: str) -> list[str]:
+        """leanCoP's list syntax: "[cut,comp(7)]", brackets optional.
+
+        Commas inside parentheses do not split, so "reo(2),comp(7)" and
+        "[def,conj,cut]" both parse.
+        """
+        text = text.strip()
+        if text.startswith("[") and text.endswith("]"):
+            text = text[1:-1]
+        tokens: list[str] = []
+        depth = 0
+        current = ""
+        for ch in text:
+            if ch == "," and depth == 0:
+                if current.strip():
+                    tokens.append(current.strip())
+                current = ""
+                continue
+            if ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth -= 1
+            current += ch
+        if current.strip():
+            tokens.append(current.strip())
+        return tokens
+
+    @staticmethod
     def from_tokens(tokens: list[str] | None) -> Strategy:
         translation = "default"
         reorder = 0

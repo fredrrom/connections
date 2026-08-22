@@ -16,7 +16,7 @@ Common flags:
 
 | | |
 |---|---|
-| `--settings` | a leanCoP-style setting, repeatable: `def`, `nodef`, `conj`, `cut`, `scut`, `comp(7)` |
+| `--settings` | leanCoP list syntax: `'[def,conj,cut,comp(7)]'`; repeatable single tokens also work |
 | `--schedule` | a named strategy schedule instead of single settings |
 | `--steps` | transition-step budget |
 | `--timeout` | wall-clock budget in seconds |

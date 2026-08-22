@@ -95,7 +95,10 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         dest="settings",
         default=[],
-        help="Strategy setting token (repeatable), e.g. --settings cut --settings comp(7)",
+        help=(
+            "Strategy settings, leanCoP list syntax: "
+            "--settings '[cut,comp(7)]'. Repeatable single tokens also work."
+        ),
     )
     parser.add_argument(
         "--steps",
@@ -185,7 +188,12 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValueError("Do not combine --schedule with --settings")
             schedule_entries = load_schedule_entries(args.schedule)
         else:
-            strategy = LeancopSettingsCodec.from_tokens(args.settings)
+            tokens = [
+                token
+                for chunk in args.settings
+                for token in LeancopSettingsCodec.split_token_list(chunk)
+            ]
+            strategy = LeancopSettingsCodec.from_tokens(tokens)
             schedule_entries = [WeightedStrategy(strategy=strategy, weight=1)]
 
         schedule_entries = [

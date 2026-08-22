@@ -93,3 +93,15 @@ def test_leancop_settings_codec_from_tokens_supports_translation_and_search_flag
 def test_leancop_settings_codec_from_tokens_prefers_nodef_over_def():
     strategy = LeancopSettingsCodec.from_tokens(["def", "nodef", "def"])
     assert strategy.matrix.translation == "nodef"
+
+
+def test_split_token_list_handles_leancop_syntax():
+    split = LeancopSettingsCodec.split_token_list
+
+    assert split("[cut,comp(7)]") == ["cut", "comp(7)"]
+    assert split("cut,comp(7)") == ["cut", "comp(7)"]
+    assert split("[def,conj,reo(2),scut,cut,comp(7)]") == [
+        "def", "conj", "reo(2)", "scut", "cut", "comp(7)",
+    ]
+    assert split("cut") == ["cut"]
+    assert split("[]") == []
