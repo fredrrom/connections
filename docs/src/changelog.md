@@ -31,12 +31,12 @@ Initial prover-loop release.
 The main API is:
 
 ```python
-from connections.interaction import ProblemSpec, Result, StrategySchedule, run
+from connections.interaction import Problem, Result, StrategySchedule, run_schedule
 
-problem = ProblemSpec("problem.p")
+problem = Problem("problem.p")
 schedule = StrategySchedule.single(make_strategy())
 
-result: Result = run(problem, schedule=schedule)
+result: Result = run_schedule(problem, schedule=schedule)
 result.szs_status
 result.to_dict()
 ```

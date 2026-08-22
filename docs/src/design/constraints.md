@@ -17,8 +17,8 @@ delta = state.constraints.delta_for_literals(
     older_instance=path_instance,
     newer=goal_literal,
     newer_instance=goal_instance,
-    logic=state.problem.logic,
-    domain=state.problem.domain,
+    logic=state.matrix.logic,
+    domain=state.matrix.domain,
 )
 ```
 

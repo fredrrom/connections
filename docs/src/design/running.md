@@ -189,7 +189,7 @@ affirmatively.
 
 ```
 state verifiably closed              -> PROVED     -> Theorem / Unsatisfiable
-AGENT_DONE and claims_exhausted      -> EXHAUSTED  -> CounterSatisfiable / Satisfiable
+AGENT_DONE, status in the map        -> EXHAUSTED  -> CounterSatisfiable / Satisfiable
 AGENT_DONE otherwise                 -> GAVE_UP    -> GaveUp
 STEP_BUDGET / TIME_BUDGET            -> RESOURCE_OUT
 ```
@@ -297,7 +297,7 @@ OnlineIDAgent(choose, options)              # stack plus the depth ladder
 
 leanCoP is pycop's `traced_leancop_agent`. A learned agent keeps the memory and replaces
 the chooser, which is where the old multiple-inheritance diamond dissolved
-into composition. The warrant lives in the memory's `status()`: only the
+into composition. The agent sets its own `status`: only it
 memory knows whether its options pruned, so only it can claim
 `DFS_EXHAUSTED` or `ID_FIXED_POINT`, and it answers `GAVE_UP` otherwise.
 

@@ -47,7 +47,7 @@ and `--no-summary` suppresses it.
 Row fields:
 
     problem  path  status  outcome  szs_status
-    inference_actions  elapsed_seconds
+    steps  proof_size  elapsed_seconds
     strategy_count  winning_strategy_index
     error_type  error_message
 

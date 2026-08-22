@@ -4,8 +4,9 @@ An agent perceives the current state and returns an action:
 
 ```python
 class Agent:
+    def __init__(self, options: AgentOptions | None = None): ...
     def __call__(self, state) -> Action | None: ...
-    def status(self) -> AgentStatus: ...
+    status: AgentStatus     # a plain attribute
 ```
 
 Percept in, action out. An agent returns *actions only*: whether a budget has
@@ -48,13 +49,12 @@ and what your result means is the judge's.
 
 ## Saying why you stopped
 
-`None` is not self-explaining, so the rollout asks `status()` once:
+`None` is not self-explaining, so the rollout reads `self.status` once:
 
 ```python
 from connections.agent import AgentStatus
 
-    def status(self):
-        return AgentStatus.GAVE_UP     # the default: no claim
+    self.status = AgentStatus.GAVE_UP     # the default: no claim
 ```
 
 `CLOSED` says you observed your derivation close. `DFS_EXHAUSTED` and
@@ -77,7 +77,7 @@ learned = OnlineDFSAgent(my_scorer, AgentOptions(factorization="equal"))
 ```
 
 The memory is the search: it exposes `A(s, μ)`, updates on the chosen
-action, and owns the warrant in its `status()`. The chooser picks among what
+action, and sets `self.status` as it learns. The chooser picks among what
 is exposed and nothing else -- `first` reproduces leanCoP order; a learned
 scorer is just another chooser. A planner that runs transitions of its own
 between percept and action fits neither slot and implements `Agent` directly.

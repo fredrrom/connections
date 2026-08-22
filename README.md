@@ -68,15 +68,15 @@ Supported input formats: [TPTP](https://www.tptp.org) `fof` and `cnf` for classi
 ## API Use
 
 ```python
-from connections.run import (
-    ProblemSpec,
+from connections.interaction import (
+    Problem,
     StrategySchedule,
     WeightedStrategy,
-    run,
+    run_schedule,
 )
 from pycop import LeancopSettingsCodec
 
-problem = ProblemSpec(
+problem = Problem(
     "Problems/SYN/SYN001+1.p",
     logic="classical",
     domain="constant",
@@ -89,30 +89,32 @@ schedule = StrategySchedule.from_weighted(
     timeout_seconds=5.0,
 )
 
-result = run(problem, schedule=schedule)
+result = run_schedule(problem, schedule=schedule)
 
 print(result.outcome)
 print(result.szs_status)
 print(result.to_dict())
 ```
 
-Policies are called with the current state and return the next action:
+Agents are called with the current state and return the next action:
 
 ```python
-from connections.policy import Policy
+from connections.agent import Agent
 
-class MyPolicy(Policy):
+class MyAgent(Agent):
     def __call__(self, state):
         ...
 ```
 
-A policy returns actions only: `Action | None`. Whether a state is terminal and
-whether a budget ran out are the rollout's to decide, not the policy's. A policy
-that stopped because its search space is exhausted says so through
-`stop_reason()`, which is a separate question from the action channel.
+An agent returns actions only: `Action | None`. Whether a budget ran out and
+what any of it means for the problem are the prover's to decide. The agent's
+`status` attribute reports on its own search, and the judge in `interaction`
+maps statuses to outcomes and SZS.
 
 `Dynamics` owns legal action generation, `rollout` applies the chosen actions,
-and `run` drives a schedule of rollouts over one problem.
+and `run_schedule` drives a schedule of rollouts over one problem. Budgets are
+best effort; hard time and memory limits belong to whatever runs connections
+in a subprocess.
 
 ## License
 
