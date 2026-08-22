@@ -11,7 +11,6 @@ import random
 from typing import Any, Generic, TypeVar
 
 from connections.syntax.logic import Domain, Logic
-from connections.interaction.outcome import ProverOutcome
 from connections.interaction.szs import SZSStatus
 from connections.interaction.records import Result
 from connections.interaction.run import (
@@ -37,7 +36,8 @@ class RunRow:
     problem: str
     path: str
     status: str | None
-    outcome: str | None
+    agent_status: str | None
+    truncation: str | None
     szs_status: str | None
     steps: int
     proof_size: int
@@ -215,7 +215,10 @@ def row_from_result(
         problem=problem or Path(path).name,
         path=str(path),
         status=_status_value(result.szs_status),
-        outcome=_outcome_value(result.outcome),
+        agent_status=_last_value(
+            result.strategy_results, "agent_status"
+        ),
+        truncation=_last_value(result.strategy_results, "truncation"),
         szs_status=_status_value(result.szs_status),
         steps=sum(strategy.steps for strategy in result.strategy_results),
         proof_size=max(
@@ -240,7 +243,8 @@ def row_from_error(
         problem=problem or Path(path).name,
         path=str(path),
         status=SZSStatus.ERROR.value,
-        outcome=ProverOutcome.ERROR.value,
+        agent_status=None,
+        truncation=None,
         szs_status=SZSStatus.ERROR.value,
         steps=0,
         proof_size=0,
@@ -257,7 +261,8 @@ def row_to_json(row: RunRow) -> dict[str, object]:
         "problem": row.problem,
         "path": row.path,
         "status": row.status,
-        "outcome": row.outcome,
+        "agent_status": row.agent_status,
+        "truncation": row.truncation,
         "szs_status": row.szs_status,
         "steps": row.steps,
         "proof_size": row.proof_size,
@@ -493,8 +498,12 @@ def _status_value(status: SZSStatus | None) -> str | None:
     return None if status is None else status.value
 
 
-def _outcome_value(outcome: ProverOutcome | None) -> str | None:
-    return None if outcome is None else outcome.value
+def _last_value(strategy_results, field: str) -> str | None:
+    for result in reversed(strategy_results):
+        value = getattr(result, field)
+        if value is not None:
+            return value.value
+    return None
 
 
 def count_status(rows: Sequence[RunRow], status: SZSStatus | str) -> int:

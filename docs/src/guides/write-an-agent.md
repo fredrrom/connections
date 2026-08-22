@@ -35,7 +35,7 @@ Start selection is yours, like factorization: the matrix's role indexes are
 facts, and which subset you query is your option.
 
 You cannot make an unsound proof this way. An agent acts only through `T`, so
-every state it reaches is a valid partial tableau. The judge believes your
+every state it reaches is a valid partial tableau. The prover believes your
 status completely -- the agent-environment split is an architecture, not a
 trust boundary -- and soundness rests on the environment, not on checking you.
 Completeness is yours.

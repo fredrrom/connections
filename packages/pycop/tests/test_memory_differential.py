@@ -65,7 +65,7 @@ def test_clean_and_traced_memories_act_identically(name, options, request):
     traced = _rollout(problem, TracedIDAgent(first, **options))
 
     assert clean.steps == traced.steps
-    assert clean.stop == traced.stop
+    assert clean.truncation == traced.truncation
     assert clean.status == traced.status
     clean_kinds = [type(a).__name__ for a in clean.actions]
     traced_kinds = [type(a).__name__ for a in traced.actions]

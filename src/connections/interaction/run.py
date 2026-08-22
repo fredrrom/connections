@@ -26,15 +26,13 @@ import time
 from collections.abc import Callable
 from typing import Any, Generic, TypeVar
 
-from connections.agent import Agent, AgentStatus
-from connections.interaction.outcome import ProverOutcome
+from connections.agent import Agent
 from connections.env.state import State
 from connections.env.tableau import Tableau
 from connections.clausification import matrix_from_file
 from connections.syntax.logic import Domain, Logic
 from connections.syntax.matrix import Matrix
 from connections.interaction.records import Result, StrategyResult
-from connections.interaction.records import Stop
 from connections.interaction.rollout import rollout
 from connections.interaction.strategy import (
     MatrixOptions,
@@ -42,7 +40,7 @@ from connections.interaction.strategy import (
     Strategy,
     StrategySchedule,
 )
-from connections.interaction.szs import SZSStatus, to_szs_status
+from connections.interaction.szs import DECIDED, SUCCESS, SZSStatus, to_szs_status
 
 StrategyT = TypeVar("StrategyT", bound=Strategy)
 ProofFoundCallback = Callable[["ProofFound[StrategyT]"], Any]
@@ -161,7 +159,6 @@ def _run_schedule(
     schedule = _strategy_schedule(schedule)
     strategy_results: list[StrategyResult[StrategyT]] = []
     winning_strategy_index: int | None = None
-    outcome: ProverOutcome | None = None
     szs_status: SZSStatus | None = None
     proof_payload: Any | None = None
     matrix_cache: MatrixCache = {}
@@ -179,13 +176,12 @@ def _run_schedule(
         result = strategy_run.result
         strategy_results.append(result)
         # A schedule aggregates by strength of verdict. A proof settles the
-        # problem and stops the schedule. An exhaustion from a systematic
+        # problem and stops the schedule. A countermodel from a systematic
         # strategy also settles it, but later strategies still get their turn
         # at a proof; a weaker verdict never overwrites it.
-        if outcome is not ProverOutcome.EXHAUSTED or result.outcome is ProverOutcome.PROVED:
-            outcome = result.outcome
+        if szs_status not in DECIDED or result.szs_status in SUCCESS:
             szs_status = result.szs_status
-        if result.outcome is ProverOutcome.PROVED:
+        if result.szs_status in SUCCESS:
             winning_strategy_index = strategy_index
             closed_state = strategy_run.proof_state
             if on_proof_found is not None and closed_state is not None:
@@ -201,7 +197,6 @@ def _run_schedule(
             break
 
     return Result(
-        outcome=outcome,
         strategy_results=tuple(strategy_results),
         winning_strategy_index=winning_strategy_index,
         szs_status=szs_status,
@@ -215,25 +210,6 @@ def _strategy_schedule(
     if isinstance(schedule, StrategySchedule):
         return schedule
     return StrategySchedule.single(schedule)
-
-
-# The agent's status, in the prover's vocabulary. The judge believes the agent
-# completely: soundness rests on the environment, which admits only valid
-# edits, so a CLOSED report is an observation of the percept, not a claim to
-# check. Statuses absent from the map carry no claim and fall to GAVE_UP.
-_STATUS_OUTCOME = {
-    AgentStatus.CLOSED: ProverOutcome.PROVED,
-    AgentStatus.DFS_EXHAUSTED: ProverOutcome.EXHAUSTED,
-    AgentStatus.ID_FIXED_POINT: ProverOutcome.EXHAUSTED,
-}
-
-
-def _judge(attempt) -> ProverOutcome:
-    if attempt.stop is Stop.STEP_BUDGET:
-        return ProverOutcome.STEP_BUDGET
-    if attempt.stop is Stop.TIME_BUDGET:
-        return ProverOutcome.TIME_BUDGET
-    return _STATUS_OUTCOME.get(attempt.status, ProverOutcome.GAVE_UP)
 
 
 def _proof_size(state: State) -> int:
@@ -251,13 +227,7 @@ def run_strategy(
     record_trajectory: bool = False,
 ) -> _StrategyRun[StrategyT]:
     strategy = entry.strategy
-    outcome: ProverOutcome | None = None
-    agent_status = None
-    trajectory = None
     started_at = time.monotonic()
-    steps = 0
-    proof_size = 0
-    state: State | None = None
     state = build_state(
         problem,
         matrix_options=strategy.matrix,
@@ -287,26 +257,24 @@ def run_strategy(
             else started_at + entry.timeout_seconds
         ),
     )
-    outcome = _judge(attempt)
-    agent_status = attempt.status
-    trajectory = attempt.actions
-    steps = attempt.steps
-    if outcome is ProverOutcome.PROVED:
-        proof_size = _proof_size(state)
-    has_conjecture = None if state is None else state.matrix.source_has_conjecture
+    szs = to_szs_status(
+        attempt.truncation,
+        attempt.status,
+        has_conjecture=state.matrix.source_has_conjecture,
+    )
     result = StrategyResult(
         strategy=strategy,
-        outcome=outcome,
-        agent_status=agent_status,
-        trajectory=trajectory,
-        steps=steps,
-        proof_size=proof_size,
+        truncation=attempt.truncation,
+        agent_status=attempt.status,
+        trajectory=attempt.actions,
+        steps=attempt.steps,
+        proof_size=_proof_size(state) if szs in SUCCESS else 0,
         elapsed_seconds=time.monotonic() - started_at,
-        szs_status=to_szs_status(outcome, has_conjecture=has_conjecture),
+        szs_status=szs,
     )
     return _StrategyRun(
         result=result,
-        proof_state=state if outcome is ProverOutcome.PROVED else None,
+        proof_state=state if szs in SUCCESS else None,
     )
 
 

@@ -26,7 +26,7 @@ A library of primitives for clausal connection tableaux, in four groups.
 **Acting in it** -- one problem at a time.
 
     agent           choosing among admissible actions; memories and choosers
-    interaction     build_state, rollout, run_schedule, result, judge
+    interaction     build_state, rollout, run_schedule, records, SZS
 
 Dependencies run upward: `constraints` and `parsing` over `syntax`,
 `clausification` over `parsing`, `env` over `syntax` and `constraints`,

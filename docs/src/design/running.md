@@ -22,7 +22,7 @@ learner runs rollouts to get trajectories.
 
 The prover is the judge around the rollout. It builds the matrix per strategy,
 runs the agent under each entry's share of the budget, maps the agent's
-status to an outcome and SZS, and
+status straight to SZS, and
 aggregates across the schedule by strength of verdict. A strategy pairs a
 formulation with an agent recipe; a schedule is a portfolio over both, first
 proof wins.
@@ -62,10 +62,10 @@ rollout(state, agent, *, step_limit=None, deadline=None, record=True) -> Rollout
 
 The rollout is the bare agent-environment loop, and it never reads the
 tableau: closure is the agent's to observe through the percept and the judge's
-to verify afterwards, so the loop is generic over states. `Stop` is the
-rollout's own observation -- `AGENT_DONE`, `STEP_BUDGET`, `TIME_BUDGET` -- and
-`AGENT_DONE` is the only stop that consults the agent, recording its
-`AgentStatus` once.
+to verify afterwards, so the loop is generic over states. An episode ends one of
+two ways, gym's vocabulary: the agent finishes and its `AgentStatus` says why,
+or a budget truncates it, `Truncation.STEPS` or `Truncation.TIME`. Exactly one
+of `status` and `truncation` is set on the `Rollout`.
 
 It takes no problem, no schedule and no clausification: by the time a rollout
 starts, *P(M)* exists and the state is a point in it.
@@ -188,10 +188,10 @@ affirmatively.
 **The judge** combines the rollout's observation with the agent's status:
 
 ```
-AGENT_DONE, CLOSED                   -> PROVED     -> Theorem / Unsatisfiable
-AGENT_DONE, an exhaustion status     -> EXHAUSTED  -> CounterSatisfiable / Satisfiable
-AGENT_DONE otherwise                 -> GAVE_UP    -> GaveUp
-STEP_BUDGET / TIME_BUDGET            -> RESOURCE_OUT
+truncated (steps or time)      -> ResourceOut
+CLOSED                         -> Theorem / Unsatisfiable
+an exhaustion status           -> CounterSatisfiable / Satisfiable
+anything else                  -> GaveUp
 ```
 
 The judge believes the agent completely. The agent-environment split is an

@@ -1,15 +1,18 @@
-"""SZS statuses, and the mapping from prover outcomes.
+"""SZS statuses, straight from what the rollout observed and the agent said.
 
-The split is by vocabulary, so the layers cannot contradict each other: a run
-never says Timeout, a supervisor never says ResourceOut, and an agent never
-says either.
+The run reports SZS. The judge is this one function: a truncated episode is the prover's
+own allotment running out, ResourceOut; the agent's statuses map to the success and
+non-success verdicts; statuses absent from the map carry no claim and are
+GaveUp. Timeout and MemoryOut are a supervising process's verdicts and are
+never produced here.
 """
 
 from __future__ import annotations
 
 from enum import Enum
 
-from connections.interaction.outcome import ProverOutcome
+from connections.agent.base import AgentStatus
+from connections.interaction.truncation import Truncation
 
 
 class SZSStatus(str, Enum):
@@ -25,17 +28,25 @@ class SZSStatus(str, Enum):
     ERROR = "Error"
 
 
+SUCCESS = frozenset({SZSStatus.THEOREM, SZSStatus.UNSATISFIABLE})
+DECIDED = SUCCESS | frozenset(
+    {SZSStatus.COUNTER_SATISFIABLE, SZSStatus.SATISFIABLE}
+)
+
+
 def to_szs_status(
-    outcome: ProverOutcome | None,
+    truncation: Truncation | None,
+    status: AgentStatus | None,
     *,
     has_conjecture: bool | None,
 ) -> SZSStatus | None:
-    if outcome is ProverOutcome.PROVED:
+    if truncation is not None:
+        return SZSStatus.RESOURCE_OUT
+    if status is AgentStatus.CLOSED:
         if has_conjecture is None:
             return None
         return SZSStatus.THEOREM if has_conjecture else SZSStatus.UNSATISFIABLE
-    if outcome is ProverOutcome.EXHAUSTED:
-        # Only reachable through an agent's affirmative systematic claim.
+    if status in (AgentStatus.DFS_EXHAUSTED, AgentStatus.ID_FIXED_POINT):
         if has_conjecture is None:
             return None
         return (
@@ -43,19 +54,12 @@ def to_szs_status(
             if has_conjecture
             else SZSStatus.SATISFIABLE
         )
-    if outcome is ProverOutcome.GAVE_UP:
-        return SZSStatus.GAVE_UP
-    if outcome in (ProverOutcome.STEP_BUDGET, ProverOutcome.TIME_BUDGET):
-        # Both are the prover's own allotment running out, which is what
-        # ResourceOut means. Timeout and MemoryOut are claims about a process
-        # and belong to whatever supervises it.
-        return SZSStatus.RESOURCE_OUT
-    if outcome is ProverOutcome.ERROR:
-        return SZSStatus.ERROR
-    return None
+    return SZSStatus.GAVE_UP
 
 
 __all__ = [
+    "DECIDED",
+    "SUCCESS",
     "SZSStatus",
     "to_szs_status",
 ]

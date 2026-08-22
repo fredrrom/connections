@@ -16,7 +16,8 @@ from connections.agent import Agent
 from connections.env.actions import Action
 from connections.env.dynamics import Dynamics
 from connections.env.state import State
-from connections.interaction.records import Rollout, Stop
+from connections.interaction.records import Rollout
+from connections.interaction.truncation import Truncation
 from connections.trace_logging import trace, trace_logger
 
 
@@ -46,16 +47,16 @@ def rollout(
         if step_limit is not None and steps >= step_limit:
             return Rollout(
                 state=state,
-                stop=Stop.STEP_BUDGET,
                 status=None,
+                truncation=Truncation.STEPS,
                 actions=None if actions is None else tuple(actions),
                 steps=steps,
             )
         if deadline is not None and time.monotonic() >= deadline:
             return Rollout(
                 state=state,
-                stop=Stop.TIME_BUDGET,
                 status=None,
+                truncation=Truncation.TIME,
                 actions=None if actions is None else tuple(actions),
                 steps=steps,
             )
@@ -64,8 +65,8 @@ def rollout(
         if action is None:
             return Rollout(
                 state=state,
-                stop=Stop.AGENT_DONE,
                 status=agent.status,
+                truncation=None,
                 actions=None if actions is None else tuple(actions),
                 steps=steps,
             )

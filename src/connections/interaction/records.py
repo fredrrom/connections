@@ -1,7 +1,9 @@
 """What runs produce, and the one serialization contract for it.
 
 ``Result.to_dict`` is the data contract between connections and anything built
-on it, versioned by the ``schema`` field. Trajectories serialize with replay
+on it, versioned by the ``schema`` field. The run reports SZS: the agent's
+status and the truncation are the whole story, and there is no separate
+outcome vocabulary. Trajectories serialize with replay
 identity: the position each action was taken at, enough for ``resolve_record``
 to regenerate the action against a replayed state. Transitions are
 deterministic, so the record sequence and a fresh initial state reconstruct
@@ -12,7 +14,6 @@ only as provenance.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
 from typing import Any, Generic, TypeVar
 
 from connections.agent.base import AgentStatus
@@ -20,7 +21,7 @@ from connections.env.actions import Action, ApplyAction, UndoAction
 from connections.env.dynamics import Dynamics
 from connections.env.rules import Extension, Factorization, Reduction, Start
 from connections.env.state import State
-from connections.interaction.outcome import ProverOutcome
+from connections.interaction.truncation import Truncation
 from connections.interaction.szs import SZSStatus
 
 RESULT_SCHEMA = "connections.result.v1"
@@ -28,33 +29,25 @@ RESULT_SCHEMA = "connections.result.v1"
 StrategyT = TypeVar("StrategyT")
 
 
-class Stop(Enum):
-    """Why the rollout loop ended: its own observation.
-
-    ``AGENT_DONE`` is the only stop that consults the agent, and the only one
-    for which ``Rollout.status`` is set.
-    """
-
-    AGENT_DONE = "agent_done"
-    STEP_BUDGET = "step_budget"
-    TIME_BUDGET = "time_budget"
-
-
 @dataclass(frozen=True, slots=True)
 class Rollout:
-    """What a rollout did, and why it stopped.
+    """What a rollout did, and how it ended.
 
-    ``steps`` is counted whether or not actions are recorded; when they are,
-    equality of the two is enforced here.
+    Exactly one of ``status`` and ``truncation`` is set: the agent finished
+    and said why, or a budget cut the episode off. ``steps`` is counted
+    whether or not actions are recorded; when they are, equality of the two
+    is enforced here.
     """
 
     state: State
-    stop: Stop
     status: AgentStatus | None
+    truncation: Truncation | None
     actions: tuple[Action, ...] | None
     steps: int
 
     def __post_init__(self) -> None:
+        if (self.status is None) == (self.truncation is None):
+            raise ValueError("exactly one of status and truncation is set")
         if self.actions is not None and len(self.actions) != self.steps:
             raise ValueError("recorded actions disagree with the step count")
 
@@ -62,7 +55,7 @@ class Rollout:
 @dataclass(frozen=True, slots=True)
 class StrategyResult(Generic[StrategyT]):
     strategy: StrategyT
-    outcome: ProverOutcome | None
+    truncation: Truncation | None
     steps: int
     proof_size: int
     elapsed_seconds: float
@@ -72,7 +65,9 @@ class StrategyResult(Generic[StrategyT]):
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "outcome": None if self.outcome is None else self.outcome.value,
+            "truncation": None
+            if self.truncation is None
+            else self.truncation.value,
             "szs_status": None if self.szs_status is None else self.szs_status.value,
             "agent_status": None
             if self.agent_status is None
@@ -88,7 +83,6 @@ class StrategyResult(Generic[StrategyT]):
 
 @dataclass(frozen=True, slots=True)
 class Result(Generic[StrategyT]):
-    outcome: ProverOutcome | None
     strategy_results: tuple[StrategyResult[StrategyT], ...]
     winning_strategy_index: int | None = None
     szs_status: SZSStatus | None = None
@@ -102,7 +96,6 @@ class Result(Generic[StrategyT]):
         """
         return {
             "schema": RESULT_SCHEMA,
-            "outcome": None if self.outcome is None else self.outcome.value,
             "szs_status": None if self.szs_status is None else self.szs_status.value,
             "winning_strategy_index": self.winning_strategy_index,
             "strategy_results": [r.to_dict() for r in self.strategy_results],
@@ -189,7 +182,6 @@ __all__ = [
     "RESULT_SCHEMA",
     "Result",
     "Rollout",
-    "Stop",
     "StrategyResult",
     "action_record",
     "resolve_record",

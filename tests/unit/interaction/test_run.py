@@ -5,8 +5,8 @@ from typing import Any
 import connections.interaction.run as run_module
 from connections.syntax.formula import Atom
 from connections.syntax.matrix import Clause, Literal, Matrix
-from connections.interaction.outcome import ProverOutcome
 from connections.interaction.szs import SZSStatus
+from connections.interaction.truncation import Truncation
 from connections.agent import (
     Agent,
     AgentOptions,
@@ -119,7 +119,7 @@ def test_prover_run_uses_source_file_dirs(tmp_path):
         schedule=StrategySchedule.single(_first_strategy()),
     )
 
-    assert result.outcome is ProverOutcome.PROVED
+    assert result.szs_status is SZSStatus.THEOREM
     assert result.szs_status is SZSStatus.THEOREM
 
 
@@ -138,7 +138,7 @@ def test_prover_run_follows_control_loop_to_theorem(tmp_path, monkeypatch):
     )
     result = run_result.strategy_results[0]
 
-    assert result.outcome is ProverOutcome.PROVED
+    assert result.szs_status is SZSStatus.THEOREM
     assert result.szs_status is SZSStatus.THEOREM
     assert result.steps == 2
     assert result.proof_size == 2
@@ -159,7 +159,7 @@ def test_prover_run_accepts_single_strategy(tmp_path, monkeypatch):
         schedule=_first_strategy(),
     )
 
-    assert result.outcome is ProverOutcome.PROVED
+    assert result.szs_status is SZSStatus.THEOREM
     assert len(result.strategy_results) == 1
 
 
@@ -182,7 +182,7 @@ def test_prover_run_reports_non_theorem_when_no_action(tmp_path, monkeypatch):
 
     # An agent that offers nothing and makes no claim is giving up: the
     # honest default, never a countermodel.
-    assert result.outcome is ProverOutcome.GAVE_UP
+    assert result.szs_status is SZSStatus.GAVE_UP
     assert result.szs_status is SZSStatus.GAVE_UP
     # A step is an application of T, so an agent call that yields no action is
     # not a step. The agent was consulted once and offered nothing.
@@ -207,7 +207,7 @@ def test_prover_step_limit_counts_transitions(tmp_path, monkeypatch):
     )
     result = run_result.strategy_results[0]
 
-    assert result.outcome is ProverOutcome.STEP_BUDGET
+    assert result.truncation is Truncation.STEPS
     assert result.steps == 0
     assert result.proof_size == 0
 
@@ -247,7 +247,7 @@ def test_prover_run_accepts_scheduled_entries(tmp_path, monkeypatch):
         schedule=StrategySchedule.from_weighted((entry,)),
     )
 
-    assert result.outcome is ProverOutcome.PROVED
+    assert result.szs_status is SZSStatus.THEOREM
     assert len(result.strategy_results) == 1
     assert result.strategy_results[0].strategy == settings
 
@@ -271,7 +271,7 @@ def test_prover_run_passes_closed_state_to_proof_callback(tmp_path, monkeypatch)
         on_proof_found=lambda event: event.state.tableau.root.closed,
     )
 
-    assert result.outcome is ProverOutcome.PROVED
+    assert result.szs_status is SZSStatus.THEOREM
     assert result.proof_payload is True
     assert not hasattr(result, "closed_state")
     assert not hasattr(result.strategy_results[0], "closed_state")
@@ -309,7 +309,7 @@ def test_prover_caches_matrices_across_schedule_entries(tmp_path, monkeypatch):
 
     # The first entry is complete and exhausts; the second runs cut and can
     # only give up. The schedule keeps the stronger verdict.
-    assert result.outcome is ProverOutcome.EXHAUSTED
+    assert result.szs_status is SZSStatus.COUNTER_SATISFIABLE
     assert result.strategy_results[0].agent_status is AgentStatus.ID_FIXED_POINT
     assert result.strategy_results[1].agent_status is AgentStatus.GAVE_UP
     assert matrix_builds == 1
@@ -347,10 +347,10 @@ def test_pycop_prover_reinitializes_policy_for_each_run(tmp_path, monkeypatch):
         schedule=StrategySchedule.single(settings),
     ).strategy_results[0]
 
-    assert first_result.outcome is ProverOutcome.EXHAUSTED
+    assert first_result.szs_status is SZSStatus.COUNTER_SATISFIABLE
     assert first_result.agent_status is AgentStatus.ID_FIXED_POINT
     assert first_result.szs_status is SZSStatus.COUNTER_SATISFIABLE
-    assert second_result.outcome is ProverOutcome.EXHAUSTED
+    assert second_result.szs_status is SZSStatus.COUNTER_SATISFIABLE
     assert second_result.agent_status is AgentStatus.ID_FIXED_POINT
     assert second_result.szs_status is SZSStatus.COUNTER_SATISFIABLE
     assert len(created) == 2
@@ -458,7 +458,7 @@ def test_expired_strategy_deadline_is_best_effort_time_budget(tmp_path, monkeypa
         schedule=_single_entry_schedule(_leancop_strategy(), timeout_seconds=0.0),
     ).strategy_results[0]
 
-    assert result.outcome is ProverOutcome.TIME_BUDGET
+    assert result.truncation is Truncation.TIME
     assert result.szs_status is SZSStatus.RESOURCE_OUT
     assert result.steps == 0
 
@@ -501,7 +501,7 @@ def test_cached_agent_reused_across_entries_with_isolated_episodes(
 
     assert len(created) == 1, "one agent per recipe within the run"
     first_entry, second_entry = result.strategy_results
-    assert first_entry.outcome == second_entry.outcome
+    assert first_entry.szs_status == second_entry.szs_status
     assert first_entry.agent_status == second_entry.agent_status
     assert first_entry.steps == second_entry.steps, (
         "the second episode must look exactly like the first: derivation-bound "

@@ -16,7 +16,7 @@ from connections.constraints.term import TermBinding
 from connections.syntax.formula import Prefix
 from connections.syntax.logic import Domain, Logic
 from connections.syntax.matrix import Clause, Literal
-from connections.interaction.outcome import ProverOutcome
+from connections.agent.base import AgentStatus
 from connections.interaction.szs import to_szs_status
 from connections.env.actions import Action, ApplyAction, UndoAction
 from connections.env.dynamics import Dynamics
@@ -90,17 +90,17 @@ def diagnose(
     deadline = None if timeout_seconds is None else started_at + timeout_seconds
     inference_actions = 0
     choices = 0
-    outcome: ProverOutcome | None = None
+    outcome: str | None = None
 
     while outcome is None:
         if state.tableau.root.closed:
-            outcome = ProverOutcome.PROVED
+            outcome = "proved"
             break
         if choices >= max_choices:
-            outcome = ProverOutcome.STEP_BUDGET
+            outcome = "step_budget"
             break
         if deadline is not None and time.monotonic() >= deadline:
-            outcome = ProverOutcome.TIMEOUT
+            outcome = "time_budget"
             break
 
         audit_state(state, audit=audit)
@@ -112,8 +112,8 @@ def diagnose(
         )
         choices += 1
 
-        if isinstance(output, ProverOutcome):
-            outcome = output
+        if output is None and replay_policy.status is not AgentStatus.SEARCHING:
+            outcome = replay_policy.status.value
             break
         if output is None:
             break
@@ -123,7 +123,7 @@ def diagnose(
         _audit_choice(actions, action, audit=audit)
         if isinstance(action, ApplyAction):
             if step_limit is not None and inference_actions >= step_limit:
-                outcome = ProverOutcome.STEP_BUDGET
+                outcome = "step_budget"
                 break
             inference_actions += 1
         Dynamics.transition(state, action)

@@ -9,7 +9,8 @@ import pytest
 from connections.agent import Agent, AgentStatus
 from connections.env.state import State
 from connections.env.tableau import Tableau
-from connections.interaction.records import Rollout, Stop
+from connections.interaction.records import Rollout
+from connections.interaction.truncation import Truncation
 from connections.interaction.rollout import rollout
 
 from tests.unit.interaction.test_run import _non_theorem_matrix
@@ -41,7 +42,7 @@ def test_an_agent_with_no_action_stops_the_rollout():
     result = rollout(_state(), agent)
 
     assert isinstance(result, Rollout)
-    assert result.stop is Stop.AGENT_DONE
+    assert result.truncation is None
     assert result.status is AgentStatus.GAVE_UP
     assert result.actions == ()
     assert result.steps == 0
@@ -53,7 +54,7 @@ def test_the_status_is_the_agents_word_queried_once():
 
     result = rollout(_state(), agent)
 
-    assert result.stop is Stop.AGENT_DONE
+    assert result.truncation is None
     assert result.status is AgentStatus.DFS_EXHAUSTED
 
 
@@ -62,7 +63,7 @@ def test_exhausted_step_budget_stops_before_consulting_the_agent():
 
     result = rollout(_state(), agent, step_limit=0)
 
-    assert result.stop is Stop.STEP_BUDGET
+    assert result.truncation is Truncation.STEPS
     assert result.status is None, "budget stops never consult the agent"
     assert result.steps == 0
     assert agent.calls == 0
@@ -73,7 +74,7 @@ def test_expired_deadline_stops_before_consulting_the_agent():
 
     result = rollout(_state(), agent, deadline=time.monotonic() - 1.0)
 
-    assert result.stop is Stop.TIME_BUDGET
+    assert result.truncation is Truncation.TIME
     assert result.status is None
     assert agent.calls == 0
 
@@ -88,7 +89,7 @@ def test_steps_and_deadline_are_checked_at_the_same_point():
         deadline=time.monotonic() - 1.0,
     )
 
-    assert result.stop is Stop.STEP_BUDGET
+    assert result.truncation is Truncation.STEPS
 
 
 def test_the_rollout_returns_the_state_it_acted_on():
@@ -110,7 +111,7 @@ def test_unrecorded_rollouts_still_count_steps():
 
 def test_recorded_actions_must_agree_with_the_step_count():
     with pytest.raises(ValueError):
-        Rollout(state=None, stop=Stop.AGENT_DONE, status=None, actions=(), steps=3)
+        Rollout(state=None, status=AgentStatus.GAVE_UP, truncation=None, actions=(), steps=3)
 
 
 def test_the_rollout_never_reads_the_tableau():
@@ -124,5 +125,5 @@ def test_the_rollout_never_reads_the_tableau():
 
     result = rollout(_NoTableau(), agent)
 
-    assert result.stop is Stop.AGENT_DONE
+    assert result.truncation is None
     assert agent.states_seen and isinstance(agent.states_seen[0], _NoTableau)

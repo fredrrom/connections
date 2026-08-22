@@ -1,50 +1,45 @@
+"""SZS straight from truncation and agent status."""
+
 from __future__ import annotations
 
-from connections.interaction.outcome import ProverOutcome
+from connections.agent import AgentStatus
 from connections.interaction.szs import SZSStatus, to_szs_status
+from connections.interaction.truncation import Truncation
 
 
-def test_proved_maps_by_problem_shape() -> None:
+def test_closed_maps_by_problem_shape():
     assert (
-        to_szs_status(
-            ProverOutcome.PROVED,
-            has_conjecture=True,
-        )
+        to_szs_status(None, AgentStatus.CLOSED, has_conjecture=True)
         is SZSStatus.THEOREM
     )
     assert (
-        to_szs_status(
-            ProverOutcome.PROVED,
-            has_conjecture=False,
-        )
+        to_szs_status(None, AgentStatus.CLOSED, has_conjecture=False)
         is SZSStatus.UNSATISFIABLE
     )
 
 
-def test_complete_negative_outcome_maps_by_problem_shape() -> None:
-    for outcome in (ProverOutcome.EXHAUSTED,):
+def test_exhaustion_statuses_map_by_problem_shape():
+    for status in (AgentStatus.DFS_EXHAUSTED, AgentStatus.ID_FIXED_POINT):
         assert (
-            to_szs_status(outcome, has_conjecture=True)
+            to_szs_status(None, status, has_conjecture=True)
             is SZSStatus.COUNTER_SATISFIABLE
         )
         assert (
-            to_szs_status(outcome, has_conjecture=False)
+            to_szs_status(None, status, has_conjecture=False)
             is SZSStatus.SATISFIABLE
         )
 
 
-def test_no_success_outcome_maps_to_szs_no_success() -> None:
-    # Both budgets are the prover's own allotment; Timeout and MemoryOut are
-    # a supervising process's verdicts, and connections never concludes them.
-    assert (
-        to_szs_status(ProverOutcome.TIME_BUDGET, has_conjecture=True)
-        is SZSStatus.RESOURCE_OUT
-    )
-    assert (
-        to_szs_status(ProverOutcome.STEP_BUDGET, has_conjecture=True)
-        is SZSStatus.RESOURCE_OUT
-    )
-    assert (
-        to_szs_status(ProverOutcome.ERROR, has_conjecture=True)
-        is SZSStatus.ERROR
-    )
+def test_truncation_is_resource_out_never_timeout():
+    for truncation in (Truncation.STEPS, Truncation.TIME):
+        assert (
+            to_szs_status(truncation, None, has_conjecture=True)
+            is SZSStatus.RESOURCE_OUT
+        )
+
+
+def test_no_claim_is_gave_up():
+    for status in (AgentStatus.GAVE_UP, AgentStatus.SEARCHING, None):
+        assert (
+            to_szs_status(None, status, has_conjecture=True) is SZSStatus.GAVE_UP
+        )
