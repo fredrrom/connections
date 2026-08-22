@@ -223,8 +223,13 @@ never says `Timeout`, a supervisor never says `ResourceOut`.
 ## Results
 
 A run returns a `Result`: outcome, per-strategy results, SZS status, and
-whatever a callback attached. `Result.to_dict()` makes it JSON-able, and that is
-the entire data contract.
+whatever a callback attached. `Result.to_dict()` is the entire data contract,
+versioned by its `schema` field, and recorded trajectories serialize inside it
+with replay identity: kind and position per action, enough for
+`resolve_record` to regenerate each action against a fresh initial state.
+Instance ids are recomputed at replay, since transitions are deterministic and
+instance numbering depends on generation order, not on the derivation. The
+record types and the contract live together in `interaction/records.py`.
 
 Everything else belongs to the caller. Selecting problems is `Path.glob` with
 TPTP conventions. Writing records is a line of `json.dumps`, with whatever

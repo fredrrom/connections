@@ -21,7 +21,7 @@ from pycop.runs import (
     summarize_run_rows,
 )
 from connections.interaction.szs import SZSStatus
-from connections.interaction.result import StrategyResult
+from connections.interaction.records import StrategyResult
 from connections.interaction.run import Problem, run_schedule as run_problem
 from connections.interaction.strategy import (
     PolicyOptions,

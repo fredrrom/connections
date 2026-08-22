@@ -33,8 +33,9 @@ from connections.calculus.tableau import Tableau
 from connections.clausification import matrix_from_file
 from connections.syntax.logic import Domain, Logic
 from connections.syntax.matrix import Matrix
-from connections.interaction.result import Result, StrategyResult
-from connections.interaction.rollout import Stop, rollout
+from connections.interaction.records import Result, StrategyResult
+from connections.interaction.records import Stop
+from connections.interaction.rollout import rollout
 from connections.interaction.strategy import (
     MatrixOptions,
     ScheduledStrategy,

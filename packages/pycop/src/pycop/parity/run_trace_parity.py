@@ -194,7 +194,7 @@ def trace_parity_row(
         reference_trace = trimmed
     first_difference = _first_difference(native_trace, reference_trace)
     return {
-        "schema": "connections.trace_parity_row.v1",
+        "schema": "pycop.trace_parity_row.v1",
         "name": case.name,
         "reference": case.reference,
         "reference_mode": reference_mode,
@@ -523,7 +523,7 @@ def _trace_error_row(
     source_file_dirs: Sequence[str | Path],
 ) -> dict[str, Any]:
     return {
-        "schema": "connections.trace_parity_row.v1",
+        "schema": "pycop.trace_parity_row.v1",
         "name": case.name,
         "problem": str(problem_path),
         "reference": case.reference,

@@ -8,49 +8,15 @@ and the state is a point in it.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from enum import Enum
 import time
 
-from connections.agent import Agent, AgentStatus
+from connections.agent import Agent
 from connections.calculus.actions import Action
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.state import State
+from connections.interaction.records import Rollout, Stop
 from connections.trace_logging import trace, trace_logger
 
-
-class Stop(Enum):
-    """Why the loop ended: the rollout's own observation.
-
-    ``AGENT_DONE`` is the only stop that consults the agent, and the only one
-    for which ``Rollout.status`` is set.
-    """
-
-    AGENT_DONE = "agent_done"
-    STEP_BUDGET = "step_budget"
-    TIME_BUDGET = "time_budget"
-
-
-@dataclass(frozen=True, slots=True)
-class Rollout:
-    """What a rollout did, and why it stopped.
-
-    Transitions are deterministic, so when the actions are recorded they and
-    the starting state reconstruct every intermediate state; proof replay reads
-    exactly this. ``steps`` is counted either way -- with ``record=False``
-    there is no action list to derive it from, and the equality of the two is
-    a tested invariant rather than a construction.
-    """
-
-    state: State
-    stop: Stop
-    status: AgentStatus | None
-    actions: tuple[Action, ...] | None
-    steps: int
-
-    def __post_init__(self) -> None:
-        if self.actions is not None and len(self.actions) != self.steps:
-            raise ValueError("recorded actions disagree with the step count")
 
 
 def rollout(
@@ -110,7 +76,5 @@ def rollout(
 
 
 __all__ = [
-    "Rollout",
-    "Stop",
     "rollout",
 ]

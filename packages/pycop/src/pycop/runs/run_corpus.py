@@ -13,7 +13,7 @@ from typing import Any, Generic, TypeVar
 from connections.syntax.logic import Domain, Logic
 from connections.interaction.outcome import ProverOutcome
 from connections.interaction.szs import SZSStatus
-from connections.interaction.result import Result
+from connections.interaction.records import Result
 from connections.interaction.run import (
     Problem,
     ProofFoundCallback,
