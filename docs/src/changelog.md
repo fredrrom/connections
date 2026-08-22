@@ -7,7 +7,11 @@ Initial prover-loop release.
 ### Added
 
 - `run`, `build_state` and `rollout` as the entry points, over `calculus` for
-  the transition system and `run` for everything above it.
+  the transition system and `run` for everything above it. Agents implement
+  policies: `Agent` is percept-in action-out, `AgentStatus` its word about its
+  own search, and the judge in `run` produces outcomes and SZS from outside
+  the agent. `ModelBasedAgent(memory, chooser)` composes search agents from
+  `DFSMemory`/`IDMemory` and a chooser.
 - Public action records under `connections.calculus.actions`.
 - Corpus selection, run rows, summaries and profiling in `pycop.runs`.
 - DFS and iterative-deepening policy components with first-action default

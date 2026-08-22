@@ -32,7 +32,6 @@ connections/            workspace root, and the `connections` distribution
 ├── src/connections/    the library
 └── packages/
     ├── pycop/          leanCoP-equivalent prover, parity, CLI
-    ├── satresetcop/    SAT shadow and Reset, CLI
     └── imitation/      learned policies, training, campaigns
 ```
 

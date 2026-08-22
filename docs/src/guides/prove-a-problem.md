@@ -35,7 +35,7 @@ different hardware, which is why reported effort should be steps -- see
 ```python
 from connections.run import build_state, rollout, run
 
-result = run(problem_spec, schedule=schedule)
+result = run(problem, schedule=schedule)
 print(result.szs_status)
 ```
 
@@ -46,8 +46,8 @@ its share of the budget, and stops at the first success.
 To work below that -- a single rollout in a system you already have:
 
 ```python
-state = build_state(problem_spec, matrix_options=matrix_options)
-rollout_result = rollout(state, policy=policy, step_limit=10_000)
+state = build_state(problem, matrix_options=matrix_options)
+rollout_result = rollout(state, agent, step_limit=10_000)
 ```
 
 `rollout` takes no problem and no schedule. By the time it starts, *P(M)* exists

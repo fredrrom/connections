@@ -25,7 +25,7 @@ nav:
   - Guides:
     - Install: guides/install.md
     - Prove a problem: guides/prove-a-problem.md
-    - Write a policy: guides/write-a-policy.md
+    - Write an agent: guides/write-an-agent.md
     - Development: guides/development.md
   - Design:
     - Architecture: design/architecture.md
@@ -35,7 +35,6 @@ nav:
     - Running: design/running.md
   - Packages:
     - pycop: packages/pycop.md
-    - satresetcop: packages/satresetcop.md
     - imitation: packages/imitation.md
   - Changelog: changelog.md
   - API reference:

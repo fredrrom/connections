@@ -25,14 +25,24 @@ A library of primitives for clausal connection tableaux, in four groups.
 
 **Acting in it** -- one problem at a time.
 
-    policy          choosing among admissible actions
-    run             build_state, rollout, strategy, schedule, result, status
+    agent           choosing among admissible actions; memories and choosers
+    run             build_state, rollout, strategy, schedule, result, judge
 
 Dependencies run upward: `constraints` and `parsing` over `syntax`,
 `clausification` over `parsing`, `calculus` over `syntax` and `constraints`,
-`policy` over `calculus`, and `run` over all of it. Nothing below `run` knows
-about budgets, schedules or statuses; nothing below `policy` knows a policy
+`agent` over `calculus`, and `run` over all of it. Nothing below `run` knows
+about budgets, schedules or statuses; nothing below `agent` knows an agent
 exists.
+
+The R&N learning-agent architecture maps onto the layers directly:
+
+| R&N | here |
+|---|---|
+| environment | *P(M)*, the calculus |
+| performance element | the agent: percept in, action out |
+| critic | the judge in `run`: verdicts from outside the agent |
+| learning element | the `imitation` package |
+| problem generator | the schedule (one problem) and the corpus sampler (many) |
 
 !!! note "One cycle today"
 
@@ -53,7 +63,6 @@ each.
 | | |
 |---|---|
 | `pycop` | leanCoP-equivalent strategies, parity harness, CLI |
-| `satresetcop` | SAT shadow and `Reset`, CLI |
 | `imitation` | learned policies, training, campaigns |
 
 A CLI owns argument parsing, schedule selection, SZS on stdout, and the exit
@@ -69,16 +78,14 @@ them, and aggregating what comes back are each package's own business.
 ```
 connections   calculus, run, SZS                         -> lark
 pycop         leanCoP-equivalent prover, parity, CLI     -> connections
-satresetcop   SAT shadow, Reset, CLI                     -> connections
 imitation     policies, graph model, training, campaigns -> connections, torch
 ```
 
 `connections` never imports from a package built on it. It is the citable
 artefact and stays independently installable.
 
-Four distributions. A fifth earns its place when a second consumer needs the
-same thing: `imitation`'s campaign machinery would become one if `satresetcop`
-wanted resumable runs, and not before.
+Three distributions. Another earns its place when a second consumer needs the
+same thing, and not before.
 
 ## Documents
 

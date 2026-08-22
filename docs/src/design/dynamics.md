@@ -24,14 +24,20 @@ belongs to a policy.
 
 ## What a state holds
 
-A tableau, the rigid substitution accumulated so far, and the problem the
-tableau is being built for. Proof-object annotations -- which rule application
-produced which node, what each application introduced -- live alongside, because
-undoing an edit needs them.
+The state is *[d, ω]*: the derivation together with its static context. The
+derivation is the tableau, the rigid substitution accumulated so far, and the
+proof-object annotations undoing needs. The context ω is the matrix itself,
+stamped with its logic and domain -- they parameterize which connections are
+admissible and whether a closed tableau's constraints are satisfiable, so two
+stamps over the same clauses are two transition systems. Identity is by
+content: the same matrix reached through different formulations compares
+equal, which is what lets agent memory about ω transfer on content rather than
+provenance. Turning a *file* into a state is parsing and clausification,
+which is `run`'s job, not the calculus's.
 
-`Problem` is part of the state: the matrix, start clauses, logic and domain.
-Turning a *file* into one is parsing and clausification, which is `run`'s job,
-not the calculus's.
+The static/dynamic split is load-bearing beyond tidiness: relabelling a
+trajectory rewrites the context half of *[d, ω]*, and that is only legal
+because ω never contaminates *d*.
 
 ## Actions
 
@@ -40,6 +46,14 @@ An edit either extends the tableau or removes part of it.
 **Applying a rule** to an open goal: start, extension, reduction, or
 factorization. Each records what it introduced -- the nodes it added and the
 constraints it posted -- so that undoing it is well defined.
+
+Start selection and factorization scope are the agent's query options, not
+system configuration: the calculus validates whatever it is asked about, and
+which clauses may start or which factorization family to consider is the agent
+asking for a subset, exactly analogous on both counts. What keeps this sound
+is the completeness criterion in [running](running.md): ignoring redundant
+rule families is free, pruning non-redundant ones forfeits the exhaustion
+claim.
 
 **Undoing an application** at a node. Any application the tableau carries may be
 undone, not only the most recent, so the action space is not a stack. A policy

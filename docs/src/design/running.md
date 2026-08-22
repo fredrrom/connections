@@ -1,18 +1,26 @@
 # Running
 
-From a policy acting in a transition system to a prover working through a
-corpus. The system itself is described in [dynamics](dynamics.md).
+From an agent acting in a transition system to a prover working through a
+corpus. The system itself is described in [dynamics](dynamics.md); an agent
+implements a policy, and the code says Agent where the paper says pi.
 
 ## Vocabulary
 
 Four concepts, from the most basic to the most assembled.
 
-**A rollout is from a state.** A policy acts in a transition system until it
-terminates or exhausts its budget.
+**A rollout is from a state.** An agent acts in a transition system until it
+offers nothing or exhausts its budget.
 
 ```python
-rollout(state, *, policy, step_limit=None, deadline=None) -> Rollout
+rollout(state, agent, *, step_limit=None, deadline=None, record=True) -> Rollout
 ```
+
+The rollout is the bare agent-environment loop, and it never reads the
+tableau: closure is the agent's to observe through the percept and the judge's
+to verify afterwards, so the loop is generic over states. `Stop` is the
+rollout's own observation -- `AGENT_DONE`, `STEP_BUDGET`, `TIME_BUDGET` -- and
+`AGENT_DONE` is the only stop that consults the agent, recording its
+`AgentStatus` once.
 
 It takes no problem, no schedule and no clausification: by the time a rollout
 starts, *P(M)* exists and the state is a point in it.
@@ -32,7 +40,7 @@ copy per rollout -- not too expensive, because the matrix is immutable and share
 and only the tableau and constraint store are duplicated.
 
 **A strategy fixes what to roll out in, and with what.** Its matrix options fix
-the matrix and therefore *P(M)*; its policy options fix the policy. Two
+the matrix and therefore *P(M)*; its agent options fix the agent. Two
 strategies differing in clausification are rollouts in different transition
 systems, not different runs in one.
 
@@ -49,8 +57,14 @@ run(problem_spec, *, schedule) -> Result
 `build_state` is where a file becomes a state, and the one place `run` reaches
 down to `parsing` and `clausification`: read the file, clausify it into a
 matrix, wrap it as the initial state of *P(M)*. `run`
-does that for each strategy in the schedule, instantiates the policy, rolls out
-under that strategy's share of the budget, and stops at the first success.
+does that for each strategy in the schedule, rolls the agent out under that
+strategy's share of the budget, and stops at the first success. Agent lifetime
+is the caller's choice: by default each entry instantiates a fresh agent from
+its options, the frozen-theta protocol, while `run(..., agent=)` reuses one
+agent across entries -- the deliberate exception for intra-conjecture work.
+Verdicts aggregate by strength: a proof stops the schedule, and a systematic
+strategy's exhaustion is never overwritten by a later pruned strategy's giving
+up.
 
 ## One problem, one process
 
@@ -119,8 +133,33 @@ number that partly measures the cluster.
 `ResourceOut` covers a resource running out, with `Timeout` and `MemoryOut` as
 the specific cases, and `GaveUp` for a system stopping of its own accord.
 
-**A rollout** reports why it stopped: it closed the tableau, the policy ran out
-of moves, or a budget was reached.
+**An agent** speaks only about itself, in `AgentStatus`: `CLOSED`,
+`DFS_EXHAUSTED`, `ID_FIXED_POINT`, `GAVE_UP`. Each member carries the one
+claim the judge reads, `claims_exhausted`; the judge never pattern-matches on
+members, so a new agent adds a member and its claim without the judge learning
+vocabulary. `GAVE_UP` is the default when an agent offers nothing and claims
+nothing, so an unsound non-theorem requires an agent to overclaim
+affirmatively.
+
+**The judge** combines the rollout's observation with the agent's word:
+
+```
+state verifiably closed              -> PROVED     -> Theorem / Unsatisfiable
+AGENT_DONE and claims_exhausted      -> EXHAUSTED  -> CounterSatisfiable / Satisfiable
+AGENT_DONE otherwise                 -> GAVE_UP    -> GaveUp
+STEP_BUDGET / TIME_BUDGET            -> RESOURCE_OUT
+```
+
+Closure is verified first, from the state itself, whatever the agent said: a
+proof found on the last budgeted step is still a proof, and an agent that
+believed it closed when the state disagrees is an error, never a proof.
+
+**The warrant.** An exhaustion claim is licensed only by systematic coverage
+of a complete fragment of the action space. Discipline may ignore rule
+families redundant for completeness -- factorization -- and keeps the claim; it
+forfeits the claim when it prunes ones that are not: cut, scut, conjecture
+start, or a depth bound that ever bound. leanCoP's `comp(N)` restores the
+claim by switching the final iterations to complete mode.
 
 **A run** turns a schedule's rollouts into a status for the problem. The first
 success wins: a proof gives `Theorem` or `Unsatisfiable`, depending on whether
@@ -193,39 +232,59 @@ reliance on inter-process communication". Any process boundary pays this. State
 flows outward only, so anything one attempt learns reaches the next by being
 recorded and applied, not by being left in memory.
 
-## Composing policies
+## The model-based agent
 
-A policy is one function, `__call__(state)`. Most of the family here factors
-into two independent axes:
-
-| memory -- what `A(s, μ)` exposes | choice -- among what it exposed |
-|---|---|
-| none (markov) | first |
-| depth-first stack | learned scorer |
-| stack plus depth bound | |
-
-leanCoP is stack-plus-bound with first-choice; the learned policies keep a
-memory and replace the choice. Six classes and a multiple-inheritance diamond
-collapse into three memories and a chooser supplied by whoever has one.
+An agent is one function, `__call__(state) -> Action | None`, plus `status()`
+for its word about its own search. Most of the family here is R&N's
+model-based agent, implemented as a memory and a chooser:
 
 ```python
 class Memory(Protocol):
-    def exposed(self, state) -> Sequence[Action]:   # A(s, μ) ⊆ A(s)
-    def update(self, state, action) -> None:        # U_π
-    def stop_reason(self) -> ProverOutcome | None   # why nothing is left
-    complete: bool                                  # does exhaustion mean anything
+    def exposed(self, state) -> Sequence[Action]   # A(s, μ) ⊆ A(s)
+    def update(self, state, action) -> None        # U_π
+    def status(self) -> AgentStatus                # its word, warrant included
 
-policy(memory, choose) -> Policy
+ModelBasedAgent(memory, choose)
 ```
 
-`stop_reason()` gives a memory somewhere to say *why* it stopped, which an empty
-action list cannot. `complete` is where the soundness gate belongs: restricted
-backtracking sets it false, so nothing downstream can turn its exhaustion into a
-countermodel.
+| memory -- what `A(s, μ)` exposes | chooser -- among what it exposed |
+|---|---|
+| none (markov) | `first` |
+| `DFSMemory`: the choicepoint stack | learned scorer |
+| `IDMemory`: stack plus depth ladder | |
 
-This is a convenience for reactive policies, not a law. A planner -- an
-rlCoP-style Monte-Carlo search -- runs thousands of transitions between being
-handed a state and returning an action, needing the transition function and
-state copies to do it. That fits neither slot, so a planner implements
-`__call__` directly and keeps its tree in its own state. `Policy` stays the only
-thing that is required.
+leanCoP is `ModelBasedAgent(IDMemory(...), first)` -- the
+`first_action_id_agent` factory. A learned agent keeps the memory and replaces
+the chooser, which is where the old multiple-inheritance diamond dissolved
+into composition. The warrant lives in the memory's `status()`: only the
+memory knows whether its discipline pruned, so only it can claim
+`DFS_EXHAUSTED` or `ID_FIXED_POINT`, and it answers `GAVE_UP` otherwise.
+
+This factoring is a convenience for reactive agents, not a law. A planner --
+an rlCoP-style Monte-Carlo search -- runs thousands of transitions between
+being handed a state and returning an action, needing the transition function
+and state copies to do it. That fits neither slot, so a planner implements
+`Agent` directly and keeps its tree in its own state.
+
+## Memory strata and episodes
+
+An episode boundary is an exogenous transition: a state change not caused by
+the agent's action. Corpus, problem, strategy and budget are four sources of
+the same event, differing in what changes -- and agent memory has strata with
+matching validity scopes, managed by the agent, keyed off what it observes:
+
+| stratum | valid across | invalidated by |
+|---|---|---|
+| derivation-bound (frontier, stack) | one attempt | reset to ε, even same ω |
+| ω-bound (statistics, shadow structures) | attempts within ω | new ω |
+| persistent (θ) | everything | nothing |
+
+Two consequences. Carried memory that *orders* preserves the exhaustion
+warrant; carried memory that *prunes* forfeits it, per episode. And
+exchangeability is a protocol property, purchased by resetting: zero-shot
+evaluation constructs fresh agents per problem, intra-conjecture experiments
+deliberately do not, and the report says which. With θ frozen, episodes are
+exchangeable and parallelism is free at any boundary; with θ advancing, every
+trajectory is stamped with what generated it, and rounds -- θ
+piecewise-constant, updates at the barrier -- buy back full parallelism, which
+is why proof aggregation parallelises so painlessly.

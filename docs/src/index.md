@@ -22,7 +22,7 @@ here provides policies.
 |---|---|
 | [Install](guides/install.md) | the workspace, or just the library |
 | [Prove a problem](guides/prove-a-problem.md) | the CLI and the Python entry points |
-| [Write a policy](guides/write-a-policy.md) | one function, and what it may assume |
+| [Write an agent](guides/write-an-agent.md) | one function, and what it may assume |
 
 ## The design notes
 
@@ -42,7 +42,6 @@ which the code does not yet match everywhere.
 | | |
 |---|---|
 | [pycop](packages/pycop.md) | leanCoP-equivalent prover, parity harness, CLI |
-| [satresetcop](packages/satresetcop.md) | SAT shadow and Reset, CLI |
 | [imitation](packages/imitation.md) | learned policies, datasets, training, campaigns |
 
 ## Scope
