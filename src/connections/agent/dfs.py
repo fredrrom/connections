@@ -95,29 +95,41 @@ class OnlineDFSAgent(Agent):
     # -- the search ---------------------------------------------------------
 
     def _available_actions(self, state: State) -> tuple[Action, ...]:
-        if self.options.cut:
-            self._commit_closed(state)
-        if state.tableau.root.closed:
-            # The final call: backtracking here would undo the proof.
-            return ()
-        goal_id = state.fringe[0].goal_id
-        alternatives = self._alternatives.get(goal_id)
-        if alternatives is None:
-            alternatives = list(self._actions_for_goal(state, goal_id))
-            self._apply_scut(state, goal_id, alternatives)
-            self._alternatives[goal_id] = alternatives
-        while alternatives and isinstance(head := alternatives[0], TraceToken):
-            del alternatives[0]
-            trace(trace_logger, head.event)
-        exposed = tuple(
-            action
-            for action in alternatives
-            if not isinstance(action, TraceToken)
-        )
-        if exposed:
-            return exposed
-        self._forget(goal_id)
-        return self._backtrack(state)
+        while True:
+            if self.options.cut:
+                self._commit_closed(state)
+            if state.tableau.root.closed:
+                # The final call: backtracking here would undo the proof.
+                return ()
+            goal_id = state.fringe[0].goal_id
+            alternatives = self._alternatives.get(goal_id)
+            if alternatives is None:
+                alternatives = list(self._actions_for_goal(state, goal_id))
+                self._apply_scut(state, goal_id, alternatives)
+                self._alternatives[goal_id] = alternatives
+            while alternatives and isinstance(head := alternatives[0], TraceToken):
+                del alternatives[0]
+                trace(trace_logger, head.event)
+            exposed = tuple(
+                action
+                for action in alternatives
+                if not isinstance(action, TraceToken)
+            )
+            if exposed:
+                return exposed
+            self._forget(goal_id)
+            actions = self._backtrack(state)
+            if actions:
+                return actions
+            # The search is exhausted. An iterative agent may restart it.
+            if not self._next_iteration():
+                return ()
+            self._alternatives.clear()
+            self._committed.clear()
+            self._scut_goal_id = None
+
+    def _next_iteration(self) -> bool:
+        return False
 
     def _actions_for_goal(
         self, state: State, goal_id: int

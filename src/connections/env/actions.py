@@ -74,10 +74,18 @@ Action: TypeAlias = AnyApplyAction | UndoAction
 
 @dataclass(frozen=True, slots=True)
 class ApplyActions:
+    """The admissible actions at a goal, grouped by rule.
+
+    ``path_limit_hits`` reports the depth gate: when ``apply_actions`` was
+    asked for a ``depth_limit``, each entry is the index into ``extension``
+    before which a withheld candidate with unifiable terms sat.
+    """
+
     start: tuple[StartAction, ...] = ()
     factorization: tuple[FactorizationAction, ...] = ()
     reduction: tuple[ReductionAction, ...] = ()
     extension: tuple[ExtensionAction, ...] = ()
+    path_limit_hits: tuple[int, ...] = ()
 
     def __bool__(self) -> bool:
         return bool(

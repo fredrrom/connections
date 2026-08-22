@@ -37,7 +37,16 @@ class Dynamics:
         *,
         factorization: FactorizationMode = "unify",
         start: str = "positive",
+        depth_limit: int | None = None,
     ) -> ApplyActions:
+        """The admissible actions at a goal; a query with options.
+
+        ``depth_limit`` is leanCoP's path limit, an option like ``start`` and
+        ``factorization``: at the limit, extension candidates whose clause is
+        not ground are withheld, and the withheld ones whose terms unify are
+        reported in ``path_limit_hits`` at their positions in the candidate
+        order.
+        """
         if goal.closed:
             return ApplyActions()
         regularity_violation = Dynamics.regularity_violation(state, goal)
@@ -50,6 +59,15 @@ class Dynamics:
                     goal.goal_id, Dynamics.start_rules_for(state, start)
                 )
             )
+        if depth_limit is not None and goal.depth + 1 >= depth_limit:
+            extension, path_limit_hits = Dynamics._gated_extension_actions(
+                state, goal.goal_id
+            )
+        else:
+            extension = Dynamics._apply_actions(
+                goal.goal_id, Dynamics.extension_rules_for(state, goal.goal_id)
+            )
+            path_limit_hits = ()
         return ApplyActions(
             factorization=Dynamics._apply_actions(
                 goal.goal_id,
@@ -60,10 +78,41 @@ class Dynamics:
             reduction=Dynamics._apply_actions(
                 goal.goal_id, Dynamics.reduction_rules_for(state, goal.goal_id)
             ),
-            extension=Dynamics._apply_actions(
-                goal.goal_id, Dynamics.extension_rules_for(state, goal.goal_id)
-            ),
+            extension=extension,
+            path_limit_hits=path_limit_hits,
         )
+
+    @staticmethod
+    def _gated_extension_actions(
+        state: State, goal_id: int
+    ) -> tuple[tuple[ApplyAction[Extension], ...], tuple[int, ...]]:
+        """Extension actions at the depth limit: ground clauses only.
+
+        Withheld candidates are not built at all -- leanCoP only checks
+        whether their terms unify, which is what decides if the limit was
+        actually hit.
+        """
+        goal = state.tableau.goals[goal_id]
+        if goal.clause_idx is None or goal.literal_index is None:
+            return (), ()
+        kept: list[ApplyAction[Extension]] = []
+        path_limit_hits: list[int] = []
+        for clause_idx, lit_idx in state.matrix.complements(
+            goal.clause_idx, goal.literal_index
+        ):
+            instance_id = state.fresh_instance_id()
+            if not state.matrix.clauses[clause_idx].is_ground:
+                if Dynamics.extension_terms_unify_for_position(
+                    state, goal_id, clause_idx, lit_idx, instance_id=instance_id
+                ):
+                    path_limit_hits.append(len(kept))
+                continue
+            action = Dynamics.extension_action_for_position(
+                state, goal_id, clause_idx, lit_idx, instance_id=instance_id
+            )
+            if action is not None:
+                kept.append(action)
+        return tuple(kept), tuple(path_limit_hits)
 
     @staticmethod
     def start_rules_for(state: State, start: str = "positive") -> tuple[Start, ...]:

@@ -47,14 +47,18 @@ An edit either extends the tableau or removes part of it.
 factorization. Each records what it introduced -- the nodes it added and the
 constraints it posted -- so that undoing it is well defined.
 
-Start selection and factorization scope are query options on the same
-footing: `apply_actions(state, goal, factorization=..., start=...)`. The
-calculus validates whatever it is asked about; which subset to serve is the
-caller's option, and "conjecture" start falls back to the positive clauses
-when the matrix has no conjecture-role clauses, matching leanCoP. What keeps this sound
-is the completeness criterion in [running](running.md): ignoring redundant
-rule families is free, pruning non-redundant ones forfeits the exhaustion
-claim.
+Start selection, factorization scope, and the depth limit are query options
+on the same footing: `apply_actions(state, goal, factorization=...,
+start=..., depth_limit=...)`. The calculus validates whatever it is asked
+about; which subset to serve is the caller's option, and "conjecture" start
+falls back to the positive clauses when the matrix has no conjecture-role
+clauses, matching leanCoP. Under a depth limit, extension candidates whose
+clause is not ground are withheld at the limit, and the withheld ones whose
+terms unify are reported with their positions -- that report is what lets an
+iterative-deepening agent decide whether deepening could still change
+anything. What keeps this sound is the completeness criterion in
+[running](running.md): ignoring redundant rule families is free, pruning
+non-redundant ones forfeits the exhaustion claim.
 
 **Undoing an application** at a node. Any application the tableau carries may be
 undone, not only the most recent, so the action space is not a stack. A policy
