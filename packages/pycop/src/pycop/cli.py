@@ -233,7 +233,8 @@ def main(argv: list[str] | None = None) -> int:
             result = run_result.strategy_results[0]
             print(None if result.szs_status is None else result.szs_status.value)
             if args.metrics:
-                print(f"METRIC inference_actions={result.inference_actions}")
+                print(f"METRIC steps={result.steps}")
+                print(f"METRIC proof_size={result.proof_size}")
             return 0
 
         run_result = run_problem(

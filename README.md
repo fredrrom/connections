@@ -4,7 +4,7 @@
 [![docs](https://github.com/fredrrom/connections/actions/workflows/pages.yml/badge.svg?branch=main)](https://fredrrom.github.io/connections/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/fredrrom/connections/blob/main/LICENSE)
 
-`connections` provides agentic primitives for classical, intuitionistic, and modal first-order prover construction based on connection tableau. `packages/pycop` is a prover built on `connections` tested extensively for inference step order parity with leanCoP 2.0, ileanCoP 1.2, and MleanCoP 1.3.
+Agentic primitives, provers, and experiments for classical, intuitionistic, and modal first-order logic based on connection tableau. Design notes, guides, and the API reference are published at <https://fredrrom.github.io/connections/>.
 
 ## Package Layout
 
@@ -21,13 +21,9 @@ The library, `src/connections/`, with dependencies running upward:
 
 The packages built on it, under `packages/`:
 
-- `pycop`: leanCoP-family strategies, schedules, settings, CLI, corpus runs,
-  and the parity harness
-- `imitation`: learned policies, datasets, training, campaigns
+- `pycop`: a prover tested extensively for inference step order parity with leanCoP 2.0, ileanCoP 1.2, and MleanCoP 1.3.
 
-The parity diagnostics live in `pycop.parity`. They compare native behaviour
-with bundled leanCoP-family reference provers, need SWI-Prolog, and are
-developer commands rather than part of the normal checks.
+- `imitation`: learned policies, datasets, training, campaigns
 
 ## Install
 
@@ -39,7 +35,7 @@ For development, see [Development](docs/src/guides/development.md).
 
 ## pycop CLI
 
-Run the built-in prover on a TPTP problem:
+Run the pyCoP prover on a TPTP problem:
 
 ```bash
 pycop Problems/SYN/SYN001+1.p classical
@@ -76,8 +72,7 @@ Supported logic arguments are `classical`, `intuitionistic`, `D`, `T`, `S4`,
 and `S5`. Supported domain arguments are `constant`, `cumulative`, and
 `varying`.
 
-Native 0.1 matrix construction supports classical `fof` and `cnf`
-input, intuitionistic ILTP `fof` input, and modal QMLTP `qmf` input.
+Supported input formats: [TPTP](https://www.tptp.org) `fof` and `cnf` for classical, [ILTP](http://www.iltp.de) `fof` input for intuitionistic, and [QMLTP](http://www.iltp.de/qmltp/) `qmf` input for modal.
 
 ## API Use
 
@@ -128,28 +123,6 @@ that stopped because its search space is exhausted says so through
 `Dynamics` owns legal action generation, `rollout` applies the chosen actions,
 and `run` drives a schedule of rollouts over one problem.
 
-## Docs
-
-Published at <https://fredrrom.github.io/connections/>.
-
-Design notes, which state the target and argue the boundaries:
-
-- [Architecture](docs/src/design/architecture.md) -- what is library, what is package
-- [Language](docs/src/design/language.md) -- source file to matrix
-- [Constraints](docs/src/design/constraints.md) -- what makes a connection admissible
-- [Dynamics](docs/src/design/dynamics.md) -- states, actions, transitions, undo
-- [Running](docs/src/design/running.md) -- rollout, strategy, schedule, run, limits, SZS
-
-Guides:
-
-- [Install](docs/src/guides/install.md)
-- [Prove a problem](docs/src/guides/prove-a-problem.md)
-- [Write a policy](docs/src/guides/write-a-policy.md)
-- [Development](docs/src/guides/development.md)
-
-- [Contributing](.github/CONTRIBUTING.md)
-- [Changelog](docs/src/changelog.md)
-
 ## License
 
 This project is licensed under GNU GPL v3 or later. See `LICENSE`.
@@ -160,7 +133,7 @@ License, as correctness oracles. They are not part of the `connections` or
 `pycop` API. Four of those files carry local parity instrumentation and are
 marked as modified. See
 [`packages/pycop/src/pycop/parity/reference_provers/NOTICE.md`](packages/pycop/src/pycop/parity/reference_provers/NOTICE.md)
-for provenance, copyright, and the list of changes.
+for the list of changes.
 
 ## Citation
 

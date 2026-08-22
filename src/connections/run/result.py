@@ -12,7 +12,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
-from connections.calculus.outcome import ProverOutcome
+from connections.agent import AgentStatus
+from connections.run.outcome import ProverOutcome
 from connections.run.strategy import Strategy
 from connections.run.szs import SZSStatus
 
@@ -24,9 +25,10 @@ class StrategyResult(Generic[StrategyT]):
     strategy: StrategyT
     outcome: ProverOutcome | None
     steps: int
-    inference_actions: int
+    proof_size: int
     elapsed_seconds: float
     szs_status: SZSStatus | None = None
+    agent_status: AgentStatus | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,7 +55,10 @@ class Result(Generic[StrategyT]):
                     "outcome": None if r.outcome is None else r.outcome.value,
                     "szs_status": None if r.szs_status is None else r.szs_status.value,
                     "steps": r.steps,
-                    "inference_actions": r.inference_actions,
+                    "proof_size": r.proof_size,
+                    "agent_status": None
+                    if r.agent_status is None
+                    else r.agent_status.label,
                     "elapsed_seconds": r.elapsed_seconds,
                 }
                 for r in self.strategy_results

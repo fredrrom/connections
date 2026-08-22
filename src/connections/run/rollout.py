@@ -1,122 +1,116 @@
-"""A policy acting in a transition system until it stops.
+"""An agent acting in a transition system until it stops.
 
-A rollout is the smallest unit of proof search. It takes no problem, no
-schedule and no clausification: by the time one starts, ``P(M)`` exists and the
-state is a point in it.
+A rollout is the bare agent-environment loop: state, agent, budgets. It knows
+nothing about closure, proofs, or SZS -- every proof-specific semantic lives in
+the judge that reads its result. By the time a rollout starts, ``P(M)`` exists
+and the state is a point in it.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 import time
 
-from connections.calculus.actions import Action, ApplyAction
+from connections.agent import Agent, AgentStatus
+from connections.calculus.actions import Action
 from connections.calculus.dynamics import Dynamics
-from connections.calculus.outcome import ProverOutcome
 from connections.calculus.state import State
-from connections.agent import Agent
 from connections.trace_logging import trace, trace_logger
+
+
+class Stop(Enum):
+    """Why the loop ended: the rollout's own observation.
+
+    ``AGENT_DONE`` is the only stop that consults the agent, and the only one
+    for which ``Rollout.status`` is set.
+    """
+
+    AGENT_DONE = "agent_done"
+    STEP_BUDGET = "step_budget"
+    TIME_BUDGET = "time_budget"
 
 
 @dataclass(frozen=True, slots=True)
 class Rollout:
     """What a rollout did, and why it stopped.
 
-    Transitions are deterministic, so the action sequence together with the
-    starting state reconstructs every intermediate state. Nothing else needs
-    storing, and proof replay reads exactly this.
+    Transitions are deterministic, so when the actions are recorded they and
+    the starting state reconstruct every intermediate state; proof replay reads
+    exactly this. ``steps`` is counted either way -- with ``record=False``
+    there is no action list to derive it from, and the equality of the two is
+    a tested invariant rather than a construction.
     """
 
-    actions: tuple[Action, ...]
     state: State
-    outcome: ProverOutcome | None
+    stop: Stop
+    status: AgentStatus | None
+    actions: tuple[Action, ...] | None
+    steps: int
 
-    @property
-    def steps(self) -> int:
-        """Transition steps: applications of ``T``.
-
-        This is the portable effort measure, and the one budgets are set in.
-        """
-        return len(self.actions)
-
-    @property
-    def inference_steps(self) -> int:
-        """Inference steps: rule applications recorded in the proof object.
-
-        An append performs one; a prune removes one or more, so this is never
-        larger than ``steps``.
-        """
-        return sum(1 for action in self.actions if isinstance(action, ApplyAction))
-
-    @property
-    def proved(self) -> bool:
-        return self.outcome is ProverOutcome.PROVED
-
-
-def _closed(state: State) -> bool:
-    return state.tableau.root.closed and state.constraints.satisfiable(
-        logic=state.matrix.logic,
-        domain=state.matrix.domain,
-    )
+    def __post_init__(self) -> None:
+        if self.actions is not None and len(self.actions) != self.steps:
+            raise ValueError("recorded actions disagree with the step count")
 
 
 def rollout(
     state: State,
+    agent: Agent,
     *,
-    policy: Agent,
     step_limit: int | None = None,
     deadline: float | None = None,
+    record: bool = True,
 ) -> Rollout:
-    """Act in ``P(M)`` from ``state`` until the policy or a budget stops it.
+    """Act in ``P(M)`` from ``state`` until the agent or a budget stops it.
 
     The state is mutated in place, so several rollouts from one state need a
-    copy each. That is not too expensive: the matrix is immutable and shared,
-    and only the tableau and constraint store are duplicated.
-
-    ``deadline`` is a ``time.monotonic()`` value, checked between steps at the
-    same point as ``step_limit`` because the two fail the same way: a step that
-    never returns means the loop that would have noticed either limit is never
-    reached. Guaranteeing termination against that needs something that can
-    kill the process.
-
-    Both budgets report ``TIME_BUDGET``/``STEP_BUDGET`` rather than ``TIMEOUT``.
-    From inside, an allotment ran out, which is ``ResourceOut``; ``Timeout`` is
-    a claim about a process and belongs to whatever supervises it.
+    copy each. The agent is called at every state it reaches, including a
+    final one: closure is the agent's to observe and report, and the judge's
+    to verify. ``deadline`` is a ``time.monotonic()`` value checked between
+    steps at the same point as ``step_limit``, because the two fail the same
+    way -- a step that never returns is a supervisor's problem, not a budget's.
     """
 
-    actions: list[Action] = []
-    outcome: ProverOutcome | None = None
+    actions: list[Action] | None = [] if record else None
+    steps = 0
 
     while True:
-        if _closed(state):
-            # An accepting state ends the rollout. What the policy makes of
-            # that is the policy's own business; a rollout does not run it
-            # down for one last turn it has nothing to do with.
-            outcome = ProverOutcome.PROVED
-            break
-        if step_limit is not None and len(actions) >= step_limit:
-            outcome = ProverOutcome.STEP_BUDGET
-            break
+        if step_limit is not None and steps >= step_limit:
+            return Rollout(
+                state=state,
+                stop=Stop.STEP_BUDGET,
+                status=None,
+                actions=None if actions is None else tuple(actions),
+                steps=steps,
+            )
         if deadline is not None and time.monotonic() >= deadline:
-            outcome = ProverOutcome.TIME_BUDGET
-            break
+            return Rollout(
+                state=state,
+                stop=Stop.TIME_BUDGET,
+                status=None,
+                actions=None if actions is None else tuple(actions),
+                steps=steps,
+            )
 
-        action = policy(state)
+        action = agent(state)
         if action is None:
-            # No action is not self-explaining: an exhausted search space says
-            # something about the problem, a policy with nothing to offer says
-            # nothing. Only the policy knows which.
-            outcome = policy.stop_reason()
-            break
+            return Rollout(
+                state=state,
+                stop=Stop.AGENT_DONE,
+                status=agent.status(),
+                actions=None if actions is None else tuple(actions),
+                steps=steps,
+            )
 
-        actions.append(action)
+        if actions is not None:
+            actions.append(action)
+        steps += 1
         Dynamics.transition(state, action)
         trace(trace_logger, action.trace_event())
-
-    return Rollout(actions=tuple(actions), state=state, outcome=outcome)
 
 
 __all__ = [
     "Rollout",
+    "Stop",
     "rollout",
 ]

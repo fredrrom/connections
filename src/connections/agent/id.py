@@ -4,9 +4,8 @@ from dataclasses import dataclass
 from typing import TypeGuard
 
 from connections.syntax.matrix import Clause
-from connections.calculus.outcome import ProverOutcome
 from connections.agent.base import BacktrackGranularity
-from connections.agent.base import StartMode, start_clause_ids
+from connections.agent.base import AgentStatus, StartMode, start_clause_ids
 from connections.agent.dfs import ChoicepointFrame, DFSPolicy
 from connections.calculus.actions import Action, ApplyAction
 from connections.calculus.dynamics import Dynamics
@@ -256,6 +255,11 @@ class IDPolicy(DFSPolicy):
 
     def _available_actions(self, state: State) -> tuple[Action, ...]:
         while True:
+            if state.tableau.root.closed:
+                # The final call: settle closed choicepoints and yield nothing.
+                # Bumping the depth ladder at a closed root would be spurious
+                # work and a spurious pathlim trace.
+                return super()._available_actions(state)
             if self._stack_empty():
                 self._start_next_depth()
             actions = super()._available_actions(state)
@@ -284,8 +288,24 @@ class IDPolicy(DFSPolicy):
             return True
         return self._path_limit_hit
 
-    def _exhausted_outcome(self) -> ProverOutcome:
-        return ProverOutcome.ID_FIXED_POINT
+    def _exhaustion_status(self) -> AgentStatus:
+        """A fixed point is claimable only from a complete final iteration.
+
+        By the time the ladder stops, a comp() switch has already turned cut
+        and scut off; if they are still on, the space was pruned and the claim
+        is forfeit. The path-limit condition -- the bound never bound during
+        the exhausting iteration -- is what _should_continue_after_empty_stack
+        already required to stop at all.
+        """
+        if (
+            self.comp is None
+            and not self.cut_enabled
+            and not self.scut_enabled
+            and self.start == "positive"
+            and not self._path_limit_hit
+        ):
+            return AgentStatus.ID_FIXED_POINT
+        return AgentStatus.GAVE_UP
 
 
 def _is_extension_action(action: Action) -> TypeGuard[ApplyAction[Extension]]:

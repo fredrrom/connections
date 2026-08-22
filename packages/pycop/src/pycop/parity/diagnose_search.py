@@ -16,7 +16,7 @@ from connections.constraints.term import TermBinding
 from connections.syntax.formula import Prefix
 from connections.syntax.logic import Domain, Logic
 from connections.syntax.matrix import Clause, Literal
-from connections.calculus.outcome import ProverOutcome
+from connections.run.outcome import ProverOutcome
 from connections.run.szs import to_szs_status
 from connections.calculus.actions import Action, ApplyAction, UndoAction
 from connections.calculus.dynamics import Dynamics

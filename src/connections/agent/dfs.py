@@ -3,8 +3,13 @@ from __future__ import annotations
 from abc import abstractmethod
 from dataclasses import dataclass
 
-from connections.calculus.outcome import ProverOutcome
-from connections.agent.base import BacktrackGranularity, Agent, StartMode, start_clause_ids
+from connections.agent.base import (
+    Agent,
+    AgentStatus,
+    BacktrackGranularity,
+    StartMode,
+    start_clause_ids,
+)
 from connections.calculus.actions import Action, ApplyAction
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.rules import FactorizationMode, Start
@@ -47,26 +52,39 @@ class DFSPolicy(Agent):
         self.factorization = factorization
         self.start = start
         self._stack: list[Frame] = []
-        self._stop_reason: ProverOutcome | None = None
+        self._status = AgentStatus.SEARCHING
 
     def __call__(self, state: State) -> DFSAgentDecision:
-        # _prepare_actions settles closed choicepoints on the way in, so a call
-        # at a final state does this policy's shutdown before yielding nothing.
+        # _prepare_actions settles closed choicepoints on the way in, so the
+        # call at a final state does this agent's shutdown before yielding
+        # nothing.
         actions = self._available_actions(state)
         if not actions:
-            # No actions at a closed tableau means the search succeeded; no
-            # actions anywhere else means its space is exhausted, which is a
-            # claim about the problem and worth reporting.
-            if not state.tableau.root.closed:
-                self._stop_reason = self._exhausted_outcome()
+            self._status = (
+                AgentStatus.CLOSED
+                if state.tableau.root.closed
+                else self._exhaustion_status()
+            )
             return None
-        self._stop_reason = None
+        self._status = AgentStatus.SEARCHING
         action = self._next_action(state, actions)
         self._after_action(state, actions, action)
         return action
 
-    def stop_reason(self) -> ProverOutcome | None:
-        return self._stop_reason
+    def status(self) -> AgentStatus:
+        return self._status
+
+    def _exhaustion_status(self) -> AgentStatus:
+        """The claim an empty frontier licenses, given this discipline.
+
+        Cut and scut prune non-redundant parts of the space; conjecture start
+        is incomplete when the axioms alone are contradictory. Any of them
+        forfeits the exhaustion claim: the search ran dry, but says nothing
+        about the problem.
+        """
+        if self.cut_enabled or self.scut_enabled or self.start != "positive":
+            return AgentStatus.GAVE_UP
+        return AgentStatus.DFS_EXHAUSTED
 
     def _available_actions(self, state: State) -> tuple[Action, ...]:
         actions = self._prepare_actions(state)
@@ -92,9 +110,6 @@ class DFSPolicy(Agent):
     def _choose_goal_id(self, state: State, goal_ids: tuple[int, ...]) -> int:
         _ = state
         return goal_ids[0]
-
-    def _exhausted_outcome(self) -> ProverOutcome:
-        return ProverOutcome.DFS_EXHAUSTED
 
     def _prepare_actions(self, state: State) -> tuple[Action, ...] | None:
         while True:

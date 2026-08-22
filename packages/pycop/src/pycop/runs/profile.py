@@ -139,7 +139,7 @@ def build_profile_overview(
     profile_total_seconds: float,
 ) -> dict[str, Any]:
     elapsed_values = _numbers(rows, "elapsed_seconds")
-    inference_values = _numbers(rows, "inference_actions")
+    inference_values = _numbers(rows, "steps")
     status_counts = Counter(str(row.get("status", "UNKNOWN")) for row in rows)
     timeout_rows = [
         row
@@ -158,7 +158,7 @@ def build_profile_overview(
         "profile_total_seconds": profile_total_seconds,
         "status_counts": dict(sorted(status_counts.items())),
         "elapsed_seconds": _profile_quantiles(elapsed_values),
-        "inference_actions": {
+        "steps": {
             "total": sum(inference_values) if inference_values else None,
             "mean": sum(inference_values) / len(inference_values)
             if inference_values
@@ -186,7 +186,7 @@ def _profile_row(row: RunRow) -> dict[str, Any]:
         "raw_status": serialized["szs_status"],
         "outcome": serialized["outcome"],
         "elapsed_seconds": serialized["elapsed_seconds"],
-        "inference_actions": serialized["inference_actions"],
+        "steps": serialized["steps"],
         "strategy_count": serialized["strategy_count"],
         "winning_strategy_index": serialized["winning_strategy_index"],
         **(
@@ -325,7 +325,7 @@ def _problem_rows(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
         "status",
         "raw_status",
         "elapsed_seconds",
-        "inference_actions",
+        "steps",
         "error",
     )
     return [{key: row.get(key) for key in fields if key in row} for row in rows]

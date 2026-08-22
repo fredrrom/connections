@@ -26,7 +26,8 @@ import time
 from collections.abc import Callable
 from typing import Any, Generic, TypeVar
 
-from connections.calculus.outcome import ProverOutcome
+from connections.agent import AgentStatus
+from connections.run.outcome import ProverOutcome
 from connections.calculus.state import State
 from connections.calculus.tableau import Tableau
 from connections.clausification import matrix_from_file
@@ -38,7 +39,7 @@ from connections.run.limits import (
     _wall_clock_alarm,
 )
 from connections.run.result import Result, StrategyResult
-from connections.run.rollout import rollout
+from connections.run.rollout import Stop, rollout
 from connections.run.strategy import (
     MatrixOptions,
     ScheduledStrategy,
@@ -157,9 +158,14 @@ def _run_schedule(
         )
         result = strategy_run.result
         strategy_results.append(result)
-        outcome = result.outcome
-        szs_status = result.szs_status
-        if outcome is ProverOutcome.PROVED:
+        # A schedule aggregates by strength of verdict. A proof settles the
+        # problem and stops the schedule. An exhaustion from a systematic
+        # strategy also settles it, but later strategies still get their turn
+        # at a proof; a weaker verdict never overwrites it.
+        if outcome is not ProverOutcome.EXHAUSTED or result.outcome is ProverOutcome.PROVED:
+            outcome = result.outcome
+            szs_status = result.szs_status
+        if result.outcome is ProverOutcome.PROVED:
             winning_strategy_index = strategy_index
             closed_state = strategy_run.proof_state
             if on_proof_found is not None and closed_state is not None:
@@ -204,6 +210,44 @@ def _strategy_schedule(
     return StrategySchedule.single(schedule)
 
 
+def _verified_closed(state: State) -> bool:
+    """The judge's own check of S-check membership: trust, then verify."""
+    return state.tableau.root.closed and state.constraints.satisfiable(
+        logic=state.matrix.logic,
+        domain=state.matrix.domain,
+    )
+
+
+def _judge(attempt, state: State) -> ProverOutcome:
+    """Combine the rollout's observation with the agent's word.
+
+    Closure is verified first, from the state itself, whatever the agent said:
+    the proof state is the prover's to extract, and a proof found on the last
+    budgeted step is still a proof. The agent's word matters only for the
+    negative claims, where it is queried about itself, never about the
+    problem: an affirmative systematic claim makes the exhaustion a statement
+    about the problem, anything else is giving up.
+    """
+    if _verified_closed(state):
+        return ProverOutcome.PROVED
+    if attempt.stop is Stop.STEP_BUDGET:
+        return ProverOutcome.STEP_BUDGET
+    if attempt.stop is Stop.TIME_BUDGET:
+        return ProverOutcome.TIME_BUDGET
+    status = attempt.status
+    if status is AgentStatus.CLOSED:
+        # The agent believed it closed; the state says otherwise.
+        return ProverOutcome.ERROR
+    if status is not None and status.claims_exhausted:
+        return ProverOutcome.EXHAUSTED
+    return ProverOutcome.GAVE_UP
+
+
+def _proof_size(state: State) -> int:
+    """|s_T|: the rule applications the final derivation carries."""
+    return len(state.tableau.rule_applications)
+
+
 def _run_strategy(
     problem: Problem,
     *,
@@ -212,9 +256,10 @@ def _run_strategy(
 ) -> _StrategyRun[StrategyT]:
     strategy = entry.strategy
     outcome: ProverOutcome | None = None
+    agent_status = None
     started_at = time.monotonic()
     steps = 0
-    inference_actions = 0
+    proof_size = 0
     state: State | None = None
     try:
         with _wall_clock_alarm(entry.timeout_seconds):
@@ -223,10 +268,10 @@ def _run_strategy(
                 matrix_options=strategy.matrix,
                 matrix_cache=matrix_cache,
             )
-            policy = strategy.policy.instantiate()
+            agent = strategy.policy.instantiate()
             attempt = rollout(
                 state,
-                policy=policy,
+                agent,
                 step_limit=entry.step_limit,
                 deadline=(
                     None
@@ -234,9 +279,11 @@ def _run_strategy(
                     else started_at + entry.timeout_seconds
                 ),
             )
-            outcome = attempt.outcome
+            outcome = _judge(attempt, state)
+            agent_status = attempt.status
             steps = attempt.steps
-            inference_actions = attempt.inference_steps
+            if outcome is ProverOutcome.PROVED:
+                proof_size = _proof_size(state)
     except WallClockExceeded:
         outcome = ProverOutcome.TIMEOUT
     except MemoryError:
@@ -245,8 +292,9 @@ def _run_strategy(
     result = StrategyResult(
         strategy=strategy,
         outcome=outcome,
+        agent_status=agent_status,
         steps=steps,
-        inference_actions=inference_actions,
+        proof_size=proof_size,
         elapsed_seconds=time.monotonic() - started_at,
         szs_status=to_szs_status(outcome, has_conjecture=has_conjecture),
     )

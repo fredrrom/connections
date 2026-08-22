@@ -1,177 +1,129 @@
-"""The rollout primitive: a policy acting in P(M) until something stops it."""
+"""The rollout primitive: the bare agent-environment loop."""
 
 from __future__ import annotations
 
 import time
 
-from connections.calculus.actions import ApplyAction, UndoAction
-from connections.calculus.outcome import ProverOutcome
+import pytest
+
+from connections.agent import Agent, AgentStatus
 from connections.calculus.state import State
 from connections.calculus.tableau import Tableau
-from connections.agent import Agent
-from connections.run.rollout import Rollout, rollout
+from connections.run.rollout import Rollout, Stop, rollout
 
 from tests.unit.run.test_run import _non_theorem_matrix
 
 
 def _state():
-    return State(matrix=_non_theorem_matrix(),
-        tableau=Tableau(),
-    )
+    return State(matrix=_non_theorem_matrix(), tableau=Tableau())
 
 
 class _Scripted(Agent):
     """Yields each scripted action in turn, then nothing."""
 
-    def __init__(self, actions=(), stop_reason=None):
-        self.actions = list(actions)
+    def __init__(self, actions=(), status=AgentStatus.GAVE_UP):
+        self.script = list(actions)
         self.calls = 0
         self.states_seen = []
-        self._stop_reason = stop_reason
+        self._status = status
 
     def __call__(self, state):
         self.calls += 1
         self.states_seen.append(state)
-        return self.actions.pop(0) if self.actions else None
+        return self.script.pop(0) if self.script else None
 
-    def stop_reason(self):
-        return self._stop_reason
+    def status(self):
+        return self._status
 
 
-def test_a_policy_call_yielding_no_action_is_not_a_step():
-    policy = _Scripted()
+def test_an_agent_with_no_action_stops_the_rollout():
+    agent = _Scripted()
 
-    result = rollout(_state(), policy=policy)
+    result = rollout(_state(), agent)
 
     assert isinstance(result, Rollout)
+    assert result.stop is Stop.AGENT_DONE
+    assert result.status is AgentStatus.GAVE_UP
     assert result.actions == ()
     assert result.steps == 0
-    assert result.inference_steps == 0
-    assert result.outcome is None
-    assert policy.calls == 1, "the policy was still consulted"
+    assert agent.calls == 1, "the agent was still consulted"
 
 
-def test_the_rollout_asks_the_policy_why_it_offered_nothing():
-    """A policy returns actions; why it stopped is a separate question."""
-    policy = _Scripted(stop_reason=ProverOutcome.DFS_EXHAUSTED)
+def test_the_status_is_the_agents_word_queried_once():
+    agent = _Scripted(status=AgentStatus.DFS_EXHAUSTED)
 
-    result = rollout(_state(), policy=policy)
+    result = rollout(_state(), agent)
 
-    assert result.outcome is ProverOutcome.DFS_EXHAUSTED
+    assert result.stop is Stop.AGENT_DONE
+    assert result.status is AgentStatus.DFS_EXHAUSTED
+
+
+def test_exhausted_step_budget_stops_before_consulting_the_agent():
+    agent = _Scripted()
+
+    result = rollout(_state(), agent, step_limit=0)
+
+    assert result.stop is Stop.STEP_BUDGET
+    assert result.status is None, "budget stops never consult the agent"
     assert result.steps == 0
+    assert agent.calls == 0
 
 
-def test_a_policy_with_no_claim_leaves_the_outcome_open():
-    policy = _Scripted(stop_reason=None)
+def test_expired_deadline_stops_before_consulting_the_agent():
+    agent = _Scripted()
 
-    result = rollout(_state(), policy=policy)
+    result = rollout(_state(), agent, deadline=time.monotonic() - 1.0)
 
-    assert result.outcome is None
-
-
-def test_exhausted_step_budget_stops_before_consulting_the_policy():
-    policy = _Scripted()
-
-    result = rollout(_state(), policy=policy, step_limit=0)
-
-    assert result.outcome is ProverOutcome.STEP_BUDGET
-    assert result.steps == 0
-    assert policy.calls == 0
-
-
-def test_expired_deadline_stops_before_consulting_the_policy():
-    policy = _Scripted()
-
-    result = rollout(_state(), policy=policy, deadline=time.monotonic() - 1.0)
-
-    # An allotment the rollout notices itself is ResourceOut, not Timeout:
-    # Timeout is a claim about a process, made by whatever supervises it.
-    assert result.outcome is ProverOutcome.TIME_BUDGET
-    assert result.steps == 0
-    assert policy.calls == 0
+    assert result.stop is Stop.TIME_BUDGET
+    assert result.status is None
+    assert agent.calls == 0
 
 
 def test_steps_and_deadline_are_checked_at_the_same_point():
-    """Both budgets are an allotment that ran out; steps is checked first."""
-    policy = _Scripted()
+    agent = _Scripted()
 
     result = rollout(
         _state(),
-        policy=policy,
+        agent,
         step_limit=0,
         deadline=time.monotonic() - 1.0,
     )
 
-    assert result.outcome is ProverOutcome.STEP_BUDGET
+    assert result.stop is Stop.STEP_BUDGET
 
 
 def test_the_rollout_returns_the_state_it_acted_on():
     state = _state()
 
-    result = rollout(state, policy=_Scripted())
+    result = rollout(state, _Scripted())
 
     assert result.state is state, "the state is mutated in place, not copied"
 
 
-def test_counts_are_derived_from_the_recorded_actions():
-    """steps and inference_steps cannot disagree with `actions`, by construction."""
-    append = object.__new__(ApplyAction)
-    prune = object.__new__(UndoAction)
+def test_unrecorded_rollouts_still_count_steps():
+    agent = _Scripted()
 
-    result = Rollout(actions=(append, prune, append), state=None, outcome=None)
+    result = rollout(_state(), agent, record=False)
 
-    assert result.steps == 3, "every action is one application of T"
-    assert result.inference_steps == 2, "only appends are inference steps"
-    assert result.inference_steps <= result.steps
-
-
-def test_proved_is_derived_from_the_outcome():
-    proved = Rollout(actions=(), state=None, outcome=ProverOutcome.PROVED)
-    budget = Rollout(actions=(), state=None, outcome=ProverOutcome.STEP_BUDGET)
-
-    assert proved.proved
-    assert not budget.proved
-
-
-def test_both_in_rollout_budgets_are_resource_out_not_timeout():
-    """The layers split by vocabulary, so they cannot contradict each other."""
-    from connections.run.szs import SZSStatus, to_szs_status
-
-    for outcome in (ProverOutcome.STEP_BUDGET, ProverOutcome.TIME_BUDGET):
-        assert to_szs_status(outcome, has_conjecture=True) is SZSStatus.RESOURCE_OUT
-
-
-def test_a_final_state_ends_the_rollout_without_consulting_the_policy():
-    """What the policy makes of success is the policy's own business.
-
-    The rollout stops at an accepting state. It does not run the policy down
-    for one last turn it has nothing to do with.
-    """
-
-    class _Root:
-        closed = True
-
-    class _Tableau:
-        root = _Root()
-
-    class _Constraints:
-        @staticmethod
-        def satisfiable(*, logic, domain):
-            return True
-
-    class _Matrix:
-        logic = "classical"
-        domain = "constant"
-
-    class _AlreadyClosed:
-        tableau = _Tableau()
-        constraints = _Constraints()
-        matrix = _Matrix()
-
-    policy = _Scripted()
-
-    result = rollout(_AlreadyClosed(), policy=policy)
-
-    assert result.outcome is ProverOutcome.PROVED
-    assert policy.calls == 0
+    assert result.actions is None
     assert result.steps == 0
+
+
+def test_recorded_actions_must_agree_with_the_step_count():
+    with pytest.raises(ValueError):
+        Rollout(state=None, stop=Stop.AGENT_DONE, status=None, actions=(), steps=3)
+
+
+def test_the_rollout_never_reads_the_tableau():
+    """The loop is generic: closure is the agent's to observe, the judge's to
+    verify. A state with no tableau at all rolls out fine."""
+
+    class _NoTableau:
+        pass
+
+    agent = _Scripted()
+
+    result = rollout(_NoTableau(), agent)
+
+    assert result.stop is Stop.AGENT_DONE
+    assert agent.states_seen and isinstance(agent.states_seen[0], _NoTableau)

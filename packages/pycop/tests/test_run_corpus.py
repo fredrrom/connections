@@ -105,7 +105,7 @@ def _row(status: str) -> "RunRow":
         outcome=None,
         szs_status=status,
         steps=1,
-        inference_actions=1,
+        proof_size=1,
         elapsed_seconds=0.1,
         strategy_count=1,
         winning_strategy_index=None,
@@ -127,4 +127,4 @@ def test_summarize_counts_resource_out_and_memory_out():
     assert summary["resource_out"] == 2
     assert summary["memory_out"] == 1
     assert summary["timeout"] == 1
-    assert "gave_up" not in summary
+    assert "gave_up" in summary

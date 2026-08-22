@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from connections.syntax.formula import Atom
 from connections.syntax.matrix import Clause, Literal, Matrix
-from connections.calculus.outcome import ProverOutcome
+from connections.agent import AgentStatus
 from connections.agent import DFSPolicy
 from connections.calculus.actions import ApplyAction, UndoAction
 from connections.calculus.dynamics import Dynamics
@@ -97,4 +97,4 @@ def test_dfs_policy_returns_non_theorem_after_root_exhaustion() -> None:
     assert isinstance(undo, UndoAction)
     Dynamics.transition(state, undo)
     assert policy(state) is None
-    assert policy.stop_reason() is ProverOutcome.DFS_EXHAUSTED
+    assert policy.status() is AgentStatus.DFS_EXHAUSTED

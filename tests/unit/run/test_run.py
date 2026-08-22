@@ -6,9 +6,9 @@ from typing import Any
 import connections.run.entry as run_module
 from connections.syntax.formula import Atom
 from connections.syntax.matrix import Clause, Literal, Matrix
-from connections.calculus.outcome import ProverOutcome
+from connections.run.outcome import ProverOutcome
 from connections.run.szs import SZSStatus
-from connections.agent import FirstActionIDPolicy, Agent, AgentDecision
+from connections.agent import AgentStatus, FirstActionIDPolicy, Agent, AgentDecision
 from connections.calculus.dynamics import Dynamics
 from connections.run.entry import Problem, run as run_problem
 from connections.calculus.state import State
@@ -130,7 +130,7 @@ def test_prover_run_follows_control_loop_to_theorem(tmp_path, monkeypatch):
     assert result.outcome is ProverOutcome.PROVED
     assert result.szs_status is SZSStatus.THEOREM
     assert result.steps == 2
-    assert result.inference_actions == 2
+    assert result.proof_size == 2
 
 
 def test_prover_run_accepts_single_strategy(tmp_path, monkeypatch):
@@ -169,11 +169,14 @@ def test_prover_run_reports_non_theorem_when_no_action(tmp_path, monkeypatch):
     )
     result = run_result.strategy_results[0]
 
-    assert result.outcome is None
-    # A step is an application of T, so a policy call that yields no action is
-    # not a step. The policy was consulted once and offered nothing.
+    # An agent that offers nothing and makes no claim is giving up: the
+    # honest default, never a countermodel.
+    assert result.outcome is ProverOutcome.GAVE_UP
+    assert result.szs_status is SZSStatus.GAVE_UP
+    # A step is an application of T, so an agent call that yields no action is
+    # not a step. The agent was consulted once and offered nothing.
     assert result.steps == 0
-    assert result.inference_actions == 0
+    assert result.proof_size == 0
 
 
 def test_prover_step_limit_counts_transitions(tmp_path, monkeypatch):
@@ -195,7 +198,7 @@ def test_prover_step_limit_counts_transitions(tmp_path, monkeypatch):
 
     assert result.outcome is ProverOutcome.STEP_BUDGET
     assert result.steps == 0
-    assert result.inference_actions == 0
+    assert result.proof_size == 0
 
 
 def test_prover_run_requires_schedule(tmp_path, monkeypatch):
@@ -293,7 +296,11 @@ def test_prover_caches_matrices_across_schedule_entries(tmp_path, monkeypatch):
         schedule=schedule,
     )
 
-    assert result.outcome is ProverOutcome.ID_FIXED_POINT
+    # The first entry is complete and exhausts; the second runs cut and can
+    # only give up. The schedule keeps the stronger verdict.
+    assert result.outcome is ProverOutcome.EXHAUSTED
+    assert result.strategy_results[0].agent_status is AgentStatus.ID_FIXED_POINT
+    assert result.strategy_results[1].agent_status is AgentStatus.GAVE_UP
     assert matrix_builds == 1
 
 
@@ -320,7 +327,7 @@ def test_prover_timeout_includes_matrix_construction(tmp_path, monkeypatch):
 
     assert result.outcome is ProverOutcome.TIMEOUT
     assert result.szs_status is SZSStatus.TIMEOUT
-    assert result.inference_actions == 0
+    assert result.proof_size == 0
 
 
 def test_prover_reports_expired_timeout_before_state_construction(tmp_path):
@@ -339,7 +346,7 @@ def test_prover_reports_expired_timeout_before_state_construction(tmp_path):
 
     assert result.outcome is ProverOutcome.TIMEOUT
     assert result.szs_status is SZSStatus.TIMEOUT
-    assert result.inference_actions == 0
+    assert result.proof_size == 0
 
 
 def test_prover_reports_memory_error_as_memory_out(tmp_path, monkeypatch):
@@ -367,7 +374,7 @@ def test_prover_reports_memory_error_as_memory_out(tmp_path, monkeypatch):
 
     assert result.outcome is ProverOutcome.MEMORY_OUT
     assert result.szs_status is SZSStatus.MEMORY_OUT
-    assert result.inference_actions == 0
+    assert result.proof_size == 0
 
 
 def test_pycop_prover_reinitializes_policy_for_each_run(tmp_path, monkeypatch):
@@ -403,9 +410,11 @@ def test_pycop_prover_reinitializes_policy_for_each_run(tmp_path, monkeypatch):
         schedule=StrategySchedule.single(settings),
     ).strategy_results[0]
 
-    assert first.outcome is ProverOutcome.ID_FIXED_POINT
+    assert first.outcome is ProverOutcome.EXHAUSTED
+    assert first.agent_status is AgentStatus.ID_FIXED_POINT
     assert first.szs_status is SZSStatus.COUNTER_SATISFIABLE
-    assert second.outcome is ProverOutcome.ID_FIXED_POINT
+    assert second.outcome is ProverOutcome.EXHAUSTED
+    assert second.agent_status is AgentStatus.ID_FIXED_POINT
     assert second.szs_status is SZSStatus.COUNTER_SATISFIABLE
     assert len(TrackingPolicy.policies) == 2
     assert TrackingPolicy.policies[0] is not TrackingPolicy.policies[1]

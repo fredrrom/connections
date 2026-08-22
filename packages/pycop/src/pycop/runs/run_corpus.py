@@ -11,7 +11,7 @@ import random
 from typing import Any, Generic, TypeVar
 
 from connections.syntax.logic import Domain, Logic
-from connections.calculus.outcome import ProverOutcome
+from connections.run.outcome import ProverOutcome
 from connections.run.szs import SZSStatus
 from connections.run.result import Result
 from connections.run.entry import (
@@ -40,7 +40,7 @@ class RunRow:
     outcome: str | None
     szs_status: str | None
     steps: int
-    inference_actions: int
+    proof_size: int
     elapsed_seconds: float
     strategy_count: int
     winning_strategy_index: int | None
@@ -218,8 +218,9 @@ def row_from_result(
         outcome=_outcome_value(result.outcome),
         szs_status=_status_value(result.szs_status),
         steps=sum(strategy.steps for strategy in result.strategy_results),
-        inference_actions=sum(
-            strategy.inference_actions for strategy in result.strategy_results
+        proof_size=max(
+            (strategy.proof_size for strategy in result.strategy_results),
+            default=0,
         ),
         elapsed_seconds=sum(
             strategy.elapsed_seconds for strategy in result.strategy_results
@@ -242,7 +243,7 @@ def row_from_error(
         outcome=ProverOutcome.ERROR.value,
         szs_status=SZSStatus.ERROR.value,
         steps=0,
-        inference_actions=0,
+        proof_size=0,
         elapsed_seconds=0.0,
         strategy_count=0,
         winning_strategy_index=None,
@@ -259,7 +260,7 @@ def row_to_json(row: RunRow) -> dict[str, object]:
         "outcome": row.outcome,
         "szs_status": row.szs_status,
         "steps": row.steps,
-        "inference_actions": row.inference_actions,
+        "proof_size": row.proof_size,
         "elapsed_seconds": row.elapsed_seconds,
         "strategy_count": row.strategy_count,
         "winning_strategy_index": row.winning_strategy_index,
@@ -279,7 +280,7 @@ def summarize_run_rows(
     summary_output: str | Path | None = None,
 ) -> dict[str, object]:
     return {
-        "schema": "connections.runs_summary.v1",
+        "schema": "connections.runs_summary.v2",
         "output": None if output is None else str(output),
         "summary_output": None if summary_output is None else str(summary_output),
         "problems": len(rows),
@@ -292,7 +293,7 @@ def summarize_run_rows(
         "memory_out": count_status(rows, SZSStatus.MEMORY_OUT),
         "error": count_status(rows, SZSStatus.ERROR),
         "steps": sum(row.steps for row in rows),
-        "inference_actions": sum(row.inference_actions for row in rows),
+        "gave_up": count_status(rows, SZSStatus.GAVE_UP),
     }
 
 

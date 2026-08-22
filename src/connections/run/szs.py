@@ -1,8 +1,15 @@
+"""SZS statuses, and the mapping from prover outcomes.
+
+The split is by vocabulary, so the layers cannot contradict each other: a run
+never says Timeout, a supervisor never says ResourceOut, and an agent never
+says either.
+"""
+
 from __future__ import annotations
 
 from enum import Enum
 
-from connections.calculus.outcome import ProverOutcome
+from connections.run.outcome import ProverOutcome
 
 
 class SZSStatus(str, Enum):
@@ -17,6 +24,7 @@ class SZSStatus(str, Enum):
     GAVE_UP = "GaveUp"
     ERROR = "Error"
 
+
 def to_szs_status(
     outcome: ProverOutcome | None,
     *,
@@ -26,7 +34,8 @@ def to_szs_status(
         if has_conjecture is None:
             return None
         return SZSStatus.THEOREM if has_conjecture else SZSStatus.UNSATISFIABLE
-    if outcome in (ProverOutcome.ID_FIXED_POINT, ProverOutcome.DFS_EXHAUSTED):
+    if outcome is ProverOutcome.EXHAUSTED:
+        # Only reachable through an agent's affirmative systematic claim.
         if has_conjecture is None:
             return None
         return (
@@ -34,17 +43,17 @@ def to_szs_status(
             if has_conjecture
             else SZSStatus.SATISFIABLE
         )
+    if outcome is ProverOutcome.GAVE_UP:
+        return SZSStatus.GAVE_UP
+    if outcome in (ProverOutcome.STEP_BUDGET, ProverOutcome.TIME_BUDGET):
+        # Both are the prover's own allotment running out, which is what
+        # ResourceOut means. Timeout and MemoryOut are claims about a process
+        # and belong to whatever supervises it.
+        return SZSStatus.RESOURCE_OUT
     if outcome is ProverOutcome.TIMEOUT:
         return SZSStatus.TIMEOUT
     if outcome is ProverOutcome.MEMORY_OUT:
         return SZSStatus.MEMORY_OUT
-    if outcome in (ProverOutcome.STEP_BUDGET, ProverOutcome.TIME_BUDGET):
-        # Both are the prover's own allotment running out, which is what
-        # ResourceOut means. Timeout and MemoryOut are claims about a process
-        # and belong to whatever supervises it: only a watching process can
-        # make them, since its clock includes interpreter startup no in-process
-        # timer sees, and a search killed for memory says nothing at all.
-        return SZSStatus.RESOURCE_OUT
     if outcome is ProverOutcome.ERROR:
         return SZSStatus.ERROR
     return None

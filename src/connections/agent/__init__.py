@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from connections.agent.base import (
-    BacktrackGranularity,
     Agent,
     AgentDecision,
+    AgentStatus,
+    BacktrackGranularity,
+    StartMode,
+    start_clause_ids,
 )
 from connections.agent.dfs import (
     ChoicepointFrame,
@@ -18,7 +21,10 @@ from connections.agent.id import (
 )
 
 __all__ = [
+    "AgentStatus",
     "BacktrackGranularity",
+    "StartMode",
+    "start_clause_ids",
     "ChoicepointFrame",
     "DFSPolicy",
     "FirstActionIDPolicy",

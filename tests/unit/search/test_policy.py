@@ -8,7 +8,7 @@ import pytest
 from connections.clausification import matrix_from_file
 from connections.syntax.formula import Atom, Variable
 from connections.syntax.matrix import Clause, Literal, Matrix
-from connections.calculus.outcome import ProverOutcome
+from connections.agent import AgentStatus
 import connections.agent.dfs as policy_module
 import connections.agent.id as id_policy_module
 from connections.agent import FirstActionIDPolicy
@@ -251,7 +251,9 @@ def test_dfs_policy_with_scut_only_tries_first_start_clause(monkeypatch):
 
     assert _label(dynamics, first) == "st0"
     assert policy(state) is None
-    assert policy.stop_reason() is ProverOutcome.DFS_EXHAUSTED
+    # scut prunes non-redundant alternatives, so this exhaustion licenses
+    # no claim about the problem: the honest status is giving up.
+    assert policy.status() is AgentStatus.GAVE_UP
 
 
 def test_dfs_policy_reads_cut_and_scut_from_constructor_args():
@@ -835,7 +837,7 @@ def test_iterative_deepening_empty_matrix_has_no_start_choicepoint(caplog):
     action = policy(state)
 
     assert action is None
-    assert policy.stop_reason() is ProverOutcome.ID_FIXED_POINT
+    assert policy.status() is AgentStatus.ID_FIXED_POINT
     assert caplog.messages == [
         "pathlim",
         "pathlim",

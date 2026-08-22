@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from connections.calculus.outcome import ProverOutcome
+from connections.run.outcome import ProverOutcome
 from connections.run.szs import SZSStatus, to_szs_status
 
 
@@ -22,7 +22,7 @@ def test_proved_maps_by_problem_shape() -> None:
 
 
 def test_complete_negative_outcome_maps_by_problem_shape() -> None:
-    for outcome in (ProverOutcome.ID_FIXED_POINT, ProverOutcome.DFS_EXHAUSTED):
+    for outcome in (ProverOutcome.EXHAUSTED,):
         assert (
             to_szs_status(outcome, has_conjecture=True)
             is SZSStatus.COUNTER_SATISFIABLE
