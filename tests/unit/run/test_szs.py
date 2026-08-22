@@ -34,9 +34,11 @@ def test_complete_negative_outcome_maps_by_problem_shape() -> None:
 
 
 def test_no_success_outcome_maps_to_szs_no_success() -> None:
+    # Both budgets are the prover's own allotment; Timeout and MemoryOut are
+    # a supervising process's verdicts, and connections never concludes them.
     assert (
-        to_szs_status(ProverOutcome.TIMEOUT, has_conjecture=True)
-        is SZSStatus.TIMEOUT
+        to_szs_status(ProverOutcome.TIME_BUDGET, has_conjecture=True)
+        is SZSStatus.RESOURCE_OUT
     )
     assert (
         to_szs_status(ProverOutcome.STEP_BUDGET, has_conjecture=True)

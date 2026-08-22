@@ -142,6 +142,13 @@ Matrix parity normalises both sides up to variable renaming and compares
 order-sensitive and multiset views, covering the classical FOF, classical CNF,
 intuitionistic FOF, and modal QMF slices.
 
+One documented boundary: parity under `conj` is claimed for FOF input only.
+leanCoP detects conjecture starts from the `#` marker its translation inserts,
+and clause-form input never carries the marker, so leanCoP starts positive on
+CNF regardless of the setting. The native prover deliberately extends `conj`
+to CNF by reading `negated_conjecture` roles, a start set leanCoP 2.1 would
+never use.
+
 !!! note "Post-proof wind-down"
 
     A rollout stops at the accepting state. The reference provers keep going a

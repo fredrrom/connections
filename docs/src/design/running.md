@@ -4,6 +4,41 @@ From an agent acting in a transition system to a prover working through a
 corpus. The system itself is described in [dynamics](dynamics.md); an agent
 implements a policy, and the code says Agent where the paper says pi.
 
+## Boundaries
+
+Four layers, each computing one thing:
+
+| layer | computes | knows nothing about |
+|---|---|---|
+| environment (`calculus`) | transitions: `A(s)`, `T`, membership in `S✓` | agents, budgets, files |
+| agent | the agent function: state to action, plus its own status | verdicts, schedules, SZS |
+| rollout | the agent function against the environment, under best-effort budgets | closure, proofs, strategies |
+| prover (`run`) | formulation, judging, reporting: one problem to one `Result` | processes, corpora, learning |
+
+The rollout computes the agent function: call the agent, apply the action,
+repeat, stopping when the agent returns nothing or a budget runs out. It is
+the unit both consumers share -- the prover runs rollouts to get verdicts, a
+learner runs rollouts to get trajectories.
+
+The prover is the judge around the rollout. It builds the matrix per strategy,
+runs the agent under each entry's share of the budget, verifies claimed
+closure against the state, maps the agent's status to an outcome and SZS, and
+aggregates across the schedule by strength of verdict. A strategy pairs a
+formulation with an agent recipe; a schedule is a portfolio over both, first
+proof wins.
+
+Budgets inside connections are best effort: steps and seconds divide the
+schedule and are checked between rollout steps. connections imposes no
+wall-clock alarm and no memory cap on itself. A hard guarantee that a problem
+ends needs a supervising process that can kill this one, and Timeout and
+MemoryOut are that supervisor's verdicts, never the prover's own.
+
+Learning agents sit above runs, not inside them. An agent persists exactly as
+long as its caller keeps it: fresh per entry by default, across a schedule via
+`run(..., agent=)`, across a corpus in a campaign that collects trajectories
+and updates parameters between episodes. The prover neither knows nor cares
+whether the agent it runs is learning.
+
 ## Vocabulary
 
 Four concepts, from the most basic to the most assembled.

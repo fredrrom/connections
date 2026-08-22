@@ -1,9 +1,9 @@
-"""One problem, one result.
+"""The prover: computes the agent function and reports the result.
 
-Named ``entry`` rather than ``run`` because a submodule ``connections.run.run``
-would shadow the ``run`` function: Python binds a submodule as an attribute of
-its package, and that lookup wins before any lazy export in ``__init__``. The
-public name is ``connections.run.run``; this module is where it is defined.
+One problem, one result. The prover formulates the matrix per strategy, rolls
+the agent out under each entry's share of the budget, judges what came back,
+and returns a Result. It is not named ``run`` because a submodule
+``connections.run.run`` would shadow the ``run`` function it defines.
 
 ``run`` is the highest entry point ``connections`` has. It handles a single
 problem, in the calling process, with no notion of other problems and no
@@ -33,11 +33,6 @@ from connections.calculus.tableau import Tableau
 from connections.clausification import matrix_from_file
 from connections.syntax.logic import Domain, Logic
 from connections.syntax.matrix import Matrix
-from connections.run.limits import (
-    WallClockExceeded,
-    _memory_limit,
-    _wall_clock_alarm,
-)
 from connections.run.result import Result, StrategyResult
 from connections.run.rollout import Stop, rollout
 from connections.run.strategy import (
@@ -99,7 +94,6 @@ def run(
     schedule: StrategyT | StrategySchedule[StrategyT],
     agent: Agent | None = None,
     on_proof_found: ProofFoundCallback[StrategyT] | None = None,
-    memory_limit_mb: int | None = None,
     record_trajectory: bool = False,
 ) -> Result[StrategyT]:
     """Turn one problem into one result.
@@ -117,16 +111,21 @@ def run(
     ``record_trajectory`` keeps each rollout's action sequence; off by
     default, since a corpus run has no reader for sixty thousand actions per
     problem.
+
+    Budgets here are best effort: steps and seconds divide the schedule and
+    are checked between rollout steps. connections imposes no wall-clock alarm
+    and no memory cap on itself; a hard guarantee that a problem ends needs a
+    supervising process that can kill this one, and that is where Timeout and
+    MemoryOut verdicts come from.
     """
 
-    with _memory_limit(memory_limit_mb):
-        return _run_schedule(
-            problem,
-            schedule=schedule,
-            agent=agent,
-            on_proof_found=on_proof_found,
-            record_trajectory=record_trajectory,
-        )
+    return _run_schedule(
+        problem,
+        schedule=schedule,
+        agent=agent,
+        on_proof_found=on_proof_found,
+        record_trajectory=record_trajectory,
+    )
 
 
 def build_state(
@@ -187,28 +186,15 @@ def _run_schedule(
             winning_strategy_index = strategy_index
             closed_state = strategy_run.proof_state
             if on_proof_found is not None and closed_state is not None:
-                # The proof callback shares the strategy's wall-clock budget:
-                # search already consumed elapsed_seconds, and an unbounded
-                # callback would otherwise turn a proved problem into a
-                # supervisor-level timeout.
-                remaining = (
-                    entry.timeout_seconds - result.elapsed_seconds
-                    if entry.timeout_seconds is not None
-                    else None
+                proof_payload = on_proof_found(
+                    ProofFound(
+                        problem=problem,
+                        strategy_index=strategy_index,
+                        strategy=entry.strategy,
+                        result=result,
+                        state=closed_state,
+                    )
                 )
-                try:
-                    with _wall_clock_alarm(remaining):
-                        proof_payload = on_proof_found(
-                            ProofFound(
-                                problem=problem,
-                                strategy_index=strategy_index,
-                                strategy=entry.strategy,
-                                result=result,
-                                state=closed_state,
-                            )
-                        )
-                except WallClockExceeded:
-                    proof_payload = None
             break
 
     return Result(
@@ -284,35 +270,29 @@ def _run_strategy(
     steps = 0
     proof_size = 0
     state: State | None = None
-    try:
-        with _wall_clock_alarm(entry.timeout_seconds):
-            state = build_state(
-                problem,
-                matrix_options=strategy.matrix,
-                matrix_cache=matrix_cache,
-            )
-            acting = agent if agent is not None else strategy.policy.instantiate()
-            attempt = rollout(
-                state,
-                acting,
-                record=record_trajectory,
-                step_limit=entry.step_limit,
-                deadline=(
-                    None
-                    if entry.timeout_seconds is None
-                    else started_at + entry.timeout_seconds
-                ),
-            )
-            outcome = _judge(attempt, state)
-            agent_status = attempt.status
-            trajectory = attempt.actions
-            steps = attempt.steps
-            if outcome is ProverOutcome.PROVED:
-                proof_size = _proof_size(state)
-    except WallClockExceeded:
-        outcome = ProverOutcome.TIMEOUT
-    except MemoryError:
-        outcome = ProverOutcome.MEMORY_OUT
+    state = build_state(
+        problem,
+        matrix_options=strategy.matrix,
+        matrix_cache=matrix_cache,
+    )
+    acting = agent if agent is not None else strategy.policy.instantiate()
+    attempt = rollout(
+        state,
+        acting,
+        record=record_trajectory,
+        step_limit=entry.step_limit,
+        deadline=(
+            None
+            if entry.timeout_seconds is None
+            else started_at + entry.timeout_seconds
+        ),
+    )
+    outcome = _judge(attempt, state)
+    agent_status = attempt.status
+    trajectory = attempt.actions
+    steps = attempt.steps
+    if outcome is ProverOutcome.PROVED:
+        proof_size = _proof_size(state)
     has_conjecture = None if state is None else state.matrix.source_has_conjecture
     result = StrategyResult(
         strategy=strategy,

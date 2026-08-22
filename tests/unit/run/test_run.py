@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import time
 from typing import Any
 
-import connections.run.entry as run_module
+import connections.run.prover as run_module
 from connections.syntax.formula import Atom
 from connections.syntax.matrix import Clause, Literal, Matrix
 from connections.run.outcome import ProverOutcome
@@ -16,7 +15,7 @@ from connections.agent import (
 )
 from connections.calculus.actions import Action
 from connections.calculus.dynamics import Dynamics
-from connections.run.entry import Problem, run as run_problem
+from connections.run.prover import Problem, run as run_problem
 from connections.calculus.state import State
 from connections.run.strategy import (
     MatrixOptions,
@@ -313,79 +312,6 @@ def test_prover_caches_matrices_across_schedule_entries(tmp_path, monkeypatch):
     assert matrix_builds == 1
 
 
-def test_prover_timeout_includes_matrix_construction(tmp_path, monkeypatch):
-    def slow_matrix(**kwargs):
-        time.sleep(0.02)
-        return _non_theorem_matrix()
-
-    monkeypatch.setattr(
-        run_module, "matrix_from_file", lambda *args, **kwargs: slow_matrix()
-    )
-    problem = tmp_path / "non_theorem.p"
-    problem.write_text(
-        "fof(a1,axiom,p).\nfof(c,conjecture,q).\n",
-        encoding="utf-8",
-    )
-    settings = _no_action_strategy()
-
-    run_result = run_problem(
-        Problem(problem),
-        schedule=_single_entry_schedule(settings, timeout_seconds=0.001),
-    )
-    result = run_result.strategy_results[0]
-
-    assert result.outcome is ProverOutcome.TIMEOUT
-    assert result.szs_status is SZSStatus.TIMEOUT
-    assert result.proof_size == 0
-
-
-def test_prover_reports_expired_timeout_before_state_construction(tmp_path):
-    problem = tmp_path / "problem.p"
-    problem.write_text(
-        "fof(a1,axiom,p).\nfof(c,conjecture,q).\n",
-        encoding="utf-8",
-    )
-    settings = _no_action_strategy()
-
-    run_result = run_problem(
-        Problem(problem),
-        schedule=_single_entry_schedule(settings, timeout_seconds=0.0),
-    )
-    result = run_result.strategy_results[0]
-
-    assert result.outcome is ProverOutcome.TIMEOUT
-    assert result.szs_status is SZSStatus.TIMEOUT
-    assert result.proof_size == 0
-
-
-def test_prover_reports_memory_error_as_memory_out(tmp_path, monkeypatch):
-    def exploding_matrix(**kwargs):
-        _ = kwargs
-        raise MemoryError
-
-    monkeypatch.setattr(
-        run_module,
-        "matrix_from_file",
-        lambda *args, **kwargs: exploding_matrix(**kwargs),
-    )
-    problem = tmp_path / "problem.p"
-    problem.write_text(
-        "fof(a1,axiom,p).\nfof(c,conjecture,q).\n",
-        encoding="utf-8",
-    )
-    settings = _no_action_strategy()
-
-    run_result = run_problem(
-        Problem(problem),
-        schedule=_single_entry_schedule(settings, timeout_seconds=1.0),
-    )
-    result = run_result.strategy_results[0]
-
-    assert result.outcome is ProverOutcome.MEMORY_OUT
-    assert result.szs_status is SZSStatus.MEMORY_OUT
-    assert result.proof_size == 0
-
-
 def test_pycop_prover_reinitializes_policy_for_each_run(tmp_path, monkeypatch):
     monkeypatch.setattr(
         run_module,
@@ -426,49 +352,6 @@ def test_pycop_prover_reinitializes_policy_for_each_run(tmp_path, monkeypatch):
     assert second_result.szs_status is SZSStatus.COUNTER_SATISFIABLE
     assert len(created) == 2
     assert created[0] is not created[1]
-
-
-def test_prover_wall_alarm_restores_signal_state(tmp_path):
-    import signal
-
-    problem = tmp_path / "theorem.p"
-    problem.write_text("fof(c,conjecture,p|~p).\n", encoding="utf-8")
-    handler_before = signal.getsignal(signal.SIGALRM)
-
-    run_problem(
-        Problem(problem),
-        schedule=_single_entry_schedule(_first_strategy(), timeout_seconds=30.0),
-    )
-
-    assert signal.getsignal(signal.SIGALRM) is handler_before
-    assert signal.getitimer(signal.ITIMER_REAL) == (0.0, 0.0)
-
-
-def test_proof_callback_shares_strategy_wall_clock_budget(tmp_path, monkeypatch):
-    monkeypatch.setattr(
-        run_module, "matrix_from_file", lambda *args, **kwargs: _theorem_matrix()
-    )
-    problem = tmp_path / "theorem.p"
-    problem.write_text(
-        "fof(a1,axiom,p).\nfof(c,conjecture,p).\n",
-        encoding="utf-8",
-    )
-    schedule = StrategySchedule.single(_first_strategy(), timeout_seconds=0.5)
-
-    def slow_callback(event: Any) -> str:
-        time.sleep(5.0)
-        return "labels"
-
-    started = time.monotonic()
-    result = run_problem(
-        Problem(problem),
-        schedule=schedule,
-        on_proof_found=slow_callback,
-    )
-
-    assert time.monotonic() - started < 3.0
-    assert result.outcome is ProverOutcome.PROVED
-    assert result.proof_payload is None
 
 
 def test_the_package_exports_the_function_not_a_module():
@@ -551,3 +434,24 @@ def test_record_trajectory_attaches_actions_to_the_result(tmp_path, monkeypatch)
     assert len(recorded.trajectory) == recorded.steps
     assert unrecorded.trajectory is None
     assert unrecorded.steps == recorded.steps
+
+
+def test_expired_strategy_deadline_is_best_effort_time_budget(tmp_path, monkeypatch):
+    """connections imposes no alarm: an expired deadline is noticed between
+    steps, reported as the strategy's own budget running out."""
+    monkeypatch.setattr(
+        run_module,
+        "matrix_from_file",
+        lambda *args, **kwargs: _non_theorem_matrix(),
+    )
+    problem = tmp_path / "non_theorem.p"
+    problem.write_text("fof(a1,axiom,p).\nfof(c,conjecture,q).\n", encoding="utf-8")
+
+    result = run_problem(
+        Problem(problem),
+        schedule=_single_entry_schedule(_leancop_strategy(), timeout_seconds=0.0),
+    ).strategy_results[0]
+
+    assert result.outcome is ProverOutcome.TIME_BUDGET
+    assert result.szs_status is SZSStatus.RESOURCE_OUT
+    assert result.steps == 0

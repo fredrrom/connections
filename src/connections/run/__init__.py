@@ -6,9 +6,9 @@ from typing import Any
 _EXPORTS = {
     "MatrixOptions": "connections.run.strategy",
     "PolicyOptions": "connections.run.strategy",
-    "Problem": "connections.run.entry",
-    "ProofFound": "connections.run.entry",
-    "ProofFoundCallback": "connections.run.entry",
+    "Problem": "connections.run.prover",
+    "ProofFound": "connections.run.prover",
+    "ProofFoundCallback": "connections.run.prover",
     "ProverOutcome": "connections.run.outcome",
     "Result": "connections.run.result",
     "Stop": "connections.run.rollout",
@@ -18,11 +18,10 @@ _EXPORTS = {
     "Strategy": "connections.run.strategy",
     "StrategyResult": "connections.run.result",
     "StrategySchedule": "connections.run.strategy",
-    "WallClockExceeded": "connections.run.limits",
     "WeightedStrategy": "connections.run.strategy",
-    "build_state": "connections.run.entry",
+    "build_state": "connections.run.prover",
     "rollout": "connections.run.rollout",
-    "run": "connections.run.entry",
+    "run": "connections.run.prover",
     "to_szs_status": "connections.run.szs",
 }
 

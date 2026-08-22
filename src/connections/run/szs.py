@@ -50,10 +50,6 @@ def to_szs_status(
         # ResourceOut means. Timeout and MemoryOut are claims about a process
         # and belong to whatever supervises it.
         return SZSStatus.RESOURCE_OUT
-    if outcome is ProverOutcome.TIMEOUT:
-        return SZSStatus.TIMEOUT
-    if outcome is ProverOutcome.MEMORY_OUT:
-        return SZSStatus.MEMORY_OUT
     if outcome is ProverOutcome.ERROR:
         return SZSStatus.ERROR
     return None

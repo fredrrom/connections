@@ -16,8 +16,6 @@ class ProverOutcome(Enum):
     GAVE_UP = "GaveUp"
     STEP_BUDGET = "StepBudget"
     TIME_BUDGET = "TimeBudget"
-    TIMEOUT = "Timeout"
-    MEMORY_OUT = "MemoryOut"
     ERROR = "Error"
 
 
