@@ -162,3 +162,34 @@ def test_matrix_tracks_positive_and_conjecture_clauses_on_direct_init():
     _assert_matrix_indices_consistent(matrix)
     assert matrix.positive_clauses == (0, 2)
     assert matrix.conjecture_clauses == (2,)
+
+
+def test_digest_distinguishes_prefix_annotations():
+    """str(literal) omits the prefix, so the digest must hash it separately:
+    two prefix-annotated matrices with equal atoms are different omegas."""
+    from connections.syntax.formula import Function, Prefix
+
+    plain = Matrix((Clause((Literal(atom=Atom("p")),)),))
+    prefixed = Matrix(
+        (Clause((Literal(atom=Atom("p"), prefix=Prefix((Function("w"),))),)),)
+    )
+
+    assert plain != prefixed
+    assert plain.digest() != prefixed.digest()
+
+
+def test_digest_distinguishes_free_variable_lists():
+    from connections.syntax.formula import Variable
+
+    bare = Matrix((Clause((Literal(atom=Atom("p", (Variable("X"),))),)),))
+    constrained = Matrix(
+        (
+            Clause(
+                (Literal(atom=Atom("p", (Variable("X"),))),),
+                free_variables=(Variable("X"),),
+            ),
+        )
+    )
+
+    assert bare != constrained
+    assert bare.digest() != constrained.digest()

@@ -17,6 +17,7 @@ from connections.syntax.formula import Prefix
 from connections.syntax.logic import Domain, Logic
 from connections.syntax.matrix import Clause, Literal
 from connections.agent.base import AgentStatus
+from connections.interaction.truncation import Truncation
 from connections.interaction.szs import to_szs_status
 from connections.env.actions import Action, ApplyAction, UndoAction
 from connections.env.dynamics import Dynamics
@@ -128,12 +129,22 @@ def diagnose(
             inference_actions += 1
         Dynamics.transition(state, action)
 
+    truncation = {
+        "step_budget": Truncation.STEPS,
+        "time_budget": Truncation.TIME,
+    }.get(outcome)
+    status = None
+    if truncation is None and outcome is not None:
+        status = (
+            AgentStatus.CLOSED if outcome == "proved" else AgentStatus(outcome)
+        )
     szs_status = to_szs_status(
-        outcome,
+        truncation,
+        status,
         has_conjecture=state.matrix.source_has_conjecture,
     )
     return {
-        "schema": "connections.search_diagnostic.v1",
+        "schema": "pycop.search_diagnostic.v1",
         "path": str(path.resolve()),
         "logic": logic,
         "domain": domain,
@@ -145,7 +156,7 @@ def diagnose(
             "conjecture_clauses": len(state.matrix.conjecture_clauses),
             "source_has_conjecture": state.matrix.source_has_conjecture,
         },
-        "outcome": None if outcome is None else outcome.value,
+        "outcome": outcome,
         "szs_status": None if szs_status is None else szs_status.value,
         "choices": choices,
         "inference_actions": inference_actions,

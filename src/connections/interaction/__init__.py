@@ -42,9 +42,9 @@ def __getattr__(name: str) -> Any:
     return value
 
 
-# `rollout` names both a module in this package and the function it defines, and
-# a submodule is bound as an attribute of its package by the import system --
-# a lookup that wins before __getattr__ is ever consulted. Bind the function
-# eagerly so the public name is the callable. (`run` avoids this by living in
-# `entry`; see the note there.)
+# `rollout` names both a module in this package and the function it defines,
+# and a submodule is bound as an attribute of its package by the import
+# system -- a lookup that wins before __getattr__ is ever consulted. Bind the
+# function eagerly so the public name is the callable. (`run_schedule` and
+# `run_strategy` do not collide with the `run` module, so they stay lazy.)
 from connections.interaction.rollout import rollout as rollout  # noqa: E402

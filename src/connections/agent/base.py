@@ -5,7 +5,10 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from enum import Enum
 
+from typing import Literal
+
 from connections.env.actions import Action
+from connections.env.rules import FactorizationMode
 from connections.env.state import State
 
 Chooser = Callable[[State, Sequence[Action]], Action]
@@ -37,9 +40,9 @@ class AgentOptions:
     cut: bool = False
     scut: bool = False
     comp: int | None = None
-    backtrack: str = "step"
-    factorization: str = "unify"
-    start: str = "positive"
+    backtrack: Literal["step", "maximal"] = "step"
+    factorization: FactorizationMode = "unify"
+    start: Literal["positive", "conjecture"] = "positive"
     initial_depth: int = 1
 
 

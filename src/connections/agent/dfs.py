@@ -1,14 +1,14 @@
 """Depth-first search over the fringe-mirroring invariant.
 
-The state is the source of truth, and this memory adds only what the state
-cannot know: which alternatives remain untried per goal. One frame per goal,
+The state is the source of truth, and the agent's stack adds only what the
+state cannot know: which alternatives remain untried per goal. One frame per goal,
 the stack mirroring the ordered fringe -- the current goal is ``fringe[0]``,
 and any disagreement between stack and state resolves to a single undo.
 
 The stack is the agent's internal state, read against ``self.options`` and
 reported through ``self.status``. It emits no trace events;
 leanCoP's event choreography is pycop's parity claim, carried by the traced
-memories there.
+agents there.
 """
 
 from __future__ import annotations

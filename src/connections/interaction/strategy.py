@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 import math
 from typing import Any, Generic, TypeVar
@@ -21,7 +21,7 @@ class MatrixOptions:
 
 @dataclass(frozen=True, slots=True)
 class PolicyOptions:
-    policy_class: type[Agent]
+    policy_class: Callable[..., Agent]
     args: Mapping[str, Any] = field(default_factory=dict)
 
     def instantiate(self) -> Agent:

@@ -144,7 +144,15 @@ class Matrix:
             for clause in self.clauses:
                 h.update(clause.role.encode())
                 for literal in clause.literals:
+                    # str(literal) omits the prefix annotation on purpose (it
+                    # is the trace/display form), so identity hashes the
+                    # prefix separately: two prefix-annotated matrices with
+                    # equal atoms are different transition systems.
                     h.update(str(literal).encode())
+                    h.update(repr(literal.prefix).encode())
+                    h.update(b";")
+                for variable in clause.free_variables:
+                    h.update(repr(variable).encode())
                 h.update(b"|")
             self._digest = h.hexdigest()
         return self._digest

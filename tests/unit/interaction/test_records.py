@@ -41,10 +41,6 @@ def test_serialized_trajectory_replays_to_a_closed_state(tmp_path, monkeypatch):
     monkeypatch.setattr(
         run_module, "matrix_from_file", lambda *args, **kwargs: _theorem_matrix()
     )
-    monkeypatch.setattr(
-        "connections.interaction.run.matrix_from_file",
-        lambda *args, **kwargs: _theorem_matrix(),
-    )
     problem = tmp_path / "theorem.p"
     problem.write_text("fof(c,conjecture,p|~p).\n", encoding="utf-8")
 

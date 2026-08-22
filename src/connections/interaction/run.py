@@ -1,9 +1,8 @@
 """Runs schedules and strategies: computes the agent function and reports.
 
 One problem, one result. The prover formulates the matrix per strategy, rolls
-the agent out under each entry's share of the budget, judges what came back,
-and returns a Result. It is not named ``run`` because a submodule
-``connections.interaction.run`` would shadow the ``run`` function it defines.
+the agent out under each entry's share of the budget, maps what came back to
+SZS, and returns a Result.
 
 ``run`` is the highest entry point ``connections`` has. It handles a single
 problem, in the calling process, with no notion of other problems and no

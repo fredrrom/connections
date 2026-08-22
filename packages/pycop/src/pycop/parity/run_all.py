@@ -109,7 +109,7 @@ def main(argv: list[str] | None = None) -> int:
 def _selected_commands(
     only: list[str],
     skip: list[str],
-) -> tuple[tuple[str, Path], ...]:
+) -> tuple[tuple[str, str], ...]:
     only_set = set(only)
     skip_set = set(skip)
     return tuple(
