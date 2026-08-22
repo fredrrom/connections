@@ -15,7 +15,6 @@ from dataclasses import dataclass
 from typing import TypeGuard
 
 from connections.agent.base import Agent, AgentOptions, AgentStatus
-from connections.agent.search import start_clause_ids
 
 from connections.calculus.actions import Action, ApplyAction
 from connections.calculus.dynamics import Dynamics
@@ -358,7 +357,7 @@ class TracedDFSAgent(Agent):
             state,
             state.tableau.goals[goal_id],
             factorization=self.factorization,
-            start_ids=start_clause_ids(state.matrix, self.start),
+            start=self.start,
         ).ordered()
 
     def _after_choicepoint_created(self, choicepoint: ChoicepointFrame) -> None:
@@ -533,9 +532,7 @@ class TracedIDAgent(TracedDFSAgent):
             self._pending_path_limit_plan = (goal_id, {}, 0)
             return tuple(
                 ApplyAction(goal_id, rule)
-                for rule in Dynamics.start_rules_for(
-                    state, start_clause_ids(state.matrix, self.start)
-                )
+                for rule in Dynamics.start_rules_for(state, self.start)
             )
         if (
             getattr(goal, "clause_idx", None) is None

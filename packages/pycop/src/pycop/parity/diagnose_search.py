@@ -195,7 +195,7 @@ def audit_state(state: State, *, audit: SearchAudit) -> None:
 
 
 def _audit_start_goal(state: State, goal: TableauNode, *, audit: SearchAudit) -> None:
-    for clause_idx in state.problem.start_clause_ids:
+    for clause_idx in state.matrix.positive_clauses:
         clause = state.matrix.clauses[clause_idx]
         audit.count("start_candidates")
         instance_id = _diagnostic_instance_id("start", clause_idx, 0)

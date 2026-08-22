@@ -55,7 +55,6 @@ class _FirstRulePolicy(Agent):
             actions = Dynamics.apply_actions(
                 state,
                 goal,
-                start_ids=state.matrix.positive_clauses,
             ).ordered()
             if actions:
                 return actions[0]

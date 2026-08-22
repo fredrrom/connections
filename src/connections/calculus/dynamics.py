@@ -15,10 +15,18 @@ from connections.calculus.rules import (
     Start,
 )
 from connections.calculus.state import State
+from connections.syntax.matrix import Matrix
 from connections.calculus.tableau import TableauNode
 from connections.trace_logging import trace, trace_logger
 
 RuleT = TypeVar("RuleT", bound=Rule)
+
+
+def start_clause_ids(matrix: Matrix, start: str) -> tuple[int, ...]:
+    """The clause ids a start mode selects from the matrix's role indexes."""
+    if start == "conjecture":
+        return matrix.conjecture_clauses or matrix.positive_clauses
+    return matrix.positive_clauses
 
 
 class Dynamics:
@@ -28,7 +36,7 @@ class Dynamics:
         goal: TableauNode,
         *,
         factorization: FactorizationMode = "unify",
-        start_ids: tuple[int, ...] = (),
+        start: str = "positive",
     ) -> ApplyActions:
         if goal.closed:
             return ApplyActions()
@@ -39,7 +47,7 @@ class Dynamics:
         if goal.goal_id == state.tableau.root_goal_id:
             return ApplyActions(
                 start=Dynamics._apply_actions(
-                    goal.goal_id, Dynamics.start_rules_for(state, start_ids)
+                    goal.goal_id, Dynamics.start_rules_for(state, start)
                 )
             )
         return ApplyActions(
@@ -58,14 +66,15 @@ class Dynamics:
         )
 
     @staticmethod
-    def start_rules_for(state: State, clause_ids: tuple[int, ...]) -> tuple[Start, ...]:
-        """Start rules for the given clauses.
+    def start_rules_for(state: State, start: str = "positive") -> tuple[Start, ...]:
+        """Start rules for the requested subset, like factorization a query option.
 
-        Which clauses may start is the agent's selection -- positive, conjecture,
-        or anything else. Legality of each start is checked here regardless.
+        "conjecture" falls back to the positive clauses when the matrix has no
+        conjecture-role clauses, matching leanCoP. Legality of each start is
+        checked here regardless of the subset asked for.
         """
         rules: list[Start] = []
-        for idx in clause_ids:
+        for idx in start_clause_ids(state.matrix, start):
             clause = state.matrix.clauses[idx]
             instance_id = state.fresh_instance_id()
             delta = state.constraints.delta_for_free_variables(

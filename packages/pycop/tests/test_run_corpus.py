@@ -16,7 +16,7 @@ from pycop.runs import RunRow, run_corpus, run_corpus_records, summarize_run_row
 class _FirstRulePolicy(Agent):
     def __call__(self, state: State) -> Action | None:
         for goal in state.fringe:
-            actions = Dynamics.apply_actions(state, goal, start_ids=state.matrix.positive_clauses).ordered()
+            actions = Dynamics.apply_actions(state, goal).ordered()
             if actions:
                 return actions[0]
         return None

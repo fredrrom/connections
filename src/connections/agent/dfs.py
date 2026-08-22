@@ -24,19 +24,6 @@ from connections.calculus.rules import Start
 from connections.calculus.state import State
 
 
-def start_clause_ids(matrix, mode: str) -> tuple[int, ...]:
-    """The clauses an agent asks to start from.
-
-    Selection is the agent's, like factorization: the matrix's role indexes
-    are facts, which subset to query is the agent's option. "conjecture"
-    falls back to the positive clauses when the matrix has no conjecture-role
-    clauses, matching leanCoP.
-    """
-    if mode == "conjecture":
-        return matrix.conjecture_clauses or matrix.positive_clauses
-    return matrix.positive_clauses
-
-
 @dataclass(slots=True)
 class Frame:
     goal_id: int
@@ -141,7 +128,7 @@ class OnlineDFSAgent(Agent):
             state,
             state.tableau.goals[goal_id],
             factorization=self.options.factorization,
-            start_ids=start_clause_ids(state.matrix, self.options.start),
+            start=self.options.start,
         ).ordered()
 
     def _push_frame(self, state: State, goal_id: int) -> Frame | None:
@@ -194,5 +181,4 @@ __all__ = [
     "Chooser",
     "Frame",
     "OnlineDFSAgent",
-    "start_clause_ids",
 ]

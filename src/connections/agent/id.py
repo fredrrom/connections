@@ -19,7 +19,7 @@ from dataclasses import replace
 from typing import TypeGuard
 
 from connections.agent.base import AgentOptions, AgentStatus
-from connections.agent.search import Chooser, OnlineDFSAgent, start_clause_ids
+from connections.agent.dfs import Chooser, OnlineDFSAgent
 from connections.calculus.actions import Action, ApplyAction
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.rules import Extension
@@ -43,9 +43,7 @@ class OnlineIDAgent(OnlineDFSAgent):
         if goal.goal_id == state.tableau.root_goal_id:
             return tuple(
                 ApplyAction(goal_id, rule)
-                for rule in Dynamics.start_rules_for(
-                    state, start_clause_ids(state.matrix, self.options.start)
-                )
+                for rule in Dynamics.start_rules_for(state, self.options.start)
             )
         if goal.clause_idx is None or goal.literal_index is None:
             return self._gated_apply_actions(state, goal_id)

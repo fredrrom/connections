@@ -23,7 +23,7 @@ class FirstAdmissible(Agent):
     def __call__(self, state):
         for goal in state.fringe:
             actions = Dynamics.apply_actions(
-                state, goal, start_ids=state.matrix.positive_clauses
+                state, goal, start="positive"
             ).ordered()
             if actions:
                 return actions[0]

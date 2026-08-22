@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from connections.agent.base import Agent, AgentOptions
-from connections.agent.search import Chooser, start_clause_ids
+from connections.agent.dfs import Chooser
 from connections.calculus.actions import Action
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.state import State
@@ -27,7 +27,7 @@ class MarkovAgent(Agent):
                 state,
                 goal,
                 factorization=self.options.factorization,
-                start_ids=start_clause_ids(state.matrix, self.options.start),
+                start=self.options.start,
             ).ordered()
             if actions:
                 return self.choose(state, actions)
