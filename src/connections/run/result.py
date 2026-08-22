@@ -29,6 +29,7 @@ class StrategyResult(Generic[StrategyT]):
     elapsed_seconds: float
     szs_status: SZSStatus | None = None
     agent_status: AgentStatus | None = None
+    trajectory: tuple | None = None
 
 
 @dataclass(frozen=True, slots=True)

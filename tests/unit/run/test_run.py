@@ -497,3 +497,56 @@ def test_importing_a_submodule_does_not_shadow_the_function():
     assert callable(connections.run.rollout)
     assert not isinstance(connections.run.rollout, types.ModuleType)
     assert callable(connections.run.run)
+
+
+def test_a_persistent_agent_is_reused_across_schedule_entries(tmp_path, monkeypatch):
+    """Agent lifetime is the caller's choice: passing an agent reuses it."""
+    monkeypatch.setattr(
+        run_module,
+        "matrix_from_file",
+        lambda *args, **kwargs: _non_theorem_matrix(),
+    )
+    problem = tmp_path / "non_theorem.p"
+    problem.write_text("fof(a1,axiom,p).\nfof(c,conjecture,q).\n", encoding="utf-8")
+
+    calls = []
+
+    class _Persistent(Agent):
+        def __call__(self, state):
+            calls.append(self)
+            return None
+
+    persistent = _Persistent()
+    schedule = StrategySchedule.from_weighted(
+        [
+            WeightedStrategy(strategy=_leancop_strategy(), weight=1),
+            WeightedStrategy(strategy=_leancop_strategy(cut=True), weight=1),
+        ]
+    )
+    run_problem(Problem(problem), schedule=schedule, agent=persistent)
+
+    assert len(calls) == 2
+    assert all(agent is persistent for agent in calls)
+
+
+def test_record_trajectory_attaches_actions_to_the_result(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        run_module, "matrix_from_file", lambda *args, **kwargs: _theorem_matrix()
+    )
+    problem = tmp_path / "theorem.p"
+    problem.write_text("fof(c,conjecture,p|~p).\n", encoding="utf-8")
+
+    recorded = run_problem(
+        Problem(problem),
+        schedule=StrategySchedule.single(_leancop_strategy()),
+        record_trajectory=True,
+    ).strategy_results[0]
+    unrecorded = run_problem(
+        Problem(problem),
+        schedule=StrategySchedule.single(_leancop_strategy()),
+    ).strategy_results[0]
+
+    assert recorded.trajectory is not None
+    assert len(recorded.trajectory) == recorded.steps
+    assert unrecorded.trajectory is None
+    assert unrecorded.steps == recorded.steps

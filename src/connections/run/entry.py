@@ -26,7 +26,7 @@ import time
 from collections.abc import Callable
 from typing import Any, Generic, TypeVar
 
-from connections.agent import AgentStatus
+from connections.agent import Agent, AgentStatus
 from connections.run.outcome import ProverOutcome
 from connections.calculus.state import State
 from connections.calculus.tableau import Tableau
@@ -97,21 +97,35 @@ def run(
     problem: Problem,
     *,
     schedule: StrategyT | StrategySchedule[StrategyT],
+    agent: Agent | None = None,
     on_proof_found: ProofFoundCallback[StrategyT] | None = None,
     memory_limit_mb: int | None = None,
+    record_trajectory: bool = False,
 ) -> Result[StrategyT]:
     """Turn one problem into one result.
 
-    Builds a state per strategy in the schedule, instantiates that strategy's
-    policy, rolls out under its share of the budget, and stops at the first
-    success.
+    Builds a state per strategy in the schedule, rolls out under that entry's
+    share of the budget, and stops at the first success.
+
+    Agent lifetime is the caller's choice. By default each entry instantiates
+    a fresh agent from its strategy options, which is the frozen-theta
+    evaluation protocol. Passing ``agent`` reuses one agent across every
+    entry -- the deliberate exception for intra-conjecture work, where memory
+    across attempts is the point. What carries over is then the agent's
+    business, and any exhaustion claims remain per-episode.
+
+    ``record_trajectory`` keeps each rollout's action sequence; off by
+    default, since a corpus run has no reader for sixty thousand actions per
+    problem.
     """
 
     with _memory_limit(memory_limit_mb):
         return _run_schedule(
             problem,
             schedule=schedule,
+            agent=agent,
             on_proof_found=on_proof_found,
+            record_trajectory=record_trajectory,
         )
 
 
@@ -140,7 +154,9 @@ def _run_schedule(
     problem: Problem,
     *,
     schedule: StrategyT | StrategySchedule[StrategyT],
+    agent: Agent | None = None,
     on_proof_found: ProofFoundCallback[StrategyT] | None = None,
+    record_trajectory: bool = False,
 ) -> Result[StrategyT]:
     schedule = _strategy_schedule(schedule)
     strategy_results: list[StrategyResult[StrategyT]] = []
@@ -155,6 +171,8 @@ def _run_schedule(
             problem,
             entry=entry,
             matrix_cache=matrix_cache,
+            agent=agent,
+            record_trajectory=record_trajectory,
         )
         result = strategy_run.result
         strategy_results.append(result)
@@ -253,10 +271,13 @@ def _run_strategy(
     *,
     entry: ScheduledStrategy[StrategyT],
     matrix_cache: MatrixCache | None = None,
+    agent: Agent | None = None,
+    record_trajectory: bool = False,
 ) -> _StrategyRun[StrategyT]:
     strategy = entry.strategy
     outcome: ProverOutcome | None = None
     agent_status = None
+    trajectory = None
     started_at = time.monotonic()
     steps = 0
     proof_size = 0
@@ -268,10 +289,11 @@ def _run_strategy(
                 matrix_options=strategy.matrix,
                 matrix_cache=matrix_cache,
             )
-            agent = strategy.policy.instantiate()
+            acting = agent if agent is not None else strategy.policy.instantiate()
             attempt = rollout(
                 state,
-                agent,
+                acting,
+                record=record_trajectory,
                 step_limit=entry.step_limit,
                 deadline=(
                     None
@@ -281,6 +303,7 @@ def _run_strategy(
             )
             outcome = _judge(attempt, state)
             agent_status = attempt.status
+            trajectory = attempt.actions
             steps = attempt.steps
             if outcome is ProverOutcome.PROVED:
                 proof_size = _proof_size(state)
@@ -293,6 +316,7 @@ def _run_strategy(
         strategy=strategy,
         outcome=outcome,
         agent_status=agent_status,
+        trajectory=trajectory,
         steps=steps,
         proof_size=proof_size,
         elapsed_seconds=time.monotonic() - started_at,
