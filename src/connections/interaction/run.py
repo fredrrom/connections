@@ -1,9 +1,9 @@
-"""The prover: computes the agent function and reports the result.
+"""Runs schedules and strategies: computes the agent function and reports.
 
 One problem, one result. The prover formulates the matrix per strategy, rolls
 the agent out under each entry's share of the budget, judges what came back,
 and returns a Result. It is not named ``run`` because a submodule
-``connections.run.run`` would shadow the ``run`` function it defines.
+``connections.interaction.run`` would shadow the ``run`` function it defines.
 
 ``run`` is the highest entry point ``connections`` has. It handles a single
 problem, in the calling process, with no notion of other problems and no
@@ -27,21 +27,21 @@ from collections.abc import Callable
 from typing import Any, Generic, TypeVar
 
 from connections.agent import Agent, AgentStatus
-from connections.run.outcome import ProverOutcome
+from connections.interaction.outcome import ProverOutcome
 from connections.calculus.state import State
 from connections.calculus.tableau import Tableau
 from connections.clausification import matrix_from_file
 from connections.syntax.logic import Domain, Logic
 from connections.syntax.matrix import Matrix
-from connections.run.result import Result, StrategyResult
-from connections.run.rollout import Stop, rollout
-from connections.run.strategy import (
+from connections.interaction.result import Result, StrategyResult
+from connections.interaction.rollout import Stop, rollout
+from connections.interaction.strategy import (
     MatrixOptions,
     ScheduledStrategy,
     Strategy,
     StrategySchedule,
 )
-from connections.run.szs import SZSStatus, to_szs_status
+from connections.interaction.szs import SZSStatus, to_szs_status
 
 StrategyT = TypeVar("StrategyT", bound=Strategy)
 ProofFoundCallback = Callable[["ProofFound[StrategyT]"], Any]
@@ -167,7 +167,7 @@ def _run_schedule(
     agent_cache: dict[int, Agent] = {}
 
     for strategy_index, entry in enumerate(schedule.entries):
-        strategy_run = _run_strategy(
+        strategy_run = run_strategy(
             problem,
             entry=entry,
             matrix_cache=matrix_cache,
@@ -256,7 +256,7 @@ def _proof_size(state: State) -> int:
     return len(state.tableau.rule_applications)
 
 
-def _run_strategy(
+def run_strategy(
     problem: Problem,
     *,
     entry: ScheduledStrategy[StrategyT],
@@ -378,4 +378,5 @@ __all__ = [
     "ProofFoundCallback",
     "build_state",
     "run_schedule",
+    "run_strategy",
 ]

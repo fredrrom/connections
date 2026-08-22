@@ -13,7 +13,7 @@ Four layers, each computing one thing:
 | environment (`calculus`) | transitions: `A(s)`, `T`, membership in `S✓` | agents, budgets, files |
 | agent | the agent function: state to action, plus its own status | verdicts, schedules, SZS |
 | rollout | the agent function against the environment, under best-effort budgets | closure, proofs, strategies |
-| prover (`run`) | formulation, judging, reporting: one problem to one `Result` | processes, corpora, learning |
+| prover (`interaction`) | formulation, judging, reporting: one problem to one `Result` | processes, corpora, learning |
 
 The rollout computes the agent function: call the agent, apply the action,
 repeat, stopping when the agent returns nothing or a budget runs out. It is
@@ -180,7 +180,7 @@ the specific cases, and `GaveUp` for a system stopping of its own accord.
 
 **An agent** speaks only about itself, in `AgentStatus`: `CLOSED`,
 `DFS_EXHAUSTED`, `ID_FIXED_POINT`, `GAVE_UP`. AgentStatus is a plain
-enum; the judge in `run` holds the one map from statuses to outcomes, and
+enum; the judge in `interaction` holds the one map from statuses to outcomes, and
 statuses absent from the map carry no claim. `GAVE_UP` is the default when an agent offers nothing and claims
 nothing, so an unsound non-theorem requires an agent to overclaim
 affirmatively.

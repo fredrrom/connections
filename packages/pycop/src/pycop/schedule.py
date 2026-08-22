@@ -7,7 +7,7 @@ from typing import cast
 
 from connections.syntax.logic import Logic
 from pycop.settings_codec import LeancopSettingsCodec
-from connections.run.strategy import Strategy, WeightedStrategy
+from connections.interaction.strategy import Strategy, WeightedStrategy
 
 
 def _entry(tokens: list[str], weight: int) -> WeightedStrategy[Strategy]:

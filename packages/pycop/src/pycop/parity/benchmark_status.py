@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 
 from connections.syntax.logic import Domain, Logic
-from connections.run.szs import SZSStatus
+from connections.interaction.szs import SZSStatus
 
 _SIMPLE_STATUS_RE = re.compile(r"^%\s*Status\s+:\s*(?P<label>.+?)\s*$")
 _INTUITIONISTIC_STATUS_RE = re.compile(

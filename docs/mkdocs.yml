@@ -44,7 +44,7 @@ nav:
     - constraints: reference/constraints.md
     - calculus: reference/calculus.md
     - agent: reference/agent.md
-    - run: reference/run.md
+    - interaction: reference/interaction.md
 
 plugins:
   - search

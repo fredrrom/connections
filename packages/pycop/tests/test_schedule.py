@@ -4,7 +4,7 @@ import pytest
 
 from pycop.schedule import SCHEDULE_BY_LOGIC, load_schedule_entries
 from pycop.settings_codec import LeancopSettingsCodec
-from connections.run.strategy import StrategySchedule, WeightedStrategy
+from connections.interaction.strategy import StrategySchedule, WeightedStrategy
 
 
 def _args(strategy):

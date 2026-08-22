@@ -16,13 +16,13 @@ from connections.constraints.term import TermBinding
 from connections.syntax.formula import Prefix
 from connections.syntax.logic import Domain, Logic
 from connections.syntax.matrix import Clause, Literal
-from connections.run.outcome import ProverOutcome
-from connections.run.szs import to_szs_status
+from connections.interaction.outcome import ProverOutcome
+from connections.interaction.szs import to_szs_status
 from connections.calculus.actions import Action, ApplyAction, UndoAction
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.rules import Extension, Factorization, Reduction, Start
 from connections.calculus.state import State
-from connections.run.strategy import MatrixOptions
+from connections.interaction.strategy import MatrixOptions
 from connections.calculus.tableau import Tableau, TableauNode
 from pycop.settings_codec import LeancopSettingsCodec
 

@@ -4,7 +4,7 @@ from connections.agent import Agent
 from connections.calculus.actions import Action
 from connections.calculus.dynamics import Dynamics
 from connections.calculus.state import State
-from connections.run.strategy import (
+from connections.interaction.strategy import (
     MatrixOptions,
     PolicyOptions,
     Strategy,

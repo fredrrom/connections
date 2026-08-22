@@ -15,5 +15,5 @@ disagree the notes are the intent.
 | [constraints](constraints.md) | unification, substitutions, prefixes |
 | [calculus](calculus.md) | state, tableau, actions, rules, dynamics |
 | [agent](agent.md) | the agent interface and shipped agents |
-| [run](run.md) | problems, strategies, schedules, results, SZS |
+| [interaction](interaction.md) | problems, strategies, schedules, results, SZS |
 

@@ -13,9 +13,9 @@ from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
 from connections.agent import AgentStatus
-from connections.run.outcome import ProverOutcome
-from connections.run.strategy import Strategy
-from connections.run.szs import SZSStatus
+from connections.interaction.outcome import ProverOutcome
+from connections.interaction.strategy import Strategy
+from connections.interaction.szs import SZSStatus
 
 StrategyT = TypeVar("StrategyT", bound=Strategy)
 

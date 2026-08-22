@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from connections.run.outcome import ProverOutcome
+from connections.interaction.outcome import ProverOutcome
 
 
 class SZSStatus(str, Enum):

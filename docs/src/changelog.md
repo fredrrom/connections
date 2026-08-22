@@ -9,7 +9,7 @@ Initial prover-loop release.
 - `run_schedule`, `build_state` and `rollout` as the entry points, over `calculus` for
   the transition system and `run` for everything above it. Agents implement
   policies: `Agent` is percept-in action-out, `AgentStatus` its word about its
-  own search, and the judge in `run` produces outcomes and SZS from outside
+  own search, and the judge in `interaction` produces outcomes and SZS from outside
   the agent. `MarkovAgent`, `OnlineDFSAgent` and `OnlineIDAgent` take a
   chooser and `AgentOptions`; a learned agent is a different chooser.
 - Public action records under `connections.calculus.actions`.
@@ -31,7 +31,7 @@ Initial prover-loop release.
 The main API is:
 
 ```python
-from connections.run import ProblemSpec, Result, StrategySchedule, run
+from connections.interaction import ProblemSpec, Result, StrategySchedule, run
 
 problem = ProblemSpec("problem.p")
 schedule = StrategySchedule.single(make_strategy())

@@ -15,8 +15,8 @@ def test_prover_public_api_exports_documented_boundary():
     )
     from connections.calculus.dynamics import Dynamics
     from connections.calculus.state import State
-    from connections.run.prover import Problem, run_schedule as run_problem
-    from connections.run.strategy import MatrixOptions, StrategySchedule
+    from connections.interaction.run import Problem, run_schedule as run_problem
+    from connections.interaction.strategy import MatrixOptions, StrategySchedule
 
     assert run_problem is not None
     assert Problem is not None

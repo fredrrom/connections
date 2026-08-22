@@ -9,9 +9,9 @@ import pytest
 from connections.agent import Agent, AgentStatus
 from connections.calculus.state import State
 from connections.calculus.tableau import Tableau
-from connections.run.rollout import Rollout, Stop, rollout
+from connections.interaction.rollout import Rollout, Stop, rollout
 
-from tests.unit.run.test_run import _non_theorem_matrix
+from tests.unit.interaction.test_run import _non_theorem_matrix
 
 
 def _state():

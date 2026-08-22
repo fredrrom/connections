@@ -20,9 +20,9 @@ from pathlib import Path
 
 import pytest
 
-from connections.run import Problem, run_schedule
-from connections.run.strategy import StrategySchedule
-from connections.run.szs import SZSStatus
+from connections.interaction import Problem, run_schedule
+from connections.interaction.strategy import StrategySchedule
+from connections.interaction.szs import SZSStatus
 
 pycop = pytest.importorskip("pycop")
 from pycop import LeancopSettingsCodec  # noqa: E402

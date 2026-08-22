@@ -11,9 +11,9 @@ from typing import Any, Literal, Mapping, Sequence
 
 
 from connections.syntax.logic import Domain, Logic
-from connections.run.szs import SZSStatus
-from connections.run.prover import Problem, run_schedule as run_problem
-from connections.run.strategy import StrategySchedule
+from connections.interaction.szs import SZSStatus
+from connections.interaction.run import Problem, run_schedule as run_problem
+from connections.interaction.strategy import StrategySchedule
 from pycop.settings_codec import LeancopSettingsCodec
 from pycop.runs import select_problem_paths
 from pycop.parity.benchmark_status import benchmark_status

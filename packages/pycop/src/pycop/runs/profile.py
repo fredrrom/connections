@@ -55,7 +55,7 @@ def profile_run_rows(
         _write_json(output / "summary.json", summary)
 
     return {
-        "schema": "connections.runs_profile_run.v1",
+        "schema": "connections.interactions_profile_run.v1",
         "profile_path": str(profile_path),
         "runs_jsonl_path": str(runs_jsonl_path),
         "output_dir": str(output),
@@ -107,7 +107,7 @@ def summarize_profile(
     _write_json(overview_path, overview)
 
     summary: dict[str, object] = {
-        "schema": "connections.runs_profile_summary.v1",
+        "schema": "connections.interactions_profile_summary.v1",
         "kind": "runs_profile",
         **extra_metadata,
         "profile_path": str(profile),
@@ -151,7 +151,7 @@ def build_profile_overview(
         row for row in rows if "error" in str(row.get("status", "")).lower()
     ]
     overview: dict[str, Any] = {
-        "schema": "connections.runs_profile_overview.v1",
+        "schema": "connections.interactions_profile_overview.v1",
         "total_elapsed_seconds": sum(elapsed_values)
         if elapsed_values
         else profile_total_seconds,

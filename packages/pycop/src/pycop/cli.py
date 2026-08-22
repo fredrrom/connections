@@ -20,10 +20,10 @@ from pycop.runs import (
     select_problem_paths,
     summarize_run_rows,
 )
-from connections.run.szs import SZSStatus
-from connections.run.result import StrategyResult
-from connections.run.prover import Problem, run_schedule as run_problem
-from connections.run.strategy import (
+from connections.interaction.szs import SZSStatus
+from connections.interaction.result import StrategyResult
+from connections.interaction.run import Problem, run_schedule as run_problem
+from connections.interaction.strategy import (
     PolicyOptions,
     ScheduledStrategy,
     Strategy,

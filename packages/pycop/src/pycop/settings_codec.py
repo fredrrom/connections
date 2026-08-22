@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from typing import Any, cast
 
 from pycop.leancop_memory import traced_leancop_agent
-from connections.run.strategy import MatrixOptions, PolicyOptions, Strategy
+from connections.interaction.strategy import MatrixOptions, PolicyOptions, Strategy
 
 
 class LeancopSettingsCodec:

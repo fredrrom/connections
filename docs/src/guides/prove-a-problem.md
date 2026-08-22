@@ -33,7 +33,7 @@ different hardware, which is why reported effort should be steps -- see
 ## From Python
 
 ```python
-from connections.run import build_state, rollout, run_schedule
+from connections.interaction import build_state, rollout, run_schedule
 
 result = run_schedule(problem, schedule=schedule)
 print(result.szs_status)

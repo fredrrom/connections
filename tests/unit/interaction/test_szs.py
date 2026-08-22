@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from connections.run.outcome import ProverOutcome
-from connections.run.szs import SZSStatus, to_szs_status
+from connections.interaction.outcome import ProverOutcome
+from connections.interaction.szs import SZSStatus, to_szs_status
 
 
 def test_proved_maps_by_problem_shape() -> None:

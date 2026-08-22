@@ -14,9 +14,9 @@ from pathlib import Path
 import pytest
 
 from connections.agent import AgentOptions, OnlineIDAgent
-from connections.run import Problem, build_state
-from connections.run.rollout import rollout
-from connections.run.strategy import MatrixOptions
+from connections.interaction import Problem, build_state
+from connections.interaction.rollout import rollout
+from connections.interaction.strategy import MatrixOptions
 
 from pycop.leancop_memory import TracedIDAgent, first
 

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-import connections.run.prover as run_module
+import connections.interaction.run as run_module
 from connections.syntax.formula import Atom
 from connections.syntax.matrix import Clause, Literal, Matrix
-from connections.run.outcome import ProverOutcome
-from connections.run.szs import SZSStatus
+from connections.interaction.outcome import ProverOutcome
+from connections.interaction.szs import SZSStatus
 from connections.agent import (
     Agent,
     AgentOptions,
@@ -15,9 +15,9 @@ from connections.agent import (
 )
 from connections.calculus.actions import Action
 from connections.calculus.dynamics import Dynamics
-from connections.run.prover import Problem, run_schedule as run_problem
+from connections.interaction.run import Problem, run_schedule as run_problem
 from connections.calculus.state import State
-from connections.run.strategy import (
+from connections.interaction.strategy import (
     MatrixOptions,
     PolicyOptions,
     Strategy,
@@ -363,27 +363,27 @@ def test_the_package_exports_the_function_not_a_module():
     """
     import types
 
-    from connections.run import build_state, rollout, run_schedule
+    from connections.interaction import build_state, rollout, run_schedule
 
     for name, obj in (
         ("run_schedule", run_schedule),
         ("build_state", build_state),
         ("rollout", rollout),
     ):
-        assert callable(obj), f"connections.run.{name} is {obj!r}"
+        assert callable(obj), f"connections.interaction.{name} is {obj!r}"
         assert not isinstance(obj, types.ModuleType), f"{name} resolved to a module"
 
 
 def test_importing_a_submodule_does_not_shadow_the_function():
-    """Importing connections.run.rollout must not rebind the package attribute."""
+    """Importing connections.interaction.rollout must not rebind the package attribute."""
     import types
 
-    import connections.run
-    import connections.run.rollout  # noqa: F401  -- the adversarial case
+    import connections.interaction
+    import connections.interaction.rollout  # noqa: F401  -- the adversarial case
 
-    assert callable(connections.run.rollout)
-    assert not isinstance(connections.run.rollout, types.ModuleType)
-    assert callable(connections.run.run_schedule)
+    assert callable(connections.interaction.rollout)
+    assert not isinstance(connections.interaction.rollout, types.ModuleType)
+    assert callable(connections.interaction.run_schedule)
 
 
 def test_a_persistent_agent_is_reused_across_schedule_entries(tmp_path, monkeypatch):

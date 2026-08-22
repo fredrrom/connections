@@ -11,15 +11,15 @@ import random
 from typing import Any, Generic, TypeVar
 
 from connections.syntax.logic import Domain, Logic
-from connections.run.outcome import ProverOutcome
-from connections.run.szs import SZSStatus
-from connections.run.result import Result
-from connections.run.prover import (
+from connections.interaction.outcome import ProverOutcome
+from connections.interaction.szs import SZSStatus
+from connections.interaction.result import Result
+from connections.interaction.run import (
     Problem,
     ProofFoundCallback,
     run_schedule as run_one_problem,
 )
-from connections.run.strategy import Strategy, StrategySchedule
+from connections.interaction.strategy import Strategy, StrategySchedule
 
 ProblemRunner = Callable[[Path], Result[Any]]
 StrategyT = TypeVar("StrategyT", bound=Strategy)
@@ -280,7 +280,7 @@ def summarize_run_rows(
     summary_output: str | Path | None = None,
 ) -> dict[str, object]:
     return {
-        "schema": "connections.runs_summary.v2",
+        "schema": "connections.interactions_summary.v2",
         "output": None if output is None else str(output),
         "summary_output": None if summary_output is None else str(summary_output),
         "problems": len(rows),

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pycop.leancop_memory import traced_leancop_agent
-from connections.run.strategy import MatrixOptions, PolicyOptions, Strategy
+from connections.interaction.strategy import MatrixOptions, PolicyOptions, Strategy
 from pycop.settings_codec import LeancopSettingsCodec
 
 
