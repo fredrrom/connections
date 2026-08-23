@@ -17,10 +17,10 @@ from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
 from connections.agent.base import AgentStatus
-from connections.env.actions import Action, ApplyAction, UndoAction
-from connections.env.dynamics import Dynamics
-from connections.env.rules import Extension, Factorization, Reduction, Start
-from connections.env.state import State
+from connections.environment.actions import Action, ApplyAction, UndoAction
+from connections.environment.dynamics import Dynamics
+from connections.environment.rules import Extension, Factorization, Reduction, Start
+from connections.environment.state import State
 from connections.interaction.truncation import Truncation
 from connections.interaction.szs import SZSStatus
 
@@ -147,6 +147,8 @@ def resolve_record(state: State, record: dict[str, Any]) -> Action | None:
     """
     kind = record["kind"]
     if kind == "undo":
+        if record["step_id"] not in state.tableau.rule_applications:
+            return None
         return UndoAction(step_id=record["step_id"])
     goal_id = record["goal_id"]
     if kind == "start":

@@ -6,13 +6,13 @@ Initial prover-loop release.
 
 ### Added
 
-- `run_schedule`, `build_state` and `rollout` as the entry points, over `env` for
+- `run_schedule`, `build_state` and `rollout` as the entry points, over `environment` for
   the transition system and `run` for everything above it. Agents implement
   policies: `Agent` is percept-in action-out, `AgentStatus` its word about its
   own search, and the judge in `interaction` produces outcomes and SZS from outside
   the agent. `MarkovAgent`, `OnlineDFSAgent` and `OnlineIDAgent` take a
   chooser and `AgentOptions`; a learned agent is a different chooser.
-- Public action records under `connections.env.actions`.
+- Public action records under `connections.environment.actions`.
 - Corpus selection, run rows, summaries and profiling in `pycop.runs`.
 - DFS and iterative-deepening policy components with first-action default
   selection.

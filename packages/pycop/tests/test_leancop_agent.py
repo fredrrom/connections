@@ -8,10 +8,10 @@ import pytest
 
 from connections.agent import AgentStatus
 from connections.agent.id import OnlineIDAgent
-from connections.env.actions import ApplyAction, UndoAction
-from connections.env.rules import Start
-from connections.env.state import State
-from connections.env.tableau import Tableau
+from connections.environment.actions import ApplyAction, UndoAction
+from connections.environment.rules import Start
+from connections.environment.state import State
+from connections.environment.tableau import Tableau
 from connections.interaction import (
     MatrixOptions,
     Problem,

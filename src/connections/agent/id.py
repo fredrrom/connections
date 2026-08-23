@@ -16,9 +16,9 @@ from dataclasses import replace
 
 from connections.agent.base import AgentOptions, AgentStatus, Chooser
 from connections.agent.dfs import OnlineDFSAgent, TraceToken
-from connections.env.actions import Action
-from connections.env.dynamics import Dynamics
-from connections.env.state import State
+from connections.environment.actions import Action
+from connections.environment.dynamics import Dynamics
+from connections.environment.state import State
 from connections.trace_logging import trace, trace_logger
 
 _PATH_LIMIT_HIT = TraceToken("pathlim_hit")

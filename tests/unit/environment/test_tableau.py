@@ -1,8 +1,8 @@
 from connections.syntax.formula import Atom
 from connections.syntax.matrix import Clause, Literal, Matrix
-from connections.env.state import State
-from connections.env.rules import Extension, Reduction, Start
-from connections.env.tableau import Tableau
+from connections.environment.state import State
+from connections.environment.rules import Extension, Reduction, Start
+from connections.environment.tableau import Tableau
 
 
 def lit(name: str, *, neg: bool = False) -> Literal:

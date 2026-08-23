@@ -122,13 +122,17 @@ class Matrix:
     conjecture_clauses: Tuple[int, ...] = field(init=False, repr=False)
 
     def stamped(self, *, logic: Logic | None = None, domain: Domain | None = None) -> "Matrix":
-        """This matrix under a different logic/domain stamp: a different omega."""
-        if logic is not None:
-            self.logic = logic
-        if domain is not None:
-            self.domain = domain
-        self._digest = None
-        return self
+        """These clauses under a different logic/domain stamp: a different omega.
+
+        A new matrix, since the stamp is part of identity and matrices hash
+        by content -- restamping in place would change a hashable object.
+        """
+        return Matrix(
+            self.clauses,
+            logic=self.logic if logic is None else logic,
+            domain=self.domain if domain is None else domain,
+            source_has_conjecture=self.source_has_conjecture,
+        )
 
     def digest(self) -> str:
         """Content identity: clauses plus the logic/domain stamp.

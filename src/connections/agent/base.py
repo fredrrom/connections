@@ -7,9 +7,9 @@ from enum import Enum
 
 from typing import Literal
 
-from connections.env.actions import Action
-from connections.env.rules import FactorizationMode
-from connections.env.state import State
+from connections.environment.actions import Action
+from connections.environment.rules import FactorizationMode
+from connections.environment.state import State
 
 Chooser = Callable[[State, Sequence[Action]], Action]
 

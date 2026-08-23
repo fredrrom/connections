@@ -5,11 +5,11 @@ from connections.syntax.matrix import Clause, Literal, Matrix
 from connections.agent import AgentOptions, AgentStatus, OnlineDFSAgent
 
 
-from connections.env.actions import ApplyAction, UndoAction
-from connections.env.dynamics import Dynamics
-from connections.env.rules import Start
-from connections.env.state import State
-from connections.env.tableau import Tableau
+from connections.environment.actions import ApplyAction, UndoAction
+from connections.environment.dynamics import Dynamics
+from connections.environment.rules import Start
+from connections.environment.state import State
+from connections.environment.tableau import Tableau
 
 def _choose_first(state, actions):
     _ = state

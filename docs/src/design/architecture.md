@@ -21,7 +21,7 @@ A library of primitives for clausal connection tableaux, in four groups.
 
 **The environment** -- the transition system an agent acts in.
 
-    env             state, tableau, actions, rules, dynamics
+    environment             state, tableau, actions, rules, dynamics
 
 **Acting in it** -- one problem at a time.
 
@@ -29,8 +29,8 @@ A library of primitives for clausal connection tableaux, in four groups.
     interaction     build_state, rollout, run_schedule, records, SZS
 
 Dependencies run upward: `constraints` and `parsing` over `syntax`,
-`clausification` over `parsing`, `env` over `syntax` and `constraints`,
-`agent` over `env`, and `interaction` over all of it. Nothing below
+`clausification` over `parsing`, `environment` over `syntax` and `constraints`,
+`agent` over `environment`, and `interaction` over all of it. Nothing below
 `interaction` knows
 about budgets, schedules or statuses; nothing below `agent` knows an agent
 exists.
@@ -71,7 +71,7 @@ them, and aggregating what comes back are each package's own business.
 ## Packages and dependency edges
 
 ```
-connections   env, agent, interaction                         -> lark
+connections   environment, agent, interaction                         -> lark
 pycop         leanCoP-equivalent prover, parity, CLI     -> connections
 ```
 

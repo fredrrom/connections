@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from connections.syntax.matrix import Literal, SignedPredicateSymbol
-from connections.env.rules import Extension, Rule, Start
+from connections.environment.rules import Extension, Rule, Start
 
 
 @dataclass(slots=True)

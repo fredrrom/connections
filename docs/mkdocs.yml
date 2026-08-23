@@ -42,7 +42,7 @@ nav:
     - parsing: reference/parsing.md
     - clausification: reference/clausification.md
     - constraints: reference/constraints.md
-    - env: reference/env.md
+    - environment: reference/environment.md
     - agent: reference/agent.md
     - interaction: reference/interaction.md
 

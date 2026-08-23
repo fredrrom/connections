@@ -1,10 +1,10 @@
 from connections.syntax.formula import Atom, Function, Prefix, Variable
 from connections.syntax.matrix import Clause, Literal, Matrix
-from connections.env.actions import ApplyAction, UndoAction
-from connections.env.dynamics import Dynamics
-from connections.env.rules import Extension, Reduction, Start
-from connections.env.state import State
-from connections.env.tableau import Tableau
+from connections.environment.actions import ApplyAction, UndoAction
+from connections.environment.dynamics import Dynamics
+from connections.environment.rules import Extension, Reduction, Start
+from connections.environment.state import State
+from connections.environment.tableau import Tableau
 
 
 def lit(name: str, *args, neg: bool = False) -> Literal:

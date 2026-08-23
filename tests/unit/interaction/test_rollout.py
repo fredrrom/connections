@@ -7,8 +7,8 @@ import time
 import pytest
 
 from connections.agent import Agent, AgentStatus
-from connections.env.state import State
-from connections.env.tableau import Tableau
+from connections.environment.state import State
+from connections.environment.tableau import Tableau
 from connections.interaction.records import Rollout
 from connections.interaction.truncation import Truncation
 from connections.interaction.rollout import rollout

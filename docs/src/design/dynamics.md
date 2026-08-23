@@ -1,6 +1,6 @@
 # Dynamics
 
-The transition system a policy acts in. This is `env/`, sitting on
+The transition system a policy acts in. This is `environment/`, sitting on
 `syntax` and `constraints` and knowing nothing above it: no budgets, no
 schedules, no statuses, no processes, and no problems-as-files.
 

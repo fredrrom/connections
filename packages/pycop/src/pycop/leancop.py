@@ -12,9 +12,9 @@ from collections.abc import Sequence
 
 from connections.agent.base import AgentOptions
 from connections.agent.id import OnlineIDAgent
-from connections.env.actions import Action
-from connections.env.rules import FactorizationMode
-from connections.env.state import State
+from connections.environment.actions import Action
+from connections.environment.rules import FactorizationMode
+from connections.environment.state import State
 
 
 def first(state: State, actions: Sequence[Action]) -> Action:

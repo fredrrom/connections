@@ -26,10 +26,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from connections.agent.base import Agent, AgentOptions, AgentStatus, Chooser
-from connections.env.actions import Action, ApplyAction, UndoAction
-from connections.env.dynamics import Dynamics
-from connections.env.rules import Start
-from connections.env.state import State
+from connections.environment.actions import Action, ApplyAction, UndoAction
+from connections.environment.dynamics import Dynamics
+from connections.environment.rules import Start
+from connections.environment.state import State
 from connections.trace_logging import trace, trace_logger
 
 

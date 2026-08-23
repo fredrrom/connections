@@ -26,8 +26,8 @@ from collections.abc import Callable
 from typing import Any, Generic, TypeVar
 
 from connections.agent import Agent
-from connections.env.state import State
-from connections.env.tableau import Tableau
+from connections.environment.state import State
+from connections.environment.tableau import Tableau
 from connections.clausification import matrix_from_file
 from connections.syntax.logic import Domain, Logic
 from connections.syntax.matrix import Matrix
@@ -117,44 +117,6 @@ def run_schedule(
     MemoryOut verdicts come from.
     """
 
-    return _run_schedule(
-        problem,
-        schedule=schedule,
-        agent=agent,
-        on_proof_found=on_proof_found,
-        record_trajectory=record_trajectory,
-    )
-
-
-def build_state(
-    problem: Problem,
-    *,
-    matrix_options: MatrixOptions,
-    matrix_cache: MatrixCache | None = None,
-) -> State:
-    """Where a file becomes a state.
-
-    This is the one place ``run`` reaches down past the calculus into parsing
-    and clausification: read the file, clausify it into a matrix, wrap it as
-    the initial state of *P(M)*.
-    """
-
-    matrix = _matrix_from_file(
-        problem,
-        matrix_options=matrix_options,
-        matrix_cache=matrix_cache,
-    )
-    return State(matrix=matrix, tableau=Tableau())
-
-
-def _run_schedule(
-    problem: Problem,
-    *,
-    schedule: StrategyT | StrategySchedule[StrategyT],
-    agent: Agent | None = None,
-    on_proof_found: ProofFoundCallback[StrategyT] | None = None,
-    record_trajectory: bool = False,
-) -> Result[StrategyT]:
     schedule = _strategy_schedule(schedule)
     strategy_results: list[StrategyResult[StrategyT]] = []
     winning_strategy_index: int | None = None
@@ -201,6 +163,27 @@ def _run_schedule(
         szs_status=szs_status,
         proof_payload=proof_payload,
     )
+
+
+def build_state(
+    problem: Problem,
+    *,
+    matrix_options: MatrixOptions,
+    matrix_cache: MatrixCache | None = None,
+) -> State:
+    """Where a file becomes a state.
+
+    This is the one place ``run`` reaches down past the calculus into parsing
+    and clausification: read the file, clausify it into a matrix, wrap it as
+    the initial state of *P(M)*.
+    """
+
+    matrix = _matrix_from_file(
+        problem,
+        matrix_options=matrix_options,
+        matrix_cache=matrix_cache,
+    )
+    return State(matrix=matrix, tableau=Tableau())
 
 
 def _strategy_schedule(

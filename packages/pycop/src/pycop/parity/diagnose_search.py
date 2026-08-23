@@ -19,12 +19,12 @@ from connections.syntax.matrix import Clause, Literal
 from connections.agent.base import AgentStatus
 from connections.interaction.truncation import Truncation
 from connections.interaction.szs import to_szs_status
-from connections.env.actions import Action, ApplyAction, UndoAction
-from connections.env.dynamics import Dynamics
-from connections.env.rules import Extension, Factorization, Reduction, Start
-from connections.env.state import State
+from connections.environment.actions import Action, ApplyAction, UndoAction
+from connections.environment.dynamics import Dynamics
+from connections.environment.rules import Extension, Factorization, Reduction, Start
+from connections.environment.state import State
 from connections.interaction.strategy import MatrixOptions
-from connections.env.tableau import Tableau, TableauNode
+from connections.environment.tableau import Tableau, TableauNode
 from pycop.settings_codec import LeancopSettingsCodec
 
 

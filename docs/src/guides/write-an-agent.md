@@ -17,7 +17,7 @@ Returning `None` ends the rollout.
 
 ```python
 from connections.agent import Agent
-from connections.env.dynamics import Dynamics
+from connections.environment.dynamics import Dynamics
 
 
 class FirstAdmissible(Agent):

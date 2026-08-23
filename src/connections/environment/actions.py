@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Generic, TypeAlias, TypeVar
 
-from connections.env.rules import Extension, Factorization, Reduction, Rule, Start
+from connections.environment.rules import Extension, Factorization, Reduction, Rule, Start
 
 RuleT = TypeVar("RuleT", bound=Rule)
 

@@ -52,7 +52,7 @@ def test_serialized_trajectory_replays_to_a_closed_state(tmp_path, monkeypatch):
     records = result.to_dict()["strategy_results"][0]["trajectory"]
     assert result.szs_status is not None and records
 
-    from connections.env.dynamics import Dynamics
+    from connections.environment.dynamics import Dynamics
 
     state = build_state(Problem(problem), matrix_options=MatrixOptions())
     for record in records:

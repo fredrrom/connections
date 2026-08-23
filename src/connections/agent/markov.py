@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from connections.agent.base import Agent, AgentOptions, AgentStatus
 from connections.agent.base import Chooser
-from connections.env.actions import Action
-from connections.env.dynamics import Dynamics
-from connections.env.state import State
+from connections.environment.actions import Action
+from connections.environment.dynamics import Dynamics
+from connections.environment.state import State
 
 
 class MarkovAgent(Agent):

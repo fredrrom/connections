@@ -13,9 +13,9 @@ from __future__ import annotations
 import time
 
 from connections.agent import Agent
-from connections.env.actions import Action
-from connections.env.dynamics import Dynamics
-from connections.env.state import State
+from connections.environment.actions import Action
+from connections.environment.dynamics import Dynamics
+from connections.environment.state import State
 from connections.interaction.records import Rollout
 from connections.interaction.truncation import Truncation
 from connections.trace_logging import trace, trace_logger
