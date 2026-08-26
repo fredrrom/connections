@@ -30,8 +30,10 @@ only on `lark`:
 uv add connections
 ```
 
-Nothing in the library starts a process, manages a pool, or writes a file, so
-installing it commits you to nothing about how you run problems. See
+Nothing in the library's API starts a process, manages a pool, or writes a
+file, so installing it commits you to nothing about how you run problems;
+the distribution ships one utility script, `connections-download-corpora`,
+for fetching the standard corpora. See
 [running](../design/running.md) for where that boundary falls and why.
 
 ## A package

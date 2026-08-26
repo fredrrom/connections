@@ -14,7 +14,6 @@ dependencies = [
 
 [project.scripts]
 pycop = "pycop.cli:main"
-pycop-download-benchmarks = "pycop.runs.download:main"
 
 [tool.uv.sources]
 connections = { workspace = true }

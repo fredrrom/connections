@@ -5,7 +5,7 @@ A leanCoP-equivalent connection prover built on
 harness that checks the equivalence claim against the leanCoP family.
 
 ```bash
-uv run pycop path/to/problem.p
+uv run pycop path/to/problem.p classical
 ```
 
 The claim is **parity of inference step ordering**: on a supported problem,
@@ -21,6 +21,47 @@ factorization scope, and undo. The Prolog control flow is not reproduced; the
 step sequence it produces is.
 
 Documentation: <https://fredrrom.github.io/connections/packages/pycop/>
+
+## CLI
+
+Run the pyCoP prover on a TPTP problem:
+
+```bash
+uv run pycop Problems/SYN/SYN001+1.p classical
+```
+
+Run a single leanCoP strategy:
+
+```bash
+uv run pycop Problems/SYN/SYN001+1.p classical \
+  --settings cut \
+  --settings 'comp(7)'
+```
+
+Run a schedule:
+
+```bash
+uv run pycop Problems/SYN/SYN001+1.p classical \
+  --schedule classical
+```
+
+Run over a directory or file list and write corpus rows:
+
+```bash
+uv run pycop Problems/SYN --out artifacts/corpus/syn.jsonl --steps 1000 --overwrite
+```
+
+Download benchmark corpora:
+
+```bash
+uv run connections-download-corpora --list
+```
+
+Supported logic arguments are `classical`, `intuitionistic`, `D`, `T`, `S4`,
+and `S5`. Supported domain arguments are `constant`, `cumulative`, and
+`varying`.
+
+Supported input formats: [TPTP](https://www.tptp.org) `fof` and `cnf` for classical, [ILTP](http://www.iltp.de) `fof` input for intuitionistic, and [QMLTP](http://www.iltp.de/qmltp/) `qmf` input for modal.
 
 ## Contents
 

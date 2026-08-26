@@ -1,3 +1,12 @@
+"""Fetch the standard corpora: provisioning the task environment.
+
+In the multi-task framing the corpus is the environment's task
+distribution, and every package built on the library runs against the same
+corpora, so fetching them ships with the library's distribution as the
+``connections-download-corpora`` console script. Nothing in the library
+API calls this: it is a utility of the distribution, not a primitive.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -10,7 +19,33 @@ import sys
 import tarfile
 import urllib.request
 
-DEFAULT_ROOT = Path("benchmarks")
+DEFAULT_ROOT = Path("corpora")
+
+
+def workspace_root(start: Path | None = None) -> Path | None:
+    """The enclosing uv workspace root, if any.
+
+    Corpora are shared by every package in the workspace, so they live in
+    one directory at its root; this walks upward to find it, which is what
+    lets the console scripts run from any directory in the repo.
+    """
+
+    current = (start if start is not None else Path.cwd()).resolve()
+    for candidate in (current, *current.parents):
+        pyproject = candidate / "pyproject.toml"
+        try:
+            if pyproject.is_file() and "[tool.uv.workspace]" in pyproject.read_text(
+                encoding="utf-8"
+            ):
+                return candidate
+        except OSError:
+            continue
+    return None
+
+
+def default_root() -> Path:
+    root = workspace_root()
+    return root / DEFAULT_ROOT if root is not None else DEFAULT_ROOT
 CHUNK_SIZE = 1024 * 1024
 PROGRESS_STEP = 64 * 1024 * 1024
 
@@ -107,7 +142,7 @@ CORPORA: tuple[Corpus, ...] = (
 def build_parser() -> argparse.ArgumentParser:
     names = ", ".join(spec.name for spec in CORPORA)
     parser = argparse.ArgumentParser(
-        description="Download benchmark corpora used by connections diagnostics.",
+        description="Download the standard corpora.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
@@ -116,7 +151,12 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="NAME",
         help=f"Corpora to download. Known names: {names}",
     )
-    parser.add_argument("--root", type=Path, default=DEFAULT_ROOT)
+    parser.add_argument(
+        "--root",
+        type=Path,
+        default=None,
+        help="Corpus directory. Defaults to corpora/ at the workspace root.",
+    )
     parser.add_argument(
         "--archive-dir",
         type=Path,
@@ -147,7 +187,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     selected = select_corpora(args.corpora, all_corpora=args.all, lookup=lookup)
-    root = args.root.expanduser().resolve()
+    root = (
+        args.root if args.root is not None else default_root()
+    ).expanduser().resolve()
     archive_dir = (
         args.archive_dir.expanduser().resolve()
         if args.archive_dir is not None

@@ -59,8 +59,8 @@ runner adds the rest. See [running](../design/running.md#results).
 Benchmark corpora:
 
 ```bash
-uv run pycop-download-benchmarks --list
-uv run pycop-download-benchmarks tptp-v6.4.0 iltp qmltp --root benchmarks
+uv run connections-download-corpora --list
+uv run connections-download-corpora tptp-v6.4.0 iltp qmltp --root benchmarks
 ```
 
 ## Profiling
@@ -116,8 +116,8 @@ A full classical trace sweep:
 
 ```bash
 uv run python -m pycop.parity.run_trace_parity \
-  --path ../benchmarks/TPTP-v6.4.0/Problems \
-  --source-dir ../benchmarks/TPTP-v6.4.0 \
+  --path ../corpora/TPTP-v6.4.0/Problems \
+  --source-dir ../corpora/TPTP-v6.4.0 \
   --timeout 1 \
   --logic classical \
   --reference leancop21 \

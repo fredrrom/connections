@@ -45,7 +45,7 @@ Use package commands for ordinary pycop runs, profiling, and benchmark setup:
 ```bash
 uv run pycop path/to/problems --out artifacts/corpus/runs.jsonl --overwrite
 uv run pycop path/to/problems --profile artifacts/profile/run --overwrite
-uv run pycop-download-benchmarks --list
+uv run connections-download-corpora --list
 ```
 
 ## Parity Triage

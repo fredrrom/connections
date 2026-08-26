@@ -15,7 +15,7 @@ AGENTS.md
 .ruff_cache/
 .ty/
 artifacts/
-benchmarks/out/
+corpora/
 
 # C extensions
 *.so
