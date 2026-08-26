@@ -6,6 +6,17 @@ Initial prover-loop release.
 
 ### Added
 
+- The `imitation` package: a Russell-and-Norvig learning agent over the
+  library. A `PerformanceRecipe` fixes the action surface; the critic
+  replays found proofs into labeled demonstrations; the learning element
+  fits a plain-torch graph network with segmented cross-entropy and hands
+  back a picklable model; `DAggerAgent` is an `ActorLearnerAgent` -- an
+  ordinary `Agent` whose internals are the actor-learner architecture --
+  and `run_experiment(agent, problems, horizon, total_steps)` drives
+  training while the agent alone decides whether its barrier moves at the
+  wave tick.
+  `imitation.measures` computes success, search cost, proof size,
+  directness and waste from run records, with budget curves.
 - `run_schedule`, `build_state` and `rollout` as the entry points, over `environment` for
   the transition system and `run` for everything above it. Agents implement
   policies: `Agent` is percept-in action-out, `AgentStatus` its word about its
@@ -22,7 +33,7 @@ Initial prover-loop release.
   initial prefix-annotated non-classical slice.
 - `pycop` CLI with settings, schedules, source directories, trace output,
   corpus JSONL output, and budget options.
-- `pycop-download-benchmarks` CLI for benchmark setup.
+- `connections-download-corpora` CLI for benchmark setup.
 - `pycop.parity` diagnostics for leanCoP-family parity checks.
 - MkDocs documentation under `docs/`.
 

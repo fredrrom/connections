@@ -59,20 +59,25 @@ It is not a prover. The named provers are in packages: a configuration and a CLI
 | | |
 |---|---|
 | `pycop` | leanCoP-equivalent strategies, parity harness, CLI |
+| `imitation` | learning agent: critic, graph model, trainer, measures |
 
 A CLI owns argument parsing, schedule selection, SZS on stdout, and the exit
 code.
 
-It also has no runner. Nothing in `connections` starts a process, manages a
-pool, or writes a file. `run` takes one problem and returns a `Result`, and
-`Result.to_dict` serialises it; selecting problems, spending CPUs on
-them, and aggregating what comes back are each package's own business.
+It also has no runner. Nothing in the `connections` API starts a process,
+manages a pool, or writes a file. `run` takes one problem and returns a
+`Result`, and `Result.to_dict` serialises it; selecting problems, spending
+CPUs on them, and aggregating what comes back are each package's own
+business. The one utility outside the API is the distribution's
+`connections-download-corpora` script, which fetches the standard
+corpora -- provisioning the task environment, not running anything in it.
 
 ## Packages and dependency edges
 
 ```
 connections   environment, agent, interaction                         -> lark
 pycop         leanCoP-equivalent prover, parity, CLI     -> connections
+imitation     learning agent over runs                   -> connections, torch
 ```
 
 `connections` never imports from a package built on it. 

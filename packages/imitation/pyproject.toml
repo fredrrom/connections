@@ -1,0 +1,26 @@
+[project]
+name = "imitation"
+version = "0.1.0"
+description = "A learning agent over connections: critic, graph model, trainer, measures."
+readme = "README.md"
+license = { text = "GPL-3.0-or-later" }
+requires-python = ">=3.10"
+authors = [{ name = "Fredrik Rømming", email = "fr409@cam.ac.uk" }]
+dependencies = ["connections", "numpy", "torch>=2.2"]
+
+[project.scripts]
+imitation-experiment = "imitation.cli:main"
+
+[tool.uv.sources]
+connections = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.10.4,<0.11.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "imitation"
+module-root = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

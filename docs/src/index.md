@@ -42,6 +42,7 @@ which the code does not yet match everywhere.
 | | |
 |---|---|
 | [pycop](packages/pycop.md) | leanCoP-equivalent prover, parity harness, CLI |
+| [imitation](packages/imitation.md) | learning agent: critic, graph model, trainer, measures |
 
 ## Scope
 
