@@ -8,13 +8,12 @@ Agentic primitives, provers, and experiments for classical, intuitionistic, and 
 
 Design notes, guides, and the API reference are in the [Docs](https://fredrrom.github.io/connections/).
 
-## Package Layout
+## Content 
 
-The library, `connections`, lives in `src/connections/`; its module map is in
-[Architecture](https://fredrrom.github.io/connections/design/architecture/).
-The packages built on it, under `packages/`:
+In addition to the prover primitive library, [`connections`](src/connections/), the repo hosts some projects built on it, under [`packages/`](packages/):
 
-- `pycop`: The pyCoP prover tested extensively for inference step order parity with leanCoP 2.0, ileanCoP 1.2, and MleanCoP 1.3.
+- [`pycop`](packages/pycop/): The pyCoP prover tested extensively for inference step order parity with [leanCoP 2.0](https://www.leancop.de), [ileanCoP 1.2](https://www.leancop.de/ileancop/), and [MleanCoP 1.3](https://www.leancop.de/mleancop/).
+- [`imitation`](packages/imitation/): Imitation learning prover and experiments based on GNN function approximation.
 
 ## Install
 
@@ -23,98 +22,6 @@ pip install git+https://github.com/fredrrom/connections.git
 ```
 
 For development, see [Development](docs/src/guides/development.md).
-
-## pycop CLI
-
-Run the pyCoP prover on a TPTP problem:
-
-```bash
-uv run pycop Problems/SYN/SYN001+1.p classical
-```
-
-Run a single leanCoP strategy:
-
-```bash
-uv run pycop Problems/SYN/SYN001+1.p classical \
-  --settings cut \
-  --settings 'comp(7)'
-```
-
-Run a schedule:
-
-```bash
-uv run pycop Problems/SYN/SYN001+1.p classical \
-  --schedule classical
-```
-
-Run over a directory or file list and write corpus rows:
-
-```bash
-uv run pycop Problems/SYN --out artifacts/corpus/syn.jsonl --steps 1000 --overwrite
-```
-
-Download benchmark corpora:
-
-```bash
-uv run pycop-download-benchmarks --list
-```
-
-Supported logic arguments are `classical`, `intuitionistic`, `D`, `T`, `S4`,
-and `S5`. Supported domain arguments are `constant`, `cumulative`, and
-`varying`.
-
-Supported input formats: [TPTP](https://www.tptp.org) `fof` and `cnf` for classical, [ILTP](http://www.iltp.de) `fof` input for intuitionistic, and [QMLTP](http://www.iltp.de/qmltp/) `qmf` input for modal.
-
-## API Use
-
-```python
-from connections.interaction import (
-    Problem,
-    StrategySchedule,
-    WeightedStrategy,
-    run_schedule,
-)
-from pycop import LeancopSettingsCodec
-
-problem = Problem(
-    "Problems/SYN/SYN001+1.p",
-    logic="classical",
-    domain="constant",
-    source_file_dirs=("/path/to/TPTP",),
-)
-strategy = LeancopSettingsCodec.from_tokens(["cut", "comp(7)"])
-schedule = StrategySchedule.from_weighted(
-    [WeightedStrategy(strategy, weight=1)],
-    steps=1000,
-    timeout_seconds=5.0,
-)
-
-result = run_schedule(problem, schedule=schedule)
-
-print(result.outcome)
-print(result.szs_status)
-print(result.to_dict())
-```
-
-Agents are called with the current state and return the next action:
-
-```python
-from connections.agent import Agent
-
-class MyAgent(Agent):
-    def __call__(self, state):
-        ...
-```
-
-An agent returns actions only: `Action | None`. Whether a budget ran out and
-what any of it means for the problem are the prover's to decide. The agent's
-`status` attribute reports on its own search, and the judge in `interaction`
-maps statuses to outcomes and SZS.
-
-`Dynamics` owns legal action generation, `rollout` applies the chosen actions,
-and `run_schedule` drives a schedule of rollouts over one problem. Budgets are
-best effort; hard time and memory limits belong to whatever runs connections
-in a subprocess.
 
 ## License
 
@@ -128,7 +35,38 @@ marked as modified. See
 [`packages/pycop/src/pycop/parity/reference_provers/NOTICE.md`](packages/pycop/src/pycop/parity/reference_provers/NOTICE.md)
 for the list of changes.
 
+## Papers
+
+This repo is the code home of the following papers:
+
+- *Imitation Learning for Connection-Tableau Construction*
+  (Rømming et al.; [arXiv:2608.26009](https://arxiv.org/abs/2608.26009), 2026).
+  The transition system and agents are the [`connections`](src/connections/)
+  library; the graph neural network, critic, trainer, and experiments are
+  [`imitation`](packages/imitation/).
+- *Connections: Markov Decision Processes for Classical, Intuitionistic and
+  Modal Connection Calculi*
+  (Rømming, Otten, Holden; [AReCCa 2023](https://ceur-ws.org/Vol-3613/)).
+  The library this repo grew from, now [`connections`](src/connections/);
+  the citation is below.
+
 ## Citation
+
+For the imitation learning provers and experiments:
+
+```bibtex
+@misc{imitation_2026,
+    author        = {Rømming, Fredrik and Bakšys, Mantas and
+                     Fixman, Martin S. and Holden, Sean B.},
+    title         = {Imitation Learning for Connection-Tableau Construction},
+    year          = {2026},
+    eprint        = {2608.26009},
+    archivePrefix = {arXiv},
+    primaryClass  = {cs.AI},
+}
+```
+
+For the library and its calculi:
 
 ```bibtex
 @inproceedings{connections_2023,

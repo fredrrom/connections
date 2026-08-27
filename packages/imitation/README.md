@@ -1,8 +1,7 @@
 # imitation
 
-Code for *Imitation Learning for Connection-Tableau Construction*
+Code for [*Imitation Learning for Connection-Tableau Construction*](https://arxiv.org/abs/2608.26009)
 (Rømming et al., 2026).
-<!-- add arXiv link once announced -->
 
 ## Reproducing the experiments
 
@@ -25,11 +24,44 @@ uv run imitation-experiment corpora/m2k \
 
 `--surface` picks the search agent the learned chooser acts through --
 `id`, `dfs`, or the whole-surface `all-actions` policy that can learn to
-backtrack (the paper's pi_id, pi_dfs, pi_markov). The command prints, per
-training pass, the measures: problems solved and success rate J_S, search
-cost J_T, proof size J_L, and directness J_D, plus coverage and retention
-across passes. Checkpoints and the collected demonstration examples land
-under `--output`.
+backtrack (the paper's $\pi_{\mathrm{id}}$, $\pi_{\mathrm{dfs}}$,
+$\pi_{\mathrm{markov}}$). The command prints, per training pass, the
+measures below, plus coverage and retention across passes. Checkpoints and
+the collected demonstration examples land under `--output`.
+
+## The measures
+
+An episode on a problem $\omega$ is a trajectory
+$\tau = (s_0, a_0, s_1, \ldots, s_T)$ from the empty derivation
+$s_0 = \varepsilon$. Write $s_t : \omega$ when the derivation $s_t$ is a
+closed tableau for $\omega$; that, or the horizon $H$, is what stops it:
+
+```math
+T = \min\bigl(H,\ \inf\{t \mid s_t : \omega\}\bigr).
+```
+
+Each step appends at most one inference to the derivation, so
+$|s_T| \le T$. The printed columns are empirical averages over a pass's
+episodes -- a checkmark subscript averages over the successful episodes
+only:
+
+```math
+\hat{J}_S = \mathrm{avg}\ \mathbf{1}\{s_T : \omega\}, \qquad
+\hat{J}_T = \mathrm{avg}_{\checkmark} T, \qquad
+\hat{J}_L = \mathrm{avg}_{\checkmark} |s_T|, \qquad
+\hat{J}_D = \mathrm{avg}_{\checkmark} \tfrac{|s_T|}{T},
+```
+
+the success rate, the search cost, the proof size, and the directness of
+the search: estimates of the corresponding expectations under the policy
+over the task distribution.
+Directness is the fraction of steps that survived into the proof --
+equivalently one minus the normalized waste $W(\tau) = T - |s_T|$, the
+exact regret against an oracle that knew in advance which derivation it
+was building. $W = 0$ exactly when the search never backtracks, so a
+perfectly imitated proof scores $J_D = 1$ however large the proof is.
+Retention between passes compares solved sets under consecutive policies:
+proofs kept, gained, and forfeited by an update.
 
 The full corpora are compute-heavy; for a smoke run, limit the task count:
 
