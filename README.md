@@ -4,36 +4,50 @@
 [![docs](https://github.com/fredrrom/connections/actions/workflows/pages.yml/badge.svg?branch=main)](https://fredrrom.github.io/connections/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/fredrrom/connections/blob/main/LICENSE)
 
-Agentic primitives, provers, and experiments for classical, intuitionistic, and modal first-order logic based on connection tableau. 
+Primitives and experiments for agentic provers based on connection tableaux, in classical, intuitionistic, and modal first-order logic. 
 
 Design notes, guides, and the API reference are in the [Docs](https://fredrrom.github.io/connections/).
 
-## Content 
+## Quick start: prove a problem
 
-In addition to the prover primitive library, [`connections`](src/connections/), the repo hosts some projects built on it, under [`packages/`](packages/):
+With [uv](https://docs.astral.sh/uv/) installed:
 
-- [`pycop`](packages/pycop/): The pyCoP prover tested extensively for inference step order parity with [leanCoP 2.0](https://www.leancop.de), [ileanCoP 1.2](https://www.leancop.de/ileancop/), and [MleanCoP 1.3](https://www.leancop.de/mleancop/).
-- [`imitation`](packages/imitation/): Imitation learning prover and experiments based on GNN function approximation.
+```bash
+git clone https://github.com/fredrrom/connections
+cd connections
+uv run --package pycop pycop examples/socrates.p
+# Theorem
+```
 
-## Install
+## Start here
+
+| Goal | Guide |
+|---|---|
+| Prove a problem | [CLI and Python entry points](docs/src/guides/prove-a-problem.md) |
+| Build a search agent | [Write an agent](docs/src/guides/write-an-agent.md) |
+| Reproduce the learning experiments | [Imitation package](packages/imitation/README.md) |
+| Understand the system | [Architecture](docs/src/design/architecture.md) |
+| Contribute | [Development guide](docs/src/guides/development.md) |
+
+## What's included
+
+| Component | Purpose |
+|---|---|
+| [`connections`](src/connections/) | States, actions, dynamics, constraints, parsing, and clausification for connection-tableau construction. |
+| [`pycop`](packages/pycop/) | A native Python prover whose inference-step ordering is checked for trace equality against the bundled [leanCoP 2.1](https://www.leancop.de), [ileanCoP 1.2](https://www.leancop.de/ileancop/), and [MleanCoP 1.3](https://www.leancop.de/mleancop/) reference provers. |
+| [`imitation`](packages/imitation/) | GNN-based imitation-learning agents and the experiments built on `connections`. |
+
+## Install the core library
+
+If you want to build on the prover primitives without installing `pycop` or
+the learning package:
 
 ```bash
 pip install git+https://github.com/fredrrom/connections.git
 ```
 
-For development, see [Development](docs/src/guides/development.md).
-
-## License
-
-This project is licensed under GNU GPL v3 or later. See `LICENSE`.
-
-The parity harness bundles leanCoP 2.1, ileanCoP 1.2 and MleanCoP 1.3 by
-Jens Otten (<https://www.leancop.de>), all under the GNU General Public
-License, as correctness oracles. They are not part of the `connections` or
-`pycop` API. Four of those files carry local parity instrumentation and are
-marked as modified. See
-[`packages/pycop/src/pycop/parity/reference_provers/NOTICE.md`](packages/pycop/src/pycop/parity/reference_provers/NOTICE.md)
-for the list of changes.
+This installs only `connections`. To use the prover, follow the quick start
+above. For a development checkout, see [Development](docs/src/guides/development.md).
 
 ## Papers
 
@@ -81,3 +95,15 @@ For the library and its calculi:
     pages      = {107--118},
 }
 ```
+
+## License
+
+This project is licensed under GNU GPL v3 or later. See [`LICENSE`](LICENSE).
+
+The parity harness bundles leanCoP 2.1, ileanCoP 1.2 and MleanCoP 1.3 by
+Jens Otten (<https://www.leancop.de>), all under the GNU General Public
+License, as correctness oracles. They are not part of the `connections` or
+`pycop` API. Four of those files carry local parity instrumentation and are
+marked as modified. See
+[`packages/pycop/src/pycop/parity/reference_provers/NOTICE.md`](packages/pycop/src/pycop/parity/reference_provers/NOTICE.md)
+for the list of changes.
