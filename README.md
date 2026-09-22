@@ -4,9 +4,9 @@
 [![docs](https://github.com/fredrrom/connections/actions/workflows/pages.yml/badge.svg?branch=main)](https://fredrrom.github.io/connections/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/fredrrom/connections/blob/main/LICENSE)
 
-Primitives and experiments for agentic provers based on connection tableaux, in classical, intuitionistic, and modal first-order logic. 
+Primitives for building agentic provers based on connection tableaux, in classical, intuitionistic, and modal first-order logic, and experiments based on them. 
 
-Design notes, guides, and the API reference are in the [Docs](https://fredrrom.github.io/connections/).
+Design notes, guides, and the API reference are in the [docs](https://fredrrom.github.io/connections/).
 
 ## Quick start: prove a problem
 
